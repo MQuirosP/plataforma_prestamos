@@ -12,7 +12,9 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
 
   if (isUsingMemoryStore()) {
     let user = inMemoryStore.users.find(u => u.email === email);
+    let isNewUser = false;
     if (!user) {
+      isNewUser = true;
       // Create memory user
       user = {
         id: providerId || `user-${Date.now()}`,
@@ -46,7 +48,7 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
     }
 
     const sub = inMemoryStore.subscriptions.find(s => s.userId === user?.id);
-    return res.json({ user, subscription: sub });
+    return res.json({ user, subscription: sub, isNewUser });
   }
 
   try {
@@ -55,7 +57,9 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
       include: { subscriptions: true }
     });
 
+    let isNewUser = false;
     if (!user) {
+      isNewUser = true;
       // Create user transactional setup
       user = await prisma.$transaction(async (tx) => {
         const newUser = await tx.user.create({
@@ -97,10 +101,10 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
 
     const activeSub = user?.subscriptions[user.subscriptions.length - 1];
 
-    // Sign a local JWT token for subsequent dashboard requests
     return res.json({
       user,
-      subscription: activeSub
+      subscription: activeSub,
+      isNewUser
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'Auth synchronization failed', details: err.message });

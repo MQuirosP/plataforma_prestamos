@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoanService } from '../services/loan.service';
@@ -8,14 +8,32 @@ import { LoanService } from '../services/loan.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="min-h-screen flex flex-col justify-center items-center bg-industrial-black px-6 select-none font-sans">
+    <div class="min-h-screen flex flex-col justify-center items-center bg-industrial-black px-6 select-none font-sans relative">
+      
+      <!-- Security Loader Overlay -->
+      <div *ngIf="showLoading()" class="absolute inset-0 bg-industrial-black/95 flex flex-col justify-center items-center z-50 transition-all duration-300">
+        <div class="w-full max-w-xs text-center space-y-6">
+          <!-- Animated Spinner -->
+          <div class="w-16 h-16 border-4 border-industrial-border border-t-caterpillar rounded-full animate-spin mx-auto shadow-lg shadow-caterpillar/10"></div>
+          
+          <div class="space-y-2">
+            <h3 class="text-sm font-black text-white uppercase tracking-wider font-mono">Acceso Seguro</h3>
+            <p class="text-xs text-caterpillar font-mono animate-pulse uppercase">{{ currentLoadingMessage() }}</p>
+          </div>
+
+          <!-- Loading Progress bar indicator -->
+          <div class="w-full bg-industrial-surface h-1.5 rounded-full overflow-hidden border border-industrial-border">
+            <div class="bg-caterpillar h-full animate-[shimmer_1.5s_infinite_linear] w-2/3 rounded-full"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="w-full max-w-md bg-industrial-dark border border-industrial-border rounded-2xl p-8 shadow-2xl relative overflow-hidden">
         
         <!-- Industrial Stripe Accent -->
         <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:40px_8px]"></div>
 
         <div class="text-center mb-8 mt-4">
-          <!-- Branded logo placeholder -->
           <div class="w-12 h-12 bg-caterpillar rounded-xl flex items-center justify-center font-extrabold text-industrial-black text-2xl mx-auto shadow-md mb-3">
             C
           </div>
@@ -52,7 +70,6 @@ import { LoanService } from '../services/loan.service';
         <!-- Google OAuth Button (Yellow textured border) -->
         <button (click)="loginWithGoogle()" 
                 class="w-full bg-industrial-surface border-2 border-dashed border-caterpillar hover:bg-industrial-surface/80 text-white py-3 px-4 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3 transition duration-150">
-          <!-- Google Icon Iconography -->
           <svg class="h-4 w-4 fill-current text-caterpillar" viewBox="0 0 24 24">
             <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.51 0-6.357-2.827-6.357-6.32s2.848-6.32 6.357-6.32c1.7 0 3.243.687 4.39 1.8l3.111-3.084C18.829 1.707 15.777 0 12.24 0 5.581 0 0 5.37 0 12s5.581 12 12.24 12c6.2 0 11.237-4.388 11.237-12 0-.853-.082-1.68-.236-2.428H12.24z"/>
           </svg>
@@ -60,10 +77,13 @@ import { LoanService } from '../services/loan.service';
         </button>
 
         <!-- Sandbox notice -->
-        <p class="text-[9px] text-industrial-muted font-mono text-center mt-6 uppercase leading-tight">
-          Entorno de desarrollo local configurado con Neon DB en AWS.<br>
-          <span class="text-caterpillar font-bold">Tip:</span> Ingresa con el correo "mario&#64;caterpillar.com" para simular el rol de ADMIN.
-        </p>
+        <div class="text-[9px] text-industrial-muted font-mono text-center mt-6 uppercase leading-tight space-y-1.5">
+          <p>Entorno de desarrollo local configurado con Neon DB en AWS.</p>
+          <p>
+            <span class="text-caterpillar font-bold">Admin:</span> mario&#64;caterpillar.com |
+            <span class="text-caterpillar font-bold">Nuevo (Onboarding):</span> nuevo&#64;caterpillar.com
+          </p>
+        </div>
 
       </div>
     </div>
@@ -75,16 +95,56 @@ export class LoginComponent {
   email = '';
   password = '';
 
+  // Loading signals
+  showLoading = signal<boolean>(false);
+  currentLoadingMessage = signal<string>('Verificando credenciales seguras...');
+
+  private loadingMessages = [
+    'Verificando credenciales seguras...',
+    'Sincronizando bóveda de datos...',
+    'Validando llaves criptográficas...',
+    'Cargando perfil de cobrador...'
+  ];
+
   onLogin(event: Event) {
     event.preventDefault();
     if (!this.email || !this.password) return;
     
-    // Simulate auth check and load profile
-    this.loanService.login(this.email, 'Usuario Demo');
+    this.triggerLoading(() => {
+      this.loanService.login(this.email, 'Usuario Demo');
+    });
   }
 
   loginWithGoogle() {
-    // Simulate successful OAuth sync endpoint response
-    this.loanService.login('mario@caterpillar-saas.com', 'Mario Quirós Pizarro');
+    this.triggerLoading(() => {
+      // If logging in as Admin or default mock. Let's toggle nuevo/admin based on input if any, 
+      // or default Google button to a new user simulation or Mario.
+      // Let's check: if email input is empty, default google to new user email 'nuevo@caterpillar.com' 
+      // to let the user see onboarding easily, or Mario! 
+      // Let's use 'nuevo@caterpillar.com' by default for Google OAuth to demonstrate the onboarding,
+      // and they can write 'mario@caterpillar.com' for Admin. This is perfect!
+      const targetEmail = this.email || 'nuevo@caterpillar-saas.com';
+      const targetName = targetEmail.includes('mario') ? 'Mario Quirós Pizarro' : 'Prestamista Nuevo';
+      
+      this.loanService.login(targetEmail, targetName);
+    });
+  }
+
+  private triggerLoading(callback: () => void) {
+    this.showLoading.set(true);
+    let messageIndex = 0;
+
+    // Cycle messages every 500ms
+    const interval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % this.loadingMessages.length;
+      this.currentLoadingMessage.set(this.loadingMessages[messageIndex]);
+    }, 500);
+
+    // Complete loader after 2 seconds
+    setTimeout(() => {
+      clearInterval(interval);
+      this.showLoading.set(false);
+      callback();
+    }, 2000);
   }
 }

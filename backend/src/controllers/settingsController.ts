@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthenticatedRequest } from '../middlewares/auth';
+import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 
 export async function getSettings(req: AuthenticatedRequest, res: Response) {
@@ -19,7 +19,12 @@ export async function getSettings(req: AuthenticatedRequest, res: Response) {
       };
       inMemoryStore.settings.push(settings);
     }
-    return res.json(settings);
+    
+    const user = inMemoryStore.users.find(u => u.id === userId);
+    return res.json({
+      ...settings,
+      telefono: user?.telefono || ''
+    });
   }
 
   try {
@@ -28,7 +33,6 @@ export async function getSettings(req: AuthenticatedRequest, res: Response) {
     });
 
     if (!settings) {
-      // Create default settings if not exists
       settings = await prisma.businessSettings.create({
         data: {
           userId,
@@ -40,7 +44,12 @@ export async function getSettings(req: AuthenticatedRequest, res: Response) {
       });
     }
 
-    return res.json(settings);
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    return res.json({
+      ...settings,
+      telefono: user?.telefono || ''
+    });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to fetch settings', details: err.message });
   }
@@ -48,7 +57,7 @@ export async function getSettings(req: AuthenticatedRequest, res: Response) {
 
 export async function updateSettings(req: AuthenticatedRequest, res: Response) {
   const userId = req.user?.id || 'mock-lender-id-123';
-  const { monedaSimbolo, monedaCodigo, nombreNegocio, plantillaWhatsapp, gananciaPorcentaje } = req.body;
+  const { monedaSimbolo, monedaCodigo, nombreNegocio, plantillaWhatsapp, gananciaPorcentaje, telefono } = req.body;
 
   const parsedGanancia = Number(gananciaPorcentaje) !== undefined ? Math.max(0, Number(gananciaPorcentaje)) : 50;
 
@@ -72,30 +81,52 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response) {
       settings.plantillaWhatsapp = plantillaWhatsapp !== undefined ? plantillaWhatsapp : settings.plantillaWhatsapp;
       settings.gananciaPorcentaje = parsedGanancia;
     }
-    return res.json(settings);
+
+    if (telefono) {
+      const user = inMemoryStore.users.find(u => u.id === userId);
+      if (user) {
+        user.telefono = telefono;
+      }
+    }
+
+    return res.json({ ...settings, telefono });
   }
 
   try {
-    const settings = await prisma.businessSettings.upsert({
-      where: { userId },
-      update: {
-        monedaSimbolo,
-        monedaCodigo,
-        nombreNegocio,
-        plantillaWhatsapp,
-        gananciaPorcentaje: parsedGanancia
-      },
-      create: {
-        userId,
-        monedaSimbolo: monedaSimbolo || '₡',
-        monedaCodigo: monedaCodigo || 'CRC',
-        nombreNegocio: nombreNegocio || 'CAT-LOAN Credit',
-        plantillaWhatsapp,
-        gananciaPorcentaje: parsedGanancia
+    const settings = await prisma.$transaction(async (tx) => {
+      const sett = await tx.businessSettings.upsert({
+        where: { userId },
+        update: {
+          monedaSimbolo,
+          monedaCodigo,
+          nombreNegocio,
+          plantillaWhatsapp,
+          gananciaPorcentaje: parsedGanancia
+        },
+        create: {
+          userId,
+          monedaSimbolo: monedaSimbolo || '₡',
+          monedaCodigo: monedaCodigo || 'CRC',
+          nombreNegocio: nombreNegocio || 'CAT-LOAN Credit',
+          plantillaWhatsapp,
+          gananciaPorcentaje: parsedGanancia
+        }
+      });
+
+      if (telefono) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { telefono }
+        });
       }
+
+      return sett;
     });
 
-    return res.json(settings);
+    return res.json({
+      ...settings,
+      telefono
+    });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to update settings', details: err.message });
   }

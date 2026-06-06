@@ -54,24 +54,28 @@ export class LoanService {
   // Auth state management
   currentUser = signal<any | null>(null);
   isLoggedIn = signal<boolean>(false);
+  isNewUser = signal<boolean>(false);
 
   async login(email: string, name: string) {
     this.loading.set(true);
     try {
-      // For development, we set the active session user.
-      // If logging in as Mario, we simulate the ADMIN account.
       const isAdmin = email.toLowerCase().includes('mario') || email.toLowerCase().includes('admin');
+      const isNew = email.toLowerCase().includes('nuevo');
       
       this.currentUser.set({
-        id: isAdmin ? 'mock-admin-id-999' : 'mock-lender-id-123',
+        id: isNew ? `new-user-${Date.now()}` : (isAdmin ? 'mock-admin-id-999' : 'mock-lender-id-123'),
         nombre: name || (isAdmin ? 'Mario Quirós Pizarro' : 'Juan Pérez Cobranzas'),
         email: email || (isAdmin ? 'mario@caterpillar-saas.com' : 'lender@caterpillar-saas.com'),
         rol: isAdmin ? 'ADMIN' : 'PRESTAMISTA'
       });
+      
+      this.isNewUser.set(isNew);
       this.isLoggedIn.set(true);
       
-      // Load user metrics and parameters
-      await this.loadLoans();
+      if (!isNew) {
+        // Load user metrics and parameters immediately for existing users
+        await this.loadLoans();
+      }
     } catch (err) {
       console.error('Login synchronization error', err);
     } finally {

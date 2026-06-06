@@ -1,9 +1,14 @@
 <app-login *ngIf="!loanService.isLoggedIn()"></app-login>
 
 <ng-container *ngIf="loanService.isLoggedIn()">
-  <app-expired *ngIf="loanService.isExpired()"></app-expired>
-  <ng-container *ngIf="!loanService.isExpired()">
-    <app-settings *ngIf="currentScreen() === 'settings'" (goBack)="currentScreen.set('dashboard')"></app-settings>
-    <app-dashboard *ngIf="currentScreen() === 'dashboard'" (openSettings)="currentScreen.set('settings')"></app-dashboard>
+  <!-- New User Onboarding Intercept -->
+  <app-onboarding *ngIf="loanService.isNewUser()" (onboardingComplete)="onOnboardingFinished()"></app-onboarding>
+
+  <ng-container *ngIf="!loanService.isNewUser()">
+    <app-expired *ngIf="loanService.isExpired()"></app-expired>
+    <ng-container *ngIf="!loanService.isExpired()">
+      <app-settings *ngIf="currentScreen() === 'settings'" (goBack)="currentScreen.set('dashboard')"></app-settings>
+      <app-dashboard *ngIf="currentScreen() === 'dashboard'" (openSettings)="currentScreen.set('settings')"></app-dashboard>
+    </ng-container>
   </ng-container>
 </ng-container>
