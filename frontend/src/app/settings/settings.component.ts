@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, Output, EventEmitter } from '@angula
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoanService, BusinessSettings } from '../services/loan.service';
+import { CountriesService, Country } from '../services/countries.service';
 
 @Component({
   selector: 'app-settings',
@@ -43,7 +44,19 @@ import { LoanService, BusinessSettings } from '../services/loan.service';
               <span class="text-[10px] text-industrial-muted mt-1 block">Aparece en la cabecera del Estado de Cuenta Visual.</span>
             </div>
 
-            <!-- Moneda y Código -->
+            <!-- Selector de País (Consumido desde REST Countries API) -->
+            <div>
+              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">País de Operación</label>
+              <select [ngModel]="selectedCountryCca2()" (ngModelChange)="onCountryChange($event)" name="selectedCountryCca2"
+                      class="w-full bg-industrial-surface border-2 border-caterpillar rounded-lg p-3 text-white text-sm focus:outline-none font-bold">
+                <option *ngFor="let country of countriesList()" [value]="country.cca2">
+                  {{ country.flag }} {{ country.name.common }} ({{ getCurrencyCode(country) }})
+                </option>
+              </select>
+              <span class="text-[10px] text-industrial-muted mt-1 block">Al seleccionar el país se configuran automáticamente la moneda y el símbolo.</span>
+            </div>
+
+            <!-- Moneda y Código (Rellenados automáticamente) -->
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Símbolo de Moneda</label>
@@ -106,8 +119,13 @@ import { LoanService, BusinessSettings } from '../services/loan.service';
 })
 export class SettingsComponent implements OnInit {
   loanService = inject(LoanService);
+  countriesService = inject(CountriesService);
 
   @Output() goBack = new EventEmitter<void>();
+
+  // Signals
+  countriesList = signal<Country[]>([]);
+  selectedCountryCca2 = signal<string>('CR');
 
   formData: BusinessSettings = {
     monedaSimbolo: '₡',
@@ -117,10 +135,50 @@ export class SettingsComponent implements OnInit {
     gananciaPorcentaje: 50
   };
 
-  ngOnInit() {
+  async ngOnInit() {
+    // 1. Load active settings
     const activeSettings = this.loanService.settings();
     if (activeSettings) {
       this.formData = { ...activeSettings };
+    }
+
+    // 2. Fetch country list
+    try {
+      const list = await this.countriesService.getCountries();
+      this.countriesList.set(list);
+
+      // 3. Match initial dropdown based on saved monedaCodigo
+      const matchedCountry = list.find(c => this.getCurrencyCode(c) === this.formData.monedaCodigo);
+      if (matchedCountry) {
+        this.selectedCountryCca2.set(matchedCountry.cca2);
+      } else {
+        // Fallback default Costa Rica
+        const crCountry = list.find(c => c.cca2 === 'CR');
+        if (crCountry) {
+          this.selectedCountryCca2.set('CR');
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching countries list', err);
+    }
+  }
+
+  getCurrencyCode(country: Country): string {
+    if (country.currencies) {
+      return Object.keys(country.currencies)[0];
+    }
+    return '';
+  }
+
+  onCountryChange(cca2: string) {
+    this.selectedCountryCca2.set(cca2);
+    const country = this.countriesList().find(c => c.cca2 === cca2);
+    if (country && country.currencies) {
+      const currencyCode = Object.keys(country.currencies)[0];
+      const currencySymbol = country.currencies[currencyCode].symbol;
+      
+      this.formData.monedaCodigo = currencyCode;
+      this.formData.monedaSimbolo = currencySymbol || '$';
     }
   }
 
