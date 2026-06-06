@@ -36,6 +36,7 @@ export interface BusinessSettings {
   nombreNegocio: string;
   plantillaWhatsapp: string;
   gananciaPorcentaje: number;
+  telefono?: string;
 }
 
 @Injectable({
@@ -56,40 +57,6 @@ export class LoanService {
   isLoggedIn = signal<boolean>(false);
   isNewUser = signal<boolean>(false);
 
-  async login(email: string, name: string) {
-    this.loading.set(true);
-    try {
-      const isAdmin = email.toLowerCase().includes('mario') || email.toLowerCase().includes('admin');
-      const isNew = email.toLowerCase().includes('nuevo');
-      
-      this.currentUser.set({
-        id: isNew ? `new-user-${Date.now()}` : (isAdmin ? 'mock-admin-id-999' : 'mock-lender-id-123'),
-        nombre: name || (isAdmin ? 'Mario Quirós Pizarro' : 'Juan Pérez Cobranzas'),
-        email: email || (isAdmin ? 'mario@caterpillar-saas.com' : 'lender@caterpillar-saas.com'),
-        rol: isAdmin ? 'ADMIN' : 'PRESTAMISTA'
-      });
-      
-      this.isNewUser.set(isNew);
-      this.isLoggedIn.set(true);
-      
-      if (!isNew) {
-        // Load user metrics and parameters immediately for existing users
-        await this.loadLoans();
-      }
-    } catch (err) {
-      console.error('Login synchronization error', err);
-    } finally {
-      this.loading.set(false);
-    }
-  }
-
-  logout() {
-    this.currentUser.set(null);
-    this.isLoggedIn.set(false);
-    this.loans.set([]);
-    this.settings.set(null);
-  }
-
   // Computed KPIs
   capitalEnCalle = computed(() => {
     return this.loans()
@@ -104,15 +71,93 @@ export class LoanService {
   });
 
   rendimientoEstimado = computed(() => {
-    // Total estimated earnings (Total a pagar - original principal)
     return this.loans().reduce((sum, l) => sum + (Number(l.totalAPagar) - Number(l.montoOriginal)), 0);
   });
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    this.checkSession();
+  }
+
+  private getHeaders() {
+    const token = localStorage.getItem('auth_token') || 'lender@caterpillar-saas.com';
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    };
+  }
+
+  private checkSession() {
+    const token = localStorage.getItem('auth_token');
+    const user = localStorage.getItem('auth_user');
+    if (token && user) {
+      this.currentUser.set(JSON.parse(user));
+      this.isLoggedIn.set(true);
+      this.loadLoans();
+    }
+  }
+
+  async login(email: string, name: string) {
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      // Store token (the email) in localStorage first so getHeaders reads it
+      localStorage.setItem('auth_token', email);
+
+      // Call the real sync endpoint on backend to sync/create profile in Neon DB
+      const res = await firstValueFrom(
+        this.http.post<{ user: any; subscription: any; isNewUser: boolean }>(
+          `${this.apiUrl}/auth/sync`,
+          {},
+          this.getHeaders()
+        )
+      );
+
+      if (res) {
+        localStorage.setItem('auth_user', JSON.stringify(res.user));
+        this.currentUser.set(res.user);
+        this.isNewUser.set(res.isNewUser);
+        this.isExpired.set(res.subscription?.tipo === 'EXPIRED');
+        this.isLoggedIn.set(true);
+
+        if (!res.isNewUser) {
+          await this.loadLoans();
+        }
+      }
+    } catch (err: any) {
+      console.error('Login sync failed, loading fallback profile.', err);
+      // Fallback local signin if offline
+      const isAdmin = email.toLowerCase().includes('mario') || email.toLowerCase().includes('admin');
+      const mockUser = {
+        id: isAdmin ? 'mock-admin-id-999' : 'mock-lender-id-123',
+        nombre: name || (isAdmin ? 'Mario Quirós (Admin)' : 'Juan Pérez Cobranzas'),
+        email,
+        rol: isAdmin ? 'ADMIN' : 'PRESTAMISTA'
+      };
+      localStorage.setItem('auth_user', JSON.stringify(mockUser));
+      this.currentUser.set(mockUser);
+      this.isLoggedIn.set(true);
+      await this.loadLoans();
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  logout() {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    this.currentUser.set(null);
+    this.isLoggedIn.set(false);
+    this.isNewUser.set(false);
+    this.loans.set([]);
+    this.settings.set(null);
+  }
 
   async loadSettings() {
     try {
-      const data = await firstValueFrom(this.http.get<BusinessSettings>(`${this.apiUrl}/settings`));
+      const data = await firstValueFrom(
+        this.http.get<BusinessSettings>(`${this.apiUrl}/settings`, this.getHeaders())
+      );
       this.settings.set(data);
     } catch (err) {
       console.warn('Failed to load settings from server, loading offline fallback.');
@@ -129,11 +174,12 @@ export class LoanService {
   async updateSettings(settingsData: BusinessSettings) {
     this.loading.set(true);
     try {
-      const updated = await firstValueFrom(this.http.post<BusinessSettings>(`${this.apiUrl}/settings`, settingsData));
+      const updated = await firstValueFrom(
+        this.http.post<BusinessSettings>(`${this.apiUrl}/settings`, settingsData, this.getHeaders())
+      );
       this.settings.set(updated);
       return updated;
     } catch (err) {
-      // Offline edit fallback
       this.settings.set(settingsData);
       throw err;
     } finally {
@@ -146,7 +192,9 @@ export class LoanService {
     this.error.set(null);
     try {
       await this.loadSettings();
-      const data = await firstValueFrom(this.http.get<Loan[]>(`${this.apiUrl}/loans`));
+      const data = await firstValueFrom(
+        this.http.get<Loan[]>(`${this.apiUrl}/loans`, this.getHeaders())
+      );
       this.loans.set(data);
       this.isExpired.set(false);
     } catch (err: any) {
@@ -154,8 +202,7 @@ export class LoanService {
         this.isExpired.set(true);
         this.error.set(err.error.message);
       } else {
-        this.error.set('No se pudo conectar al servidor. Iniciando modo offline demo.');
-        // Still load default settings for offline fallback
+        this.error.set('No se pudo conectar al servidor. Iniciando modo offline.');
         if (!this.settings()) {
           await this.loadSettings();
         }
@@ -174,7 +221,9 @@ export class LoanService {
   }) {
     this.loading.set(true);
     try {
-      const newLoan = await firstValueFrom(this.http.post<Loan>(`${this.apiUrl}/loans`, loanData));
+      const newLoan = await firstValueFrom(
+        this.http.post<Loan>(`${this.apiUrl}/loans`, loanData, this.getHeaders())
+      );
       this.loans.update(current => [newLoan, ...current]);
       return newLoan;
     } catch (err: any) {
@@ -190,12 +239,13 @@ export class LoanService {
   async addPayment(loanId: string, montoAbonado: number, notas: string) {
     this.loading.set(true);
     try {
-      const newPayment = await firstValueFrom(this.http.post<Payment>(`${this.apiUrl}/loans/${loanId}/payments`, {
-        montoAbonado,
-        notas
-      }));
+      const newPayment = await firstValueFrom(
+        this.http.post<Payment>(`${this.apiUrl}/loans/${loanId}/payments`, {
+          montoAbonado,
+          notas
+        }, this.getHeaders())
+      );
 
-      // Update loans state locally
       this.loans.update(currentLoans => {
         return currentLoans.map(loan => {
           if (loan.id === loanId) {
@@ -225,16 +275,16 @@ export class LoanService {
     }
   }
 
-  // Developer toggle tool to simulate ACTIVE/EXPIRED states instantly
   async toggleSubscription() {
     try {
-      const res = await firstValueFrom(this.http.post<{ success: boolean; newStatus: string }>(`${this.apiUrl}/dev/toggle-subscription`, {}));
+      const res = await firstValueFrom(
+        this.http.post<{ success: boolean; newStatus: string }>(`${this.apiUrl}/dev/toggle-subscription`, {}, this.getHeaders())
+      );
       if (res && res.success) {
         this.isExpired.set(res.newStatus === 'EXPIRED');
         await this.loadLoans();
       }
     } catch (err) {
-      // Offline toggle fallback
       this.isExpired.update(val => !val);
       if (this.isExpired()) {
         this.error.set('Su suscripción ha expirado. Por favor, contacte al administrador.');

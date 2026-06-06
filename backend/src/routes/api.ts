@@ -9,22 +9,22 @@ import { isUsingMemoryStore, inMemoryStore, prisma } from '../services/db';
 const router = Router();
 
 // Apply auth middleware to all routes below
-router.use(authMiddleware);
+router.use(authMiddleware as any);
 
 // Auth Sync profile
-router.post('/auth/sync', syncUser);
+router.post('/auth/sync', syncUser as any);
 
 // Loan management
-router.get('/loans', getLoans);
-router.post('/loans', createLoan);
-router.post('/loans/:id/payments', addPayment);
+router.get('/loans', getLoans as any);
+router.post('/loans', createLoan as any);
+router.post('/loans/:id/payments', addPayment as any);
 
 // Settings management
-router.get('/settings', getSettings);
-router.post('/settings', updateSettings);
+router.get('/settings', getSettings as any);
+router.post('/settings', updateSettings as any);
 
 // Admin analytics
-router.get('/admin/expiring-subscriptions', getExpiringSubscribers);
+router.get('/admin/expiring-subscriptions', getExpiringSubscribers as any);
 
 // Developer Helper: Endpoint to toggle the current user's subscription status between ACTIVE and EXPIRED
 // This allows the user to test the Expired Subscription View block screen on the frontend immediately.

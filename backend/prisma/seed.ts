@@ -5,61 +5,77 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seeding...');
 
-  // Create or update Admin User
-  const admin = await prisma.user.upsert({
-    where: { email: 'mario@caterpillar-saas.com' },
-    update: {
-      nombre: 'Mario Quirós Pizarro',
-      telefono: '+50688888888',
-      rol: 'ADMIN'
-    },
-    create: {
-      nombre: 'Mario Quirós Pizarro',
-      email: 'mario@caterpillar-saas.com',
-      telefono: '+50688888888',
-      rol: 'ADMIN'
-    }
-  });
-
-  console.log(`👤 Admin user upserted: ${admin.nombre}`);
-
-  // Create active subscription expiring in 2050
   const validUntil = new Date('2050-12-31T23:59:59.000Z');
-  
-  // Clean past subscriptions for this admin to prevent duplicates
-  await prisma.subscription.deleteMany({
-    where: { userId: admin.id }
-  });
 
-  await prisma.subscription.create({
-    data: {
-      userId: admin.id,
-      tipo: 'ACTIVE',
-      validUntil
-    }
-  });
-
-  console.log(`💳 Active subscription created, valid until 2050`);
-
-  // Create default business settings
-  await prisma.businessSettings.upsert({
-    where: { userId: admin.id },
-    update: {
-      monedaSimbolo: '₡',
-      monedaCodigo: 'CRC',
-      nombreNegocio: 'CAT-LOAN Credit',
-      gananciaPorcentaje: 50
+  // List of accounts to seed
+  const accounts = [
+    {
+      nombre: 'Mario Quirós (Admin)',
+      email: 'mario.quiros.admin@gmail.com',
+      rol: 'ADMIN' as const
     },
-    create: {
-      userId: admin.id,
-      monedaSimbolo: '₡',
-      monedaCodigo: 'CRC',
-      nombreNegocio: 'CAT-LOAN Credit',
-      gananciaPorcentaje: 50
+    {
+      nombre: 'Mario Quirós (Admin Placeholder)',
+      email: 'TU_CORREO_ADMIN@gmail.com',
+      rol: 'ADMIN' as const
+    },
+    {
+      nombre: 'Mario Quirós (Prestamista)',
+      email: 'mario.quiros.prestamista@gmail.com',
+      rol: 'PRESTAMISTA' as const
+    },
+    {
+      nombre: 'Mario Quirós (Prestamista Placeholder)',
+      email: 'TU_CORREO_PRUEBAS@gmail.com',
+      rol: 'PRESTAMISTA' as const
     }
-  });
+  ];
 
-  console.log(`⚙️ Default Business Settings initialized for CR`);
+  for (const acc of accounts) {
+    const user = await prisma.user.upsert({
+      where: { email: acc.email },
+      update: {
+        nombre: acc.nombre,
+        rol: acc.rol
+      },
+      create: {
+        nombre: acc.nombre,
+        email: acc.email,
+        telefono: '+50688888888',
+        rol: acc.rol
+      }
+    });
+
+    console.log(`👤 User upserted: ${user.nombre} (${user.email})`);
+
+    // Create active subscription
+    await prisma.subscription.deleteMany({
+      where: { userId: user.id }
+    });
+
+    await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        tipo: 'ACTIVE',
+        validUntil
+      }
+    });
+
+    // Create Business settings
+    await prisma.businessSettings.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: {
+        userId: user.id,
+        monedaSimbolo: '₡',
+        monedaCodigo: 'CRC',
+        nombreNegocio: acc.rol === 'ADMIN' ? 'CAT-LOAN Admin Corp' : 'Cobros Mario Q.',
+        gananciaPorcentaje: 50
+      }
+    });
+  }
+
+  console.log('⚙️ Default Business Settings initialized for all seed users.');
   console.log('✅ Seeding completed successfully.');
 }
 
