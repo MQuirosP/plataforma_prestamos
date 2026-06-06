@@ -39,11 +39,23 @@ export interface BusinessSettings {
   telefono?: string;
 }
 
+export interface Subscriber {
+  userId: string;
+  nombre: string;
+  email: string;
+  telefono: string;
+  subscriptionType: 'TRIAL' | 'ACTIVE' | 'EXPIRED';
+  validUntil: string;
+  diasRestantes: number;
+}
+
+import { environment } from '../../environments/environment';
+
 @Injectable({
   providedIn: 'root'
 })
 export class LoanService {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = environment.apiUrl;
 
   // Signals for state management
   loans = signal<Loan[]>([]);
@@ -293,5 +305,17 @@ export class LoanService {
         await this.loadLoans();
       }
     }
+  }
+
+  async getSubscribers(): Promise<Subscriber[]> {
+    return firstValueFrom(
+      this.http.get<Subscriber[]>(`${this.apiUrl}/admin/subscribers`, this.getHeaders())
+    );
+  }
+
+  async renewSubscription(userId: string, days: number): Promise<any> {
+    return firstValueFrom(
+      this.http.post<any>(`${this.apiUrl}/admin/renew-subscription`, { userId, days }, this.getHeaders())
+    );
   }
 }

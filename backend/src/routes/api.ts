@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getLoans, createLoan, addPayment } from '../controllers/loanController';
-import { getExpiringSubscribers } from '../controllers/adminController';
+import { getExpiringSubscribers, getAllSubscribers, renewUserSubscription } from '../controllers/adminController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
 import { syncUser } from '../controllers/authController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
@@ -23,8 +23,10 @@ router.post('/loans/:id/payments', addPayment as any);
 router.get('/settings', getSettings as any);
 router.post('/settings', updateSettings as any);
 
-// Admin analytics
+// Admin analytics & management
 router.get('/admin/expiring-subscriptions', getExpiringSubscribers as any);
+router.get('/admin/subscribers', getAllSubscribers as any);
+router.post('/admin/renew-subscription', renewUserSubscription as any);
 
 // Developer Helper: Endpoint to toggle the current user's subscription status between ACTIVE and EXPIRED
 // This allows the user to test the Expired Subscription View block screen on the frontend immediately.

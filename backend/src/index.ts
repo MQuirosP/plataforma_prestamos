@@ -1,16 +1,59 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import apiRouter from './routes/api';
 import { checkDatabaseConnection } from './services/db';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Whitelisted origins
+const allowedOrigins = [
+  'http://localhost:4200',
+  'https://loans-cat.mquirosp78.workers.dev'
+];
+
 app.use(cors({
-  origin: '*', // Allow all origins for local B2B development setup
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, or dev testing)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
+
+// Rate limiters
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde."
+  },
+  statusCode: 429
+});
+
+const strictAuthLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5, // Limit each IP to 5 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde."
+  },
+  statusCode: 429
+});
+
+// Apply rate limiting
+app.use('/api/auth', strictAuthLimiter);
+app.use('/api', generalLimiter);
 
 app.use(express.json());
 

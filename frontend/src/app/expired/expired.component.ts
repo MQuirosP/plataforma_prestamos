@@ -34,10 +34,18 @@ import { LoanService } from '../services/loan.service';
           Reactivar con Soporte
         </a>
 
-        <!-- Dev Bypass Tool -->
-        <button (click)="bypass()" class="mt-8 text-xs text-industrial-muted hover:text-white underline font-mono">
-          [Simular Reactivación de Cuenta (Dev)]
-        </button>
+        <!-- Actions -->
+        <div class="mt-8 flex flex-col gap-2">
+          <!-- Dev Bypass Tool -->
+          <button (click)="bypass()" class="text-xs text-industrial-muted hover:text-white underline font-mono">
+            [Simular Reactivación de Cuenta (Dev)]
+          </button>
+          
+          <!-- Exit/Logout -->
+          <button (click)="logout()" class="text-xs text-semantic-red hover:text-red-400 font-bold uppercase tracking-wider mt-2">
+            Cerrar Sesión
+          </button>
+        </div>
       </div>
     </div>
   `,
@@ -47,11 +55,15 @@ export class ExpiredComponent {
   private loanService = inject(LoanService);
 
   // Admin contact phone number prefilled with structured text
-  adminWhatsappUrl = `https://wa.me/525599999999?text=${encodeURIComponent(
+  adminWhatsappUrl = `https://wa.me/50672666369?text=${encodeURIComponent(
     'Hola Administrador, mi cuenta de cobrador de Préstamos ha vencido. Solicito la reactivación de mi membresía mensual.'
   )}`;
 
   bypass() {
     this.loanService.toggleSubscription();
+  }
+
+  logout() {
+    this.loanService.logout();
   }
 }
