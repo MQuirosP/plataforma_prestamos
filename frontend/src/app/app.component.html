@@ -1,2 +1,5 @@
 <app-expired *ngIf="loanService.isExpired()"></app-expired>
-<app-dashboard *ngIf="!loanService.isExpired()"></app-dashboard>
+<ng-container *ngIf="!loanService.isExpired()">
+  <app-settings *ngIf="currentScreen() === 'settings'" (goBack)="currentScreen.set('dashboard')"></app-settings>
+  <app-dashboard *ngIf="currentScreen() === 'dashboard'" (openSettings)="currentScreen.set('settings')"></app-dashboard>
+</ng-container>

@@ -24,14 +24,26 @@ enum LoanStatus {
 }
 
 model User {
-  id            String         @id @default(uuid())
+  id            String            @id @default(uuid())
   nombre        String
-  email         String         @unique
+  email         String            @unique
   telefono      String
-  rol           Role           @default(PRESTAMISTA)
-  createdAt     DateTime       @default(now())
+  rol           Role              @default(PRESTAMISTA)
+  createdAt     DateTime          @default(now())
   subscriptions Subscription[]
   loans         Loan[]
+  settings      BusinessSettings?
+}
+
+model BusinessSettings {
+  id                 String @id @default(uuid())
+  userId             String @unique
+  user               User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monedaSimbolo      String @default("₡")
+  monedaCodigo       String @default("CRC")
+  nombreNegocio      String @default("CAT-LOAN Credit")
+  plantillaWhatsapp  String @default("Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!")
+  gananciaPorcentaje Int    @default(50)
 }
 
 model Subscription {

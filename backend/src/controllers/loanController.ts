@@ -100,7 +100,28 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
   const parsedMonto = Number(montoOriginal);
   const parsedCuota = Number(cuotaSemanal);
   const parsedDia = Number(diaCobro);
-  const totalAPagar = parsedMonto * 1.5; // 1.50 multiplier logic
+
+  // Retrieve user's configured interest rate percentage from settings
+  let gananciaPorcentaje = 50;
+  if (isUsingMemoryStore()) {
+    const sett = inMemoryStore.settings.find(s => s.userId === prestamistaId);
+    if (sett) {
+      gananciaPorcentaje = sett.gananciaPorcentaje;
+    }
+  } else {
+    try {
+      const sett = await prisma.businessSettings.findUnique({
+        where: { userId: prestamistaId }
+      });
+      if (sett) {
+        gananciaPorcentaje = sett.gananciaPorcentaje;
+      }
+    } catch {
+      gananciaPorcentaje = 50;
+    }
+  }
+
+  const totalAPagar = parsedMonto * (1 + (gananciaPorcentaje / 100));
 
   // Check if subscription status is EXPIRED
   let isExpired = false;

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getLoans, createLoan, addPayment } from '../controllers/loanController';
 import { getExpiringSubscribers } from '../controllers/adminController';
+import { getSettings, updateSettings } from '../controllers/settingsController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth';
 import { isUsingMemoryStore, inMemoryStore, prisma } from '../services/db';
 
@@ -13,6 +14,10 @@ router.use(authMiddleware);
 router.get('/loans', getLoans);
 router.post('/loans', createLoan);
 router.post('/loans/:id/payments', addPayment);
+
+// Settings management
+router.get('/settings', getSettings);
+router.post('/settings', updateSettings);
 
 // Admin analytics
 router.get('/admin/expiring-subscriptions', getExpiringSubscribers);

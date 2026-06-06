@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoanService, Loan, Payment } from '../services/loan.service';
@@ -18,21 +18,32 @@ import html2canvas from 'html2canvas';
             C
           </div>
           <div>
-            <h1 class="text-lg font-bold text-white leading-tight tracking-tight">CAT-LOAN</h1>
-            <p class="text-[10px] text-caterpillar uppercase tracking-wider font-mono">B2B LENDER CONSOLE</p>
+            <h1 class="text-sm font-black text-white leading-none tracking-tight uppercase">
+              {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN' }}
+            </h1>
+            <p class="text-[9px] text-caterpillar uppercase tracking-wider font-mono mt-0.5">CONSOLE</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
+          <!-- Settings Toggle button -->
+          <button (click)="openSettings.emit()" 
+                  class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-caterpillar transition duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+
           <!-- Quick dev toggle subscription status -->
           <button (click)="toggleSub()" 
-                  class="text-xs bg-industrial-surface border border-industrial-border px-3 py-1.5 rounded-lg text-caterpillar hover:text-white font-mono transition duration-150">
-            🔒 [Suscripción: {{ loanService.isExpired() ? 'Expirada' : 'Activa' }}]
+                  class="text-[10px] bg-industrial-surface border border-industrial-border px-2.5 py-2 rounded-lg text-caterpillar hover:text-white font-mono transition duration-150">
+            🔒 [{{ loanService.isExpired() ? 'Expirado' : 'Activo' }}]
           </button>
           
           <button (click)="openCreateModal()" 
                   class="bg-caterpillar hover:bg-caterpillar-dark text-industrial-black p-2 rounded-lg font-bold transition duration-150 shadow-md">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
             </svg>
           </button>
@@ -46,15 +57,21 @@ import html2canvas from 'html2canvas';
         <section class="grid grid-cols-3 gap-3 mb-6">
           <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between">
             <span class="text-[10px] text-industrial-muted uppercase font-mono">En la Calle</span>
-            <span class="text-sm font-black text-white mt-1">{{ capitalEnCalle() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="text-sm font-black text-white mt-1">
+              {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ capitalEnCalle() | number:'1.0-0' }}
+            </span>
           </div>
           <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between">
             <span class="text-[10px] text-industrial-muted uppercase font-mono">Esta Semana</span>
-            <span class="text-sm font-black text-caterpillar mt-1">{{ porCobrarEstaSemana() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="text-sm font-black text-caterpillar mt-1">
+              {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ porCobrarEstaSemana() | number:'1.0-0' }}
+            </span>
           </div>
           <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between">
             <span class="text-[10px] text-industrial-muted uppercase font-mono">Rendimiento</span>
-            <span class="text-sm font-black text-semantic-emerald mt-1">{{ rendimientoEstimado() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="text-sm font-black text-semantic-emerald mt-1">
+              {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ rendimientoEstimado() | number:'1.0-0' }}
+            </span>
           </div>
         </section>
 
@@ -89,7 +106,9 @@ import html2canvas from 'html2canvas';
               </div>
               <div class="text-right">
                 <span class="text-xs text-industrial-muted font-mono block">Pendiente</span>
-                <span class="text-sm font-black text-white block">{{ loan.balancePendiente | currency:'USD' }}</span>
+                <span class="text-sm font-black text-white block">
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.balancePendiente | number:'1.0-0' }}
+                </span>
               </div>
             </div>
 
@@ -101,7 +120,9 @@ import html2canvas from 'html2canvas';
               </div>
               <div class="text-right">
                 <span class="text-industrial-muted block">Cuota Semanal:</span>
-                <span class="text-caterpillar font-bold block">{{ loan.cuotaSemanal | currency:'USD' }}</span>
+                <span class="text-caterpillar font-bold block">
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.cuotaSemanal | number:'1.0-0' }}
+                </span>
               </div>
             </div>
 
@@ -177,8 +198,10 @@ import html2canvas from 'html2canvas';
               </select>
             </div>
             <div class="bg-industrial-surface p-3 rounded-lg border border-industrial-border text-xs text-industrial-muted font-mono flex justify-between items-center mt-2">
-              <span>Total Estimado a Cobrar (+50%):</span>
-              <span class="text-white font-extrabold text-sm">{{ (newLoanData.montoOriginal || 0) * 1.5 | currency:'USD' }}</span>
+              <span>Total Estimado a Cobrar (+{{ loanService.settings()?.gananciaPorcentaje || 50 }}%):</span>
+              <span class="text-white font-extrabold text-sm">
+                {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (newLoanData.montoOriginal || 0) * (1 + (loanService.settings()?.gananciaPorcentaje || 50) / 100) | number:'1.0-0' }}
+              </span>
             </div>
             
             <button type="submit" 
@@ -209,7 +232,9 @@ import html2canvas from 'html2canvas';
               </div>
               <div class="flex justify-between mt-1 items-end">
                 <span class="text-white font-extrabold text-sm">{{ selectedLoanForAbono.clienteNombre }}</span>
-                <span class="text-caterpillar font-black text-base">{{ selectedLoanForAbono.balancePendiente | currency:'USD' }}</span>
+                <span class="text-caterpillar font-black text-base">
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedLoanForAbono.balancePendiente | number:'1.0-0' }}
+                </span>
               </div>
             </div>
 
@@ -245,7 +270,9 @@ import html2canvas from 'html2canvas';
 
             <div class="text-center border-b border-industrial-border/60 pb-4 mt-2 mb-4">
               <h2 class="text-xs text-caterpillar uppercase tracking-widest font-mono">Estado de Cuenta Oficial</h2>
-              <p class="text-[9px] text-industrial-muted uppercase tracking-wider font-mono">B2B Caterpillar Credit</p>
+              <p class="text-[9px] text-industrial-muted uppercase tracking-wider font-mono">
+                {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN Credit' }}
+              </p>
             </div>
 
             <!-- Client Metadata -->
@@ -267,16 +294,22 @@ import html2canvas from 'html2canvas';
             <!-- Financial Status Box -->
             <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl space-y-2 mb-4">
               <div class="flex justify-between text-xs">
-                <span class="text-industrial-muted">Monto Original (x1.5):</span>
-                <span class="text-white font-bold">{{ selectedStatementLoan?.totalAPagar | currency:'USD' }}</span>
+                <span class="text-industrial-muted">Monto Original:</span>
+                <span class="text-white font-bold">
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.totalAPagar | number:'1.0-0' }}
+                </span>
               </div>
               <div class="flex justify-between text-xs">
                 <span class="text-industrial-muted">Total Abonado:</span>
-                <span class="text-semantic-emerald font-bold">+{{ (selectedStatementLoan?.totalAPagar || 0) - (selectedStatementLoan?.balancePendiente || 0) | currency:'USD' }}</span>
+                <span class="text-semantic-emerald font-bold">
+                  +{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (selectedStatementLoan?.totalAPagar || 0) - (selectedStatementLoan?.balancePendiente || 0) | number:'1.0-0' }}
+                </span>
               </div>
               <div class="flex justify-between text-sm pt-2 border-t border-industrial-border/60 font-black">
                 <span class="text-white">BALANCE RESTANTE:</span>
-                <span class="text-caterpillar">{{ selectedStatementLoan?.balancePendiente | currency:'USD' }}</span>
+                <span class="text-caterpillar">
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.balancePendiente | number:'1.0-0' }}
+                </span>
               </div>
             </div>
 
@@ -305,7 +338,9 @@ import html2canvas from 'html2canvas';
                     <span class="text-[9px] text-white block">{{ pay.fechaPago | date:'dd/MM HH:mm' }}</span>
                   </div>
                   <div class="text-right">
-                    <span class="text-white font-black block">{{ pay.montoAbonado | currency:'USD' }}</span>
+                    <span class="text-white font-black block">
+                      {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
+                    </span>
                     <span class="text-[8px] text-industrial-muted block" *ngIf="pay.notas">{{ pay.notas }}</span>
                   </div>
                 </div>
@@ -344,6 +379,8 @@ import html2canvas from 'html2canvas';
 export class DashboardComponent implements OnInit {
   loanService = inject(LoanService);
 
+  @Output() openSettings = new EventEmitter<void>();
+
   // States
   activeTab = signal<'atrasados' | 'hoy' | 'dia'>('hoy');
   showCreateModal = signal<boolean>(false);
@@ -368,8 +405,6 @@ export class DashboardComponent implements OnInit {
   // Get current weekday mapped to 1-7
   get currentWeekday(): number {
     const day = new Date().getDay();
-    // getDay() gives 0 (Sunday) to 6 (Saturday)
-    // We want: 1 = Lunes, 6 = Sábado, 7 = Domingo
     if (day === 0) return 7;
     return day;
   }
@@ -406,8 +441,6 @@ export class DashboardComponent implements OnInit {
       const weeksActive = Math.max(1, Math.ceil((Date.now() - new Date(l.fechaInicio).getTime()) / (7 * 24 * 60 * 60 * 1000)));
       const targetWeeklyExpectation = Number(l.cuotaSemanal) * weeksActive;
 
-      // Logic definition:
-      // Atrasado: Accumulated paid balance is less than weekly quota expectation based on time elapsed
       if (paymentsTotal < targetWeeklyExpectation) {
         atrasados++;
       } else if (l.diaCobro === today) {
@@ -442,7 +475,6 @@ export class DashboardComponent implements OnInit {
       if (this.activeTab() === 'hoy') {
         return !isAtrasado && isHoy;
       }
-      // al día category (is not behind, and is not scheduled for today)
       return !isAtrasado && !isHoy;
     });
   }
@@ -454,7 +486,13 @@ export class DashboardComponent implements OnInit {
   }
 
   getWhatsappLink(loan: Loan): string {
-    const formattedMsg = `Hola ${loan.clienteNombre}, te escribo para recordarte que tu balance pendiente es de ${loan.balancePendiente} USD. Tu cuota programada es de ${loan.cuotaSemanal} USD. Favor de enviar el abono a la brevedad. ¡Gracias!`;
+    const settings = this.loanService.settings();
+    const template = settings?.plantillaWhatsapp || "Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!";
+    const formattedMsg = template
+      .replace('{cliente}', loan.clienteNombre)
+      .replace('{saldo}', String(loan.balancePendiente))
+      .replace('{cuota}', String(loan.cuotaSemanal))
+      .replace('{moneda}', settings?.monedaSimbolo || '₡');
     return `https://wa.me/${loan.clienteTelefono}?text=${encodeURIComponent(formattedMsg)}`;
   }
 
@@ -518,7 +556,6 @@ export class DashboardComponent implements OnInit {
       this.showAbonoModal.set(false);
       this.recalculateCounts();
       
-      // Auto open receipt sharing modal after success
       const updated = this.loans().find(l => l.id === this.selectedLoanForAbono?.id);
       if (updated) {
         this.openStatement(updated);
@@ -538,7 +575,6 @@ export class DashboardComponent implements OnInit {
     if (!element) return;
 
     try {
-      // Create canvas from modal card
       const canvas = await html2canvas(element, {
         backgroundColor: '#121212',
         scale: 2
@@ -549,7 +585,6 @@ export class DashboardComponent implements OnInit {
 
         const file = new File([blob], `Recibo_${this.selectedStatementLoan?.clienteNombre}.png`, { type: 'image/png' });
         
-        // Use Web Share API if supported
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
@@ -561,7 +596,6 @@ export class DashboardComponent implements OnInit {
             this.downloadFallback(canvas);
           }
         } else {
-          // Standard browser download fallback
           this.downloadFallback(canvas);
         }
       }, 'image/png');

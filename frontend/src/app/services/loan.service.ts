@@ -28,6 +28,16 @@ export interface Loan {
   payments: Payment[];
 }
 
+export interface BusinessSettings {
+  id?: string;
+  userId?: string;
+  monedaSimbolo: string;
+  monedaCodigo: string;
+  nombreNegocio: string;
+  plantillaWhatsapp: string;
+  gananciaPorcentaje: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -36,6 +46,7 @@ export class LoanService {
 
   // Signals for state management
   loans = signal<Loan[]>([]);
+  settings = signal<BusinessSettings | null>(null);
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
   isExpired = signal<boolean>(false);
@@ -60,10 +71,42 @@ export class LoanService {
 
   constructor(private http: HttpClient) {}
 
+  async loadSettings() {
+    try {
+      const data = await firstValueFrom(this.http.get<BusinessSettings>(`${this.apiUrl}/settings`));
+      this.settings.set(data);
+    } catch (err) {
+      console.warn('Failed to load settings from server, loading offline fallback.');
+      this.settings.set({
+        monedaSimbolo: '₡',
+        monedaCodigo: 'CRC',
+        nombreNegocio: 'CAT-LOAN Credit',
+        plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!',
+        gananciaPorcentaje: 50
+      });
+    }
+  }
+
+  async updateSettings(settingsData: BusinessSettings) {
+    this.loading.set(true);
+    try {
+      const updated = await firstValueFrom(this.http.post<BusinessSettings>(`${this.apiUrl}/settings`, settingsData));
+      this.settings.set(updated);
+      return updated;
+    } catch (err) {
+      // Offline edit fallback
+      this.settings.set(settingsData);
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
   async loadLoans() {
     this.loading.set(true);
     this.error.set(null);
     try {
+      await this.loadSettings();
       const data = await firstValueFrom(this.http.get<Loan[]>(`${this.apiUrl}/loans`));
       this.loans.set(data);
       this.isExpired.set(false);
@@ -73,6 +116,10 @@ export class LoanService {
         this.error.set(err.error.message);
       } else {
         this.error.set('No se pudo conectar al servidor. Iniciando modo offline demo.');
+        // Still load default settings for offline fallback
+        if (!this.settings()) {
+          await this.loadSettings();
+        }
       }
     } finally {
       this.loading.set(false);

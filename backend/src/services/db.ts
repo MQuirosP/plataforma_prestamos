@@ -42,6 +42,16 @@ export interface MemoryPayment {
   fechaPago: Date;
 }
 
+export interface MemoryBusinessSettings {
+  id: string;
+  userId: string;
+  monedaSimbolo: string;
+  monedaCodigo: string;
+  nombreNegocio: string;
+  plantillaWhatsapp: string;
+  gananciaPorcentaje: number;
+}
+
 class InMemoryStore {
   users: MemoryUser[] = [
     {
@@ -166,6 +176,27 @@ class InMemoryStore {
       fechaPago: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
     }
   ];
+
+  settings: MemoryBusinessSettings[] = [
+    {
+      id: 'sett-1',
+      userId: 'mock-lender-id-123',
+      monedaSimbolo: '₡',
+      monedaCodigo: 'CRC',
+      nombreNegocio: 'CAT-LOAN Credit',
+      plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!',
+      gananciaPorcentaje: 50
+    },
+    {
+      id: 'sett-2',
+      userId: 'expired-lender-id-2',
+      monedaSimbolo: '₡',
+      monedaCodigo: 'CRC',
+      nombreNegocio: 'Sofía Créditos',
+      plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!',
+      gananciaPorcentaje: 50
+    }
+  ];
 }
 
 export const inMemoryStore = new InMemoryStore();
@@ -222,6 +253,40 @@ export async function checkDatabaseConnection() {
           telefono: '+525577889900',
           rol: 'PRESTAMISTA'
         }
+      });
+
+      // Business Settings for users
+      await prisma.businessSettings.createMany({
+        data: [
+          {
+            userId: u1.id,
+            monedaSimbolo: '₡',
+            monedaCodigo: 'CRC',
+            nombreNegocio: 'CAT-LOAN Credit',
+            gananciaPorcentaje: 50
+          },
+          {
+            userId: u2.id,
+            monedaSimbolo: '₡',
+            monedaCodigo: 'CRC',
+            nombreNegocio: 'CAT-LOAN Credit',
+            gananciaPorcentaje: 50
+          },
+          {
+            userId: u3.id,
+            monedaSimbolo: '₡',
+            monedaCodigo: 'CRC',
+            nombreNegocio: 'Pedro Créditos',
+            gananciaPorcentaje: 50
+          },
+          {
+            userId: u4.id,
+            monedaSimbolo: '₡',
+            monedaCodigo: 'CRC',
+            nombreNegocio: 'Sofía Créditos',
+            gananciaPorcentaje: 50
+          }
+        ]
       });
 
       // Subscriptions
