@@ -1,0 +1,34 @@
+# Dependency directories
+node_modules/
+dist/
+tmp/
+out/
+.angular/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Prisma
+/backend/prisma/dev.db
+/backend/prisma/dev.db-journal

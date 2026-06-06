@@ -1,0 +1,2 @@
+<app-expired *ngIf="loanService.isExpired()"></app-expired>
+<app-dashboard *ngIf="!loanService.isExpired()"></app-dashboard>
