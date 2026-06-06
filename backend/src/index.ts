@@ -10,7 +10,8 @@ const PORT = process.env.PORT || 3000;
 // Whitelisted origins
 const allowedOrigins = [
   'http://localhost:4200',
-  'https://loans-cat.mquirosp78.workers.dev'
+  'https://loans-cat.mquirosp78.workers.dev',
+  'https://plataforma-prestamos.pages.dev'
 ];
 
 app.use(cors({
