@@ -2,13 +2,17 @@ import { Router } from 'express';
 import { getLoans, createLoan, addPayment } from '../controllers/loanController';
 import { getExpiringSubscribers } from '../controllers/adminController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
-import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth';
+import { syncUser } from '../controllers/authController';
+import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { isUsingMemoryStore, inMemoryStore, prisma } from '../services/db';
 
 const router = Router();
 
 // Apply auth middleware to all routes below
 router.use(authMiddleware);
+
+// Auth Sync profile
+router.post('/auth/sync', syncUser);
 
 // Loan management
 router.get('/loans', getLoans);
