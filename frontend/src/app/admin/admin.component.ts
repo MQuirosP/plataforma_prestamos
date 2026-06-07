@@ -726,16 +726,36 @@ export class AdminComponent implements OnInit {
         canvas.toBlob(async (blob) => {
           if (!blob) return;
 
-          const file = new File([blob], `Recordatorio_${tenant.nombre}.png`, { type: 'image/png' });
-          const text = `Hola ${tenant.nombre}, te adjuntamos el recordatorio de tu suscripción a CAT-LOAN.`;
+          const formData = new FormData();
+          formData.append('file', blob);
+          formData.append('upload_preset', 'loans_cat');
 
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            try {
-              await navigator.share({ files: [file], title: 'Recordatorio de Pago', text });
-            } catch (shareErr) {
-              this.fallbackClipboard(blob, tenant);
+          try {
+            const uploadRes = await fetch('https://api.cloudinary.com/v1_1/dv74qevjc/image/upload', {
+              method: 'POST',
+              body: formData
+            });
+
+            if (!uploadRes.ok) {
+              throw new Error('Cloudinary upload failed');
             }
-          } else {
+
+            const uploadData = await uploadRes.json();
+            const imageUrl = uploadData.secure_url;
+
+            const isExpiring = this.isExpiringSoon(tenant.fechaPruebaFin);
+            const cleanPhone = this.formatWhatsappNumber(tenant.telefono);
+            let text = `Hola ${tenant.nombre}, te saludamos de CAT-LOAN. Adjuntamos tu estado de suscripción: ${imageUrl}`;
+            
+            if (isExpiring && tenant.fechaPruebaFin) {
+              const date = new Date(tenant.fechaPruebaFin).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+              text = `Hola ${tenant.nombre}, te recordamos que tu plan ${tenant.plan} en CAT-LOAN expira el próximo ${date}. Adjuntamos tu recordatorio de renovación: ${imageUrl}`;
+            }
+
+            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+            window.open(whatsappUrl, '_blank');
+            this.toastService.success('Recordatorio enviado a WhatsApp');
+          } catch (uploadErr) {
             this.fallbackClipboard(blob, tenant);
           }
         }, 'image/png');

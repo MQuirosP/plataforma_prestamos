@@ -733,19 +733,37 @@ export class DashboardComponent implements OnInit {
       canvas.toBlob(async (blob) => {
         if (!blob) return;
 
-        const file = new File([blob], `Recibo_${this.selectedStatementLoan?.clienteNombre}.png`, { type: 'image/png' });
-        
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              files: [file],
-              title: 'Recibo de Pago',
-              text: `Hola ${this.selectedStatementLoan?.clienteNombre}, adjunto envío tu estado de cuenta digital.`
-            });
-          } catch (shareErr) {
-            this.downloadFallback(canvas);
+        const formData = new FormData();
+        formData.append('file', blob);
+        formData.append('upload_preset', 'loans_cat');
+
+        try {
+          const uploadRes = await fetch('https://api.cloudinary.com/v1_1/dv74qevjc/image/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!uploadRes.ok) {
+            throw new Error('Cloudinary upload failed');
           }
-        } else {
+
+          const uploadData = await uploadRes.json();
+          const imageUrl = uploadData.secure_url;
+
+          const loan = this.selectedStatementLoan;
+          if (!loan) return;
+
+          let cleanPhone = loan.clienteTelefono.replace(/\D/g, '');
+          if (cleanPhone.length === 8) {
+            cleanPhone = '506' + cleanPhone;
+          }
+
+          const msg = `Hola ${loan.clienteNombre}, adjunto envío tu estado de cuenta digital: ${imageUrl}`;
+          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+          
+          window.open(whatsappUrl, '_blank');
+          this.toastService.success('Recibo enviado a WhatsApp.');
+        } catch (uploadErr) {
           this.downloadFallback(canvas);
         }
       }, 'image/png');
