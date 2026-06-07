@@ -1,4 +1,15 @@
 <app-toast></app-toast>
+
+<!-- Impersonation Return Banner -->
+<div *ngIf="loanService.currentUser()?.isImpersonating" class="fixed bottom-6 right-6 z-50">
+  <button (click)="returnToAdmin()" class="bg-semantic-red text-white px-4 py-3 rounded-full shadow-2xl font-black uppercase text-xs hover:bg-red-600 transition flex items-center gap-2">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+    Volver a Admin
+  </button>
+</div>
+
 <app-login *ngIf="!loanService.isLoggedIn()"></app-login>
 
 <ng-container *ngIf="loanService.isLoggedIn()">

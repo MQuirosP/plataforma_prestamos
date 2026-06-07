@@ -1,12 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
+import { prisma, isUsingMemoryStore } from '../services/db';
+import * as jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
-    id: string; // The real database UUID
+    id: string;
     nombre: string;
-    email: string;
+    email?: string;
     rol: 'ADMIN' | 'PRESTAMISTA' | 'COBRADOR';
+    prestamistaId?: string;
+    isImpersonating?: boolean;
   };
 }
 
@@ -14,79 +19,51 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    // Default fallback if no header is present
-    req.user = {
-      id: 'mock-lender-id-123',
-      nombre: 'Juan Pérez Cobranzas',
-      email: 'lender@caterpillar-saas.com',
-      rol: 'PRESTAMISTA'
-    };
-    return next();
+    return res.status(401).json({ error: 'Bearer token required' });
   }
 
-  let token = authHeader.split(' ')[1];
+  const token = authHeader.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Bearer token required' });
   }
-  token = token.trim().toLowerCase();
-
-  // If running in-memory store mode
-  if (isUsingMemoryStore()) {
-    let user = inMemoryStore.users.find(u => u.email === token);
-    if (!user) {
-      // Create user on the fly in memory
-      user = {
-        id: token.includes('admin') ? 'mock-admin-id-999' : `mem-user-${Date.now()}`,
-        nombre: token.split('@')[0],
-        email: token,
-        telefono: '+50600000000',
-        rol: token.includes('admin') ? 'ADMIN' : 'PRESTAMISTA',
-        createdAt: new Date()
-      };
-      inMemoryStore.users.push(user);
-    }
-    req.user = {
-      id: user.id,
-      nombre: user.nombre,
-      email: user.email,
-      rol: user.rol
-    };
-    return next();
-  }
 
   try {
-    // Lookup the user in the Neon DB using their email token
-    let user = await prisma.user.findUnique({
-      where: { email: token }
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    
+    // Si estamos en memoria ignoramos la DB
+    if (isUsingMemoryStore()) {
+      req.user = decoded;
+      return next();
+    }
+
+    // Verificar estado de suspensión en la DB real (Kill Switch)
+    const userDb = await prisma.user.findUnique({
+      where: { id: decoded.id }
     });
 
-    if (!user) {
-      // If the user isn't in the database yet (e.g. first sync),
-      // we attach a temporary object so the sync controller can create it.
-      req.user = {
-        id: `temp-${Date.now()}`,
-        nombre: token.split('@')[0],
-        email: token,
-        rol: token.includes('admin') ? 'ADMIN' : 'PRESTAMISTA'
-      };
-    } else {
-      // Auto-upgrade role if email contains 'admin' keyword (in case the DB record predates the admin logic)
-      let effectiveRole = user.rol as any;
-      if (effectiveRole !== 'ADMIN' && user.email.includes('admin')) {
-        effectiveRole = 'ADMIN';
-        // Update DB record asynchronously
-        prisma.user.update({ where: { id: user.id }, data: { rol: 'ADMIN' } }).catch(() => {});
-      }
-      req.user = {
-        id: user.id,
-        nombre: user.nombre,
-        email: user.email,
-        rol: effectiveRole
-      };
+    if (!userDb) {
+      return res.status(401).json({ error: 'Usuario no encontrado' });
     }
-    
+
+    if (userDb.rol === 'PRESTAMISTA' && userDb.suspendido) {
+      return res.status(403).json({ error: 'Su suscripción se encuentra suspendida. Contacte al administrador.' });
+    }
+
+    if (userDb.rol === 'COBRADOR' && userDb.prestamistaId) {
+      const prestamistaDb = await prisma.user.findUnique({
+        where: { id: userDb.prestamistaId }
+      });
+      if (prestamistaDb?.suspendido) {
+        return res.status(403).json({ error: 'La suscripción de su administrador se encuentra suspendida.' });
+      }
+    }
+
+    req.user = {
+      ...decoded,
+      rol: userDb.rol // Priorizamos el rol de la base de datos por si cambió
+    };
     next();
   } catch (err: any) {
-    return res.status(500).json({ error: 'Auth middleware failed', details: err.message });
+    return res.status(401).json({ error: 'Token inválido o expirado' });
   }
 }

@@ -1,214 +1,189 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
-import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
+import { prisma } from '../services/db';
+import * as bcrypt from 'bcryptjs';
+import * as jwt from 'jsonwebtoken';
 
-export async function getExpiringSubscribers(req: AuthenticatedRequest, res: Response) {
-  // Ensure requesting user is ADMIN
-  const requestorRole = req.user?.rol || 'ADMIN'; // fallback to ADMIN for developer testing
-  if (requestorRole !== 'ADMIN') {
-    return res.status(403).json({ error: 'Access denied. Administrator privileges required.' });
-  }
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
-  const limitDate = new Date();
-  limitDate.setDate(limitDate.getDate() + 5); // 5 days from now
-
-  if (isUsingMemoryStore()) {
-    // Filter expiring subscriptions
-    const expiringSubscriptions = inMemoryStore.subscriptions.filter(sub => {
-      const expiration = new Date(sub.validUntil);
-      // Diff in days
-      const diffTime = expiration.getTime() - Date.now();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      // Expiring in 5 days or less (including already expired, to review renewals)
-      return diffDays <= 5;
-    });
-
-    const result = expiringSubscriptions.map(sub => {
-      const user = inMemoryStore.users.find(u => u.id === sub.userId);
-      const expiration = new Date(sub.validUntil);
-      const diffTime = expiration.getTime() - Date.now();
-      const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      return {
-        userId: user?.id,
-        nombre: user?.nombre,
-        email: user?.email,
-        telefono: user?.telefono,
-        subscriptionType: sub.tipo,
-        validUntil: sub.validUntil,
-        diasRestantes
-      };
-    });
-
-    return res.json(result);
-  }
-
+// Función auxiliar para registrar logs de auditoría
+async function logAudit(tipoEvento: string, descripcion: string, req: AuthenticatedRequest, prestamistaId?: string) {
   try {
-    // Find subscriptions where validUntil is less than or equal to limitDate
-    const subscriptions = await prisma.subscription.findMany({
-      where: {
-        validUntil: {
-          lte: limitDate
-        }
-      },
-      include: {
-        user: true
-      },
-      orderBy: {
-        validUntil: 'asc'
-      }
-    });
-
-    const result = subscriptions.map(sub => {
-      const expiration = new Date(sub.validUntil);
-      const diffTime = expiration.getTime() - Date.now();
-      const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      return {
-        userId: sub.userId,
-        nombre: sub.user.nombre,
-        email: sub.user.email,
-        telefono: sub.user.telefono,
-        subscriptionType: sub.tipo,
-        validUntil: sub.validUntil,
-        diasRestantes
-      };
-    });
-
-    return res.json(result);
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch analytics', details: err.message });
-  }
-}
-
-export async function getAllSubscribers(req: AuthenticatedRequest, res: Response) {
-  // Ensure requesting user is ADMIN
-  const requestorRole = req.user?.rol;
-  if (requestorRole !== 'ADMIN') {
-    return res.status(403).json({ error: 'Access denied. Administrator privileges required.' });
-  }
-
-  if (isUsingMemoryStore()) {
-    const result = inMemoryStore.users
-      .filter(u => u.rol !== 'ADMIN')
-      .map(user => {
-        const sub = inMemoryStore.subscriptions.find(s => s.userId === user.id);
-        const validUntil = sub ? sub.validUntil : new Date();
-        const expiration = new Date(validUntil);
-        const diffTime = expiration.getTime() - Date.now();
-        const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        return {
-          userId: user.id,
-          nombre: user.nombre,
-          email: user.email,
-          telefono: user.telefono,
-          subscriptionType: sub ? sub.tipo : 'EXPIRED',
-          validUntil: validUntil,
-          diasRestantes
-        };
-      });
-
-    return res.json(result);
-  }
-
-  try {
-    const users = await prisma.user.findMany({
-      where: {
-        rol: 'PRESTAMISTA'
-      },
-      include: {
-        subscriptions: {
-          orderBy: {
-            createdAt: 'desc'
-          },
-          take: 1
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-
-    const result = users.map(user => {
-      const sub = user.subscriptions[0];
-      const validUntil = sub ? sub.validUntil : new Date();
-      const expiration = new Date(validUntil);
-      const diffTime = expiration.getTime() - Date.now();
-      const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      return {
-        userId: user.id,
-        nombre: user.nombre,
-        email: user.email,
-        telefono: user.telefono,
-        subscriptionType: sub ? sub.tipo : 'EXPIRED',
-        validUntil: validUntil,
-        diasRestantes
-      };
-    });
-
-    return res.json(result);
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch subscribers', details: err.message });
-  }
-}
-
-export async function renewUserSubscription(req: AuthenticatedRequest, res: Response) {
-  // Ensure requesting user is ADMIN
-  const requestorRole = req.user?.rol;
-  if (requestorRole !== 'ADMIN') {
-    return res.status(403).json({ error: 'Access denied. Administrator privileges required.' });
-  }
-
-  const { userId, days } = req.body;
-  if (!userId) {
-    return res.status(400).json({ error: 'userId is required' });
-  }
-
-  const daysToExtend = typeof days !== 'undefined' && days !== null ? Number(days) : 30;
-  const status = daysToExtend > 0 ? 'ACTIVE' : 'EXPIRED';
-  const validUntil = new Date();
-  if (daysToExtend > 0) {
-    validUntil.setDate(validUntil.getDate() + daysToExtend);
-  } else {
-    validUntil.setMinutes(validUntil.getMinutes() - 1); // 1 minute in the past
-  }
-
-  if (isUsingMemoryStore()) {
-    let sub = inMemoryStore.subscriptions.find(s => s.userId === userId);
-    if (sub) {
-      sub.tipo = status;
-      sub.validUntil = validUntil;
-    } else {
-      sub = {
-        id: `mem-sub-${Date.now()}`,
-        userId,
-        tipo: status,
-        validUntil,
-        createdAt: new Date()
-      };
-      inMemoryStore.subscriptions.push(sub);
-    }
-    return res.json({ success: true, validUntil, tipo: status });
-  }
-
-  try {
-    await prisma.subscription.deleteMany({
-      where: { userId }
-    });
-
-    const newSub = await prisma.subscription.create({
+    await prisma.logActividadSaaS.create({
       data: {
-        userId,
-        tipo: status,
-        validUntil
+        tipoEvento,
+        descripcion,
+        ip: req.ip || '0.0.0.0',
+        prestamistaId
+      }
+    });
+  } catch (err) {
+    console.error('Error al registrar auditoría:', err);
+  }
+}
+
+// 1. Obtener todos los prestamistas (tenants)
+export async function getTenants(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  try {
+    const tenants = await prisma.user.findMany({
+      where: { rol: 'PRESTAMISTA' },
+      select: {
+        id: true, nombre: true, username: true, email: true, telefono: true,
+        plan: true, suspendido: true, fechaPruebaFin: true, createdAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json(tenants);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// 2. Crear un nuevo Prestamista (Tenant)
+export async function createTenant(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  const { nombre, username, password, email, telefono, plan } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Username y password requeridos' });
+
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const newTenant = await prisma.user.create({
+      data: {
+        nombre: nombre || username,
+        username,
+        password: hash,
+        email,
+        telefono: telefono || '+50600000000',
+        rol: 'PRESTAMISTA',
+        plan: plan || 'BRONCE'
       }
     });
 
-    return res.json({ success: true, validUntil: newSub.validUntil, tipo: newSub.tipo });
+    // Crear configuraciones por defecto
+    await prisma.businessSettings.create({
+      data: {
+        userId: newTenant.id,
+        monedaSimbolo: '₡',
+        monedaCodigo: 'CRC',
+        nombreNegocio: nombre || 'Mi Negocio Crediticio',
+        gananciaPorcentaje: 50
+      }
+    });
+
+    await logAudit('CREAR_TENANT', `Se creó el prestamista ${username}`, req, newTenant.id);
+    return res.json({ success: true, tenant: newTenant });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to renew subscription', details: err.message });
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// 3. Suspender o Activar Tenant
+export async function toggleSuspendTenant(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!user) return res.status(404).json({ error: 'Tenant no encontrado' });
+
+    const newStatus = !user.suspendido;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { suspendido: newStatus }
+    });
+
+    await logAudit(newStatus ? 'SUSPENDER_TENANT' : 'ACTIVAR_TENANT', `El prestamista ${user.username} fue ${newStatus ? 'suspendido' : 'activado'}`, req, user.id);
+    return res.json({ success: true, suspendido: newStatus });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// 4. Cambiar Plan
+export async function changeTenantPlan(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  try {
+    const { plan } = req.body;
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { plan }
+    });
+
+    await logAudit('CAMBIO_PLAN', `El plan de ${user.username} cambió a ${plan}`, req, user.id);
+    return res.json({ success: true, plan });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// 5. Suplantación (Impersonate)
+export async function impersonateTenant(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  try {
+    const targetId = req.params.prestamistaId;
+    const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!targetUser || targetUser.rol !== 'PRESTAMISTA') {
+      return res.status(404).json({ error: 'Prestamista no encontrado' });
+    }
+
+    const token = jwt.sign(
+      {
+        id: targetUser.id,
+        email: targetUser.email,
+        nombre: targetUser.nombre,
+        rol: targetUser.rol,
+        isImpersonating: true
+      },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    await logAudit('IMPERSONATE', `Admin accedió como ${targetUser.username}`, req, targetUser.id);
+    return res.json({ success: true, token, user: targetUser });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// 6. Obtener Logs de Auditoría
+export async function getLogs(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  try {
+    const logs = await prisma.logActividadSaaS.findMany({
+      orderBy: { fecha: 'desc' },
+      take: 100
+    });
+    return res.json(logs);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// 7. Obtener Stats
+export async function getStats(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  try {
+    const totalPrestamistas = await prisma.user.count({ where: { rol: 'PRESTAMISTA' } });
+    const totalCobradores = await prisma.user.count({ where: { rol: 'COBRADOR' } });
+    const totalPrestamos = await prisma.loan.count();
+    
+    // Distribución de planes
+    const bronce = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'BRONCE' } });
+    const plata = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'PLATA' } });
+    const oro = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'ORO' } });
+
+    // Volumen de transacciones (Pagos)
+    const pagos = await prisma.payment.aggregate({
+      _sum: { montoAbonado: true }
+    });
+
+    return res.json({
+      totalPrestamistas,
+      totalCobradores,
+      totalPrestamos,
+      planes: { bronce, plata, oro },
+      volumenTransaccional: pagos._sum.montoAbonado || 0
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 }

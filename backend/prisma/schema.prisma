@@ -13,6 +13,12 @@ enum Role {
   COBRADOR
 }
 
+enum PlanSaaS {
+  BRONCE
+  PLATA
+  ORO
+}
+
 enum SubscriptionType {
   TRIAL
   ACTIVE
@@ -45,9 +51,14 @@ enum LiquidacionEstado {
 model User {
   id              String            @id @default(uuid())
   nombre          String
-  email           String            @unique
+  username        String            @unique
+  password        String
+  email           String?
   telefono        String
   rol             Role              @default(PRESTAMISTA)
+  plan            PlanSaaS          @default(BRONCE)
+  suspendido      Boolean           @default(false)
+  fechaPruebaFin  DateTime?
   /// Solo aplica cuando rol = COBRADOR — apunta al prestamista dueño
   prestamistaId   String?
   prestamista     User?             @relation("CobradorPrestamista", fields: [prestamistaId], references: [id])
@@ -149,4 +160,14 @@ model Invite {
   rol           Role     @default(COBRADOR)
   usado         Boolean  @default(false)
   createdAt     DateTime @default(now())
+}
+
+/// Registro de actividad global del SaaS para auditoría
+model LogActividadSaaS {
+  id            String   @id @default(uuid())
+  fecha         DateTime @default(now())
+  tipoEvento    String
+  descripcion   String
+  ip            String?
+  prestamistaId String?
 }

@@ -159,6 +159,24 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
     });
   }
 
+  // CHECK PLAN LIMITS
+  if (!isUsingMemoryStore()) {
+    const prestamistaInfo = await prisma.user.findUnique({
+      where: { id: prestamistaId },
+      select: { plan: true }
+    });
+
+    if (prestamistaInfo?.plan !== 'ORO') {
+      const loanCount = await prisma.loan.count({ where: { prestamistaId, estado: 'ACTIVE' } });
+      if (prestamistaInfo?.plan === 'BRONCE' && loanCount >= 25) {
+        return res.status(400).json({ error: 'Límite de plan Bronce alcanzado (máximo 25 clientes). Por favor, suba de categoría.' });
+      }
+      if (prestamistaInfo?.plan === 'PLATA' && loanCount >= 50) {
+        return res.status(400).json({ error: 'Límite de plan Plata alcanzado (máximo 50 clientes). Por favor, suba de categoría.' });
+      }
+    }
+  }
+
   if (isUsingMemoryStore()) {
     const newLoan: any = {
       id: `loan-${Date.now()}`,

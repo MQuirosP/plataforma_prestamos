@@ -110,47 +110,30 @@ export class LoanService {
     }
   }
 
-  async login(email: string, name: string, inviteToken?: string) {
+  async login(username: string, password: string) {
     this.loading.set(true);
     this.error.set(null);
     try {
-      // Store token (the email) in localStorage first so getHeaders reads it
-      localStorage.setItem('auth_token', email);
-
-      // Call the real sync endpoint on backend to sync/create profile in Neon DB
       const res = await firstValueFrom(
-        this.http.post<{ user: any; subscription: any; isNewUser: boolean }>(
-          `${this.apiUrl}/auth/sync`,
-          { inviteToken },
-          this.getHeaders()
+        this.http.post<{ token: string; user: any; subscription: any }>(
+          `${this.apiUrl}/auth/login`,
+          { username, password }
         )
       );
 
-      if (res) {
+      if (res && res.token) {
+        localStorage.setItem('auth_token', res.token);
         localStorage.setItem('auth_user', JSON.stringify(res.user));
         this.currentUser.set(res.user);
-        this.isNewUser.set(res.isNewUser);
+        this.isNewUser.set(false);
         this.isExpired.set(res.subscription?.tipo === 'EXPIRED');
         this.isLoggedIn.set(true);
 
-        if (!res.isNewUser) {
-          await this.loadLoans();
-        }
+        await this.loadLoans();
       }
     } catch (err: any) {
-      console.error('Login sync failed, loading fallback profile.', err);
-      // Fallback local signin if offline
-      const isAdmin = email.toLowerCase().includes('mario') || email.toLowerCase().includes('admin');
-      const mockUser = {
-        id: isAdmin ? 'mock-admin-id-999' : 'mock-lender-id-123',
-        nombre: name || (isAdmin ? 'Mario Quirós (Admin)' : 'Juan Pérez Cobranzas'),
-        email,
-        rol: isAdmin ? 'ADMIN' : 'PRESTAMISTA'
-      };
-      localStorage.setItem('auth_user', JSON.stringify(mockUser));
-      this.currentUser.set(mockUser);
-      this.isLoggedIn.set(true);
-      await this.loadLoans();
+      console.error('Login failed', err);
+      this.error.set(err.error?.error || 'Credenciales inválidas o error de conexión');
     } finally {
       this.loading.set(false);
     }

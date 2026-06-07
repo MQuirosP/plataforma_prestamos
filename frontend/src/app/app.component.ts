@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LoanService } from './services/loan.service';
+import { AdminService } from './services/admin.service';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { ExpiredComponent } from './expired/expired.component';
 import { SettingsComponent } from './settings/settings.component';
@@ -18,11 +19,15 @@ import { ToastComponent } from './toast/toast.component';
 })
 export class AppComponent {
   loanService = inject(LoanService);
+  adminService = inject(AdminService);
   currentScreen = signal<'dashboard' | 'settings'>('dashboard');
 
   onOnboardingFinished() {
     this.loanService.isNewUser.set(false);
-    // Reload loans to pick up the updated settings (e.g. currency symbol, business name)
     this.loanService.loadLoans();
+  }
+
+  returnToAdmin() {
+    this.adminService.returnToAdmin();
   }
 }

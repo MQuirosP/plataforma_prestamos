@@ -1,163 +1,64 @@
-import { Response } from 'express';
-import { AuthenticatedRequest } from '../middlewares/auth.middleware';
-import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
+import { Request, Response } from 'express';
+import { prisma } from '../services/db';
+import * as bcrypt from 'bcryptjs';
+import * as jwt from 'jsonwebtoken';
 
-export async function syncUser(req: AuthenticatedRequest, res: Response) {
-  const jwtUser = req.user;
-  if (!jwtUser) {
-    return res.status(401).json({ error: 'Auth sync requires verified JWT user details' });
-  }
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
-  const { email: rawEmail, nombre, id: providerId } = jwtUser;
-  const normalizedEmail = (rawEmail || '').trim().toLowerCase();
+export async function login(req: Request, res: Response) {
+  const { username, password } = req.body;
 
-  if (isUsingMemoryStore()) {
-    let user = inMemoryStore.users.find(u => u.email === normalizedEmail);
-    let isNewUser = false;
-    if (!user) {
-      isNewUser = true;
-      user = {
-        id: providerId || `user-${Date.now()}`,
-        nombre: nombre || 'Nuevo Prestamista',
-        email: normalizedEmail,
-        telefono: '+50600000000',
-        rol: normalizedEmail.includes('admin') ? 'ADMIN' : 'PRESTAMISTA',
-        createdAt: new Date()
-      };
-      inMemoryStore.users.push(user);
-
-      inMemoryStore.subscriptions.push({
-        id: `sub-${Date.now()}`,
-        userId: user.id,
-        tipo: 'TRIAL',
-        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        createdAt: new Date()
-      });
-
-      inMemoryStore.settings.push({
-        id: `sett-${Date.now()}`,
-        userId: user.id,
-        monedaSimbolo: '₡',
-        monedaCodigo: 'CRC',
-        nombreNegocio: 'CAT-LOAN Credit',
-        plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
-        gananciaPorcentaje: 50
-      });
-    }
-
-    const sub = inMemoryStore.subscriptions.find(s => s.userId === user?.id);
-    return res.json({ user, subscription: sub, isNewUser });
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username y contraseña son obligatorios' });
   }
 
   try {
-    let user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+    const user = await prisma.user.findUnique({
+      where: { username },
       include: { subscriptions: true }
     });
 
-    let isNewUser = false;
     if (!user) {
-      isNewUser = true;
-      const inviteToken = req.body.inviteToken;
-      
-      let prestamistaIdToAssign: string | undefined = undefined;
-      let defaultRol = normalizedEmail.includes('admin') ? 'ADMIN' : 'PRESTAMISTA';
-
-      if (inviteToken) {
-        const invite = await prisma.invite.findUnique({ where: { id: inviteToken } });
-        if (invite && !invite.usado) {
-          prestamistaIdToAssign = invite.prestamistaId;
-          defaultRol = invite.rol;
-          // Mark invite as used
-          await prisma.invite.update({
-            where: { id: invite.id },
-            data: { usado: true }
-          });
-        } else {
-          console.warn(`Token de invitación inválido o ya usado: ${inviteToken}`);
-          // Fallback: lo creamos como PRESTAMISTA normal o tiramos error?
-          // Lo creamos como PRESTAMISTA normal para que no falle el login
-        }
-      }
-
-      user = await prisma.$transaction(async (tx) => {
-        const newUser = await tx.user.create({
-          data: {
-            id: providerId || undefined,
-            nombre: nombre || 'Nuevo Usuario',
-            email: normalizedEmail,
-            telefono: '+50600000000',
-            rol: defaultRol,
-            prestamistaId: prestamistaIdToAssign || undefined
-          }
-        });
-
-        await tx.subscription.create({
-          data: {
-            userId: newUser.id,
-            tipo: 'TRIAL',
-            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          }
-        });
-
-        // Solo crear BusinessSettings si es PRESTAMISTA o ADMIN
-        if (defaultRol !== 'COBRADOR') {
-          await tx.businessSettings.create({
-            data: {
-              userId: newUser.id,
-              monedaSimbolo: '₡',
-              monedaCodigo: 'CRC',
-              nombreNegocio: 'Mi Negocio Crediticio',
-              gananciaPorcentaje: 50
-            }
-          });
-        }
-
-        return tx.user.findUnique({
-          where: { id: newUser.id },
-          include: { subscriptions: true }
-        }) as any;
-      });
+      return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    const activeSub = user?.subscriptions[user.subscriptions.length - 1];
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    // Si es prestamista o cobrador, verificar suspensión
+    if (user.rol === 'PRESTAMISTA' && user.suspendido) {
+      return res.status(403).json({ error: 'Su suscripción se encuentra suspendida. Contacte al administrador.' });
+    }
+    
+    if (user.rol === 'COBRADOR' && user.prestamistaId) {
+      const prestamista = await prisma.user.findUnique({ where: { id: user.prestamistaId } });
+      if (prestamista?.suspendido) {
+        return res.status(403).json({ error: 'La suscripción de su administrador se encuentra suspendida.' });
+      }
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        rol: user.rol,
+        prestamistaId: user.prestamistaId
+      },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    const activeSub = user.subscriptions[user.subscriptions.length - 1];
 
     return res.json({
+      token,
       user,
-      subscription: activeSub,
-      isNewUser
+      subscription: activeSub
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Auth synchronization failed', details: err.message });
-  }
-}
-
-export async function generateInvite(req: AuthenticatedRequest, res: Response) {
-  const jwtUser = req.user;
-  if (!jwtUser) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // En una arquitectura más robusta validaríamos el rol del user actual,
-  // pero asumimos que solo el prestamista puede generar invites de cobrador.
-
-  try {
-    let prestamistaId = req.body.prestamistaId || jwtUser.id;
-
-    if (!isUsingMemoryStore()) {
-      const invite = await prisma.invite.create({
-        data: {
-          prestamistaId: prestamistaId,
-          rol: 'COBRADOR',
-        }
-      });
-      return res.json({ success: true, inviteToken: invite.id });
-    } else {
-      // Fallback para memoria
-      const token = `mem-inv-${Date.now()}`;
-      return res.json({ success: true, inviteToken: token });
-    }
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to generate invite', details: err.message });
+    return res.status(500).json({ error: 'Login falló', details: err.message });
   }
 }
