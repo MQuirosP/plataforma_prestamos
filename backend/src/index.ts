@@ -77,7 +77,7 @@ app.use('/api', apiRouter);
 async function startServer() {
   await checkDatabaseConnection();
   
-  app.listen(PORT, () => {
+  app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`===================================================`);
     console.log(`🚀 CAT-LOAN-SAAS Server running on port ${PORT}`);
     console.log(`👉 API Health Check: http://localhost:${PORT}/health`);
