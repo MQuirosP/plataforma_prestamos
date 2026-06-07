@@ -57,7 +57,7 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
         totalAPagar: Number(loan.totalAPagar),
         cuotaSemanal: Number(loan.cuotaSemanal),
         balancePendiente,
-        cuotaActual: Math.min(numCuotasAbonadas + 1, totalCuotasEstimadas),
+        cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
         cuotasTotales: totalCuotasEstimadas,
         payments
       };
@@ -83,7 +83,7 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
         totalAPagar: Number(loan.totalAPagar),
         cuotaSemanal: Number(loan.cuotaSemanal),
         balancePendiente,
-        cuotaActual: Math.min(numCuotasAbonadas + 1, totalCuotasEstimadas),
+        cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
         cuotasTotales: totalCuotasEstimadas,
         payments: loan.payments.map(p => ({
           ...p,

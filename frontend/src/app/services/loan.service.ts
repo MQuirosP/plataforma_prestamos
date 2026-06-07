@@ -267,7 +267,7 @@ export class LoanService {
             return {
               ...loan,
               balancePendiente,
-              cuotaActual: Math.min(numCuotasAbonadas + 1, totalCuotasEstimadas),
+              cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
               estado: balancePendiente <= 0 ? 'PAID' as const : 'ACTIVE' as const,
               payments: updatedPayments
             };
