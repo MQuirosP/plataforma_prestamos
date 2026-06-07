@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 const allowedOrigins = [
   'http://localhost:4200',
   'https://loans-cat.mquirosp78.workers.dev',
-  'https://loans-cat.pages.dev',               // <-- Agregar esta URL explícita del log
+  'https://loans-cat.pages.dev',
   'https://plataforma-prestamos.pages.dev'
 ];
 
@@ -29,8 +29,14 @@ app.use(cors({
   allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With', 'Accept']
 }));
 
-// Asegúrate de que las peticiones OPTIONS (preflight) se respondan con estado 200 inmediatamente
-app.options('*', cors());
+// Responder inmediatamente a las peticiones OPTIONS globales sin pasar por otros middlewares
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,X-Requested-With,Accept');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  return res.sendStatus(200);
+});
 
 // Rate limiters
 const generalLimiter = rateLimit({
