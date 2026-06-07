@@ -8,30 +8,29 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
-// Environment-based origins
-const envOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : [];
+const allowedOrigins = [
+  'http://localhost:4200',
+  'https://loans-cat.mquirosp78.workers.dev',
+  'https://loans-cat.pages.dev',               // <-- Agregar esta URL explícita del log
+  'https://plataforma-prestamos.pages.dev'
+];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, or dev testing)
-    if (!origin) return callback(null, true);
-    
-    // Localhost is allowed for development, and any origin in the ALLOWED_ORIGINS env variable
-    const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(origin);
-    
-    if (isLocalhost || envOrigins.includes(origin)) {
-      return callback(null, true);
+    // Validar coincidencia exacta o subdominios dinámicos de Cloudflare
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.pages.dev') || origin.endsWith('.workers.dev')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Bloqueado por seguridad industrial CORS - Cat-Loan'));
     }
-    
-    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-    return callback(new Error(msg), false);
   },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With', 'Accept']
 }));
+
+// Asegúrate de que las peticiones OPTIONS (preflight) se respondan con estado 200 inmediatamente
+app.options('*', cors());
 
 // Rate limiters
 const generalLimiter = rateLimit({
