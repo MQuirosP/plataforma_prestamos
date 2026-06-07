@@ -7,25 +7,20 @@ import { checkDatabaseConnection } from './services/db';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Whitelisted origins
-const allowedOrigins = [
-  'http://localhost:4200',
-  'https://loans-cat.mquirosp78.workers.dev',
-  'https://plataforma-prestamos.pages.dev'
-];
+// Environment-based origins
+const envOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : [];
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, or dev testing)
     if (!origin) return callback(null, true);
     
-    // Check if origin matches allowed patterns:
-    // localhost, any .pages.dev subdomain, any .workers.dev subdomain
+    // Localhost is allowed for development, and any origin in the ALLOWED_ORIGINS env variable
     const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(origin);
-    const isPagesDev = /\.pages\.dev$/.test(origin) || origin === 'https://pages.dev';
-    const isWorkersDev = /\.workers\.dev$/.test(origin) || origin === 'https://workers.dev';
     
-    if (isLocalhost || isPagesDev || isWorkersDev || allowedOrigins.indexOf(origin) !== -1) {
+    if (isLocalhost || envOrigins.includes(origin)) {
       return callback(null, true);
     }
     
