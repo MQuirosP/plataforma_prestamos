@@ -34,9 +34,7 @@ import { LoanService } from '../services/loan.service';
         <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:40px_8px]"></div>
 
         <div class="text-center mb-8 mt-4">
-          <div class="w-12 h-12 bg-caterpillar rounded-xl flex items-center justify-center font-extrabold text-industrial-black text-2xl mx-auto shadow-md mb-3">
-            C
-          </div>
+          <img src="/assets/images/logo.png" class="w-12 h-12 object-contain mx-auto mb-3" alt="Logo">
           <h2 class="text-2xl font-black text-white uppercase tracking-tight leading-tight">CAT-LOAN Credit</h2>
           <p class="text-[10px] text-caterpillar uppercase tracking-widest font-mono mt-1">SaaS Plataforma de Cobranza</p>
         </div>
