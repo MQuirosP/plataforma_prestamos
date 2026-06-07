@@ -58,6 +58,9 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
 
   try {
     const hash = await bcrypt.hash(password, 10);
+    const fechaPruebaFin = new Date();
+    fechaPruebaFin.setDate(fechaPruebaFin.getDate() + 30);
+
     const newTenant = await prisma.user.create({
       data: {
         nombre: nombre || username,
@@ -66,7 +69,8 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
         email,
         telefono: telefono || '+50600000000',
         rol: Role.PRESTAMISTA,
-        plan: plan || PlanSaaS.BRONCE
+        plan: plan || PlanSaaS.BRONCE,
+        fechaPruebaFin
       }
     });
 
