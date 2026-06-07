@@ -14,6 +14,16 @@ export interface Tenant {
   suspendido: boolean;
   fechaPruebaFin?: string;
   createdAt: string;
+  _count?: {
+    cobradores: number;
+    loans: number;
+  };
+  cobradores?: {
+    id: string;
+    nombre: string;
+    username: string;
+    telefono: string;
+  }[];
 }
 
 export interface SaaSStats {

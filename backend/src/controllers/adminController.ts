@@ -30,7 +30,16 @@ export async function getTenants(req: AuthenticatedRequest, res: Response) {
       where: { rol: 'PRESTAMISTA' },
       select: {
         id: true, nombre: true, username: true, email: true, telefono: true,
-        plan: true, suspendido: true, fechaPruebaFin: true, createdAt: true
+        plan: true, suspendido: true, fechaPruebaFin: true, createdAt: true,
+        _count: {
+          select: {
+            cobradores: true,
+            loans: { where: { estado: 'ACTIVE' } }
+          }
+        },
+        cobradores: {
+          select: { id: true, nombre: true, username: true, telefono: true }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
