@@ -13,7 +13,7 @@ import { ToastService } from '../services/toast.service';
     <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
       
       <!-- Top Caterpillar Branded Bar -->
-      <header class="bg-industrial-dark border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
+      <header class="border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95" style="background-color: #111111;">
         <div class="flex items-center gap-2">
           <button (click)="goBack.emit()" class="text-caterpillar hover:text-white mr-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

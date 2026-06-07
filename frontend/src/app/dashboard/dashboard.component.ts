@@ -13,11 +13,9 @@ import { ToastService } from '../services/toast.service';
     <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
       
       <!-- Top Caterpillar Branded Bar -->
-      <header class="bg-industrial-dark border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 bg-caterpillar rounded-lg flex items-center justify-center font-extrabold text-industrial-black text-lg">
-            C
-          </div>
+      <header class="border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95" style="background-color: #111111;">
+        <div class="flex items-center gap-2.5">
+          <img src="/assets/images/logo-header.webp" class="h-8 w-auto object-contain" alt="Cat-Loan Logo">
           <div>
             <h1 class="text-sm font-black text-white leading-none tracking-tight uppercase">
               {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN' }}
