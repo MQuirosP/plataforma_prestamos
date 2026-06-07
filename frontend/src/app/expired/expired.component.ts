@@ -18,7 +18,7 @@ import { LoanService } from '../services/loan.service';
         </div>
 
         <h1 class="text-3xl font-extrabold text-white tracking-tight mb-2">ACCESO BLOQUEADO</h1>
-        <div class="text-caterpillar font-mono uppercase tracking-widest text-xs mb-6">Suscripción SaaS Expirada</div>
+        <div class="text-caterpillar font-mono uppercase tracking-widest text-xs mb-6">Suscripción Expirada</div>
 
         <p class="text-industrial-light text-base mb-8 leading-relaxed">
           Su cuenta no cuenta con una membresía activa de cobrador. Se han deshabilitado temporalmente las funciones de registro de abonos y alta de clientes.

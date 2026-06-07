@@ -19,13 +19,17 @@ import html2canvas from 'html2canvas';
           <img src="/assets/images/logo-header.webp" class="h-8 w-auto object-contain" alt="Cat-Loan Logo">
           <div>
             <h1 class="text-sm font-black text-white leading-none tracking-tight uppercase">PANEL DE CONTROL</h1>
-            <p class="text-[9px] text-caterpillar uppercase tracking-wider font-mono mt-0.5">CAT-LOAN SAAS ADMIN</p>
+            <p class="text-[9px] text-caterpillar uppercase tracking-wider font-mono mt-0.5">CAT-LOAN · PANEL ADMIN</p>
           </div>
         </div>
 
         <div class="flex gap-2">
-          <button (click)="showPlanModal.set(true)" class="bg-industrial-surface border border-industrial-border px-3 py-1.5 rounded-lg text-white hover:border-caterpillar text-[10px] font-bold uppercase transition">
-            Configurar Planes
+          <!-- Gear icon opens the admin settings panel -->
+          <button (click)="showSettingsPanel.set(true)" title="Configuración" class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-caterpillar hover:border-caterpillar transition duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
           </button>
           <button (click)="logout()" class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-semantic-red transition duration-150">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -49,7 +53,7 @@ import html2canvas from 'html2canvas';
             <span class="text-xl font-black text-white block mt-1">{{ stats()?.totalCobradores }}</span>
           </div>
           <div class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl">
-            <span class="text-[9px] text-industrial-muted uppercase font-mono">Volumen SaaS</span>
+            <span class="text-[9px] text-industrial-muted uppercase font-mono">Volumen Total</span>
             <span class="text-xl font-black text-caterpillar block mt-1">₡{{ stats()?.volumenTransaccional | number:'1.0-0' }}</span>
           </div>
           <div class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl flex items-center justify-between">
@@ -137,7 +141,11 @@ import html2canvas from 'html2canvas';
               <div>
                 <label class="block text-[9px] text-industrial-muted uppercase mb-1">Plan Actual</label>
                 <select [ngModel]="tenant.plan" (ngModelChange)="changePlan(tenant.id, $event)" class="bg-industrial-surface border border-industrial-border text-white text-xs rounded p-2 w-full focus:outline-none">
-                  <option *ngFor="let conf of planConfigs()" [value]="conf.plan">{{ conf.plan }}</option>
+                  <option value="BRONCE">BRONCE</option>
+                  <option value="PLATA">PLATA</option>
+                  <option value="ORO">ORO</option>
+                  <option value="PLATINO">PLATINO</option>
+                  <option value="DIAMANTE">DIAMANTE</option>
                 </select>
               </div>
               
@@ -230,41 +238,62 @@ import html2canvas from 'html2canvas';
         </div>
       </div>
 
-      <!-- Plan Config Modal -->
-      <div *ngIf="showPlanModal()" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-industrial-dark border border-industrial-border rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative">
-          <div class="flex justify-between items-center mb-6">
-            <h3 class="text-white font-black uppercase tracking-tight text-lg">Configuración de Planes</h3>
-            <button (click)="showPlanModal.set(false)" class="text-industrial-muted hover:text-white focus:outline-none">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+      <!-- Admin Settings Panel (slide-in from right) -->
+      <div *ngIf="showSettingsPanel()" class="fixed inset-0 z-50 flex">
+        <!-- Backdrop -->
+        <div class="flex-1 bg-black/60 backdrop-blur-sm" (click)="showSettingsPanel.set(false)"></div>
+
+        <!-- Panel -->
+        <div class="w-full max-w-lg bg-industrial-dark border-l border-industrial-border flex flex-col shadow-2xl overflow-y-auto">
+          <!-- Panel Header -->
+          <div class="flex justify-between items-center px-6 py-4 border-b border-industrial-border sticky top-0 bg-industrial-dark z-10">
+            <div class="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-caterpillar" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <h3 class="text-white font-black uppercase tracking-tight">Configuración General</h3>
+            </div>
+            <button (click)="showSettingsPanel.set(false)" class="text-industrial-muted hover:text-white focus:outline-none transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
-          
-          <div class="space-y-6">
-            <div *ngFor="let config of planConfigs()" class="bg-industrial-surface border border-industrial-border p-4 rounded-lg">
-              <div class="flex justify-between items-center mb-4 border-b border-industrial-border pb-2">
-                <h4 class="text-caterpillar font-black text-lg">{{ config.plan }}</h4>
-                <button (click)="savePlanConfig(config)" class="bg-caterpillar text-industrial-black px-3 py-1.5 rounded text-[10px] uppercase font-bold hover:bg-caterpillar-dark transition">
-                  Guardar
-                </button>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Máx Clientes</label>
-                  <input type="number" [(ngModel)]="config.maxClientes" class="w-full bg-industrial-dark border border-industrial-border rounded p-2 text-white text-sm focus:border-caterpillar outline-none">
-                  <span class="text-[8px] text-industrial-muted mt-0.5 block">(-1 para ilimitado)</span>
+
+          <!-- Section: Planes y Límites -->
+          <div class="px-6 py-5">
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-[9px] text-caterpillar uppercase font-mono tracking-widest">Planes y Límites</span>
+              <div class="flex-1 h-px bg-industrial-border"></div>
+            </div>
+
+            <div class="space-y-4">
+              <div *ngFor="let config of planConfigs()" class="bg-industrial-surface border border-industrial-border p-4 rounded-lg">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b border-industrial-border/50">
+                  <h4 class="text-caterpillar font-black text-sm">{{ config.plan }}</h4>
+                  <button (click)="savePlanConfig(config)" class="bg-caterpillar text-industrial-black px-3 py-1 rounded text-[9px] uppercase font-bold hover:bg-caterpillar-dark transition">
+                    Guardar
+                  </button>
                 </div>
-                <div>
-                  <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Máx Cobradores</label>
-                  <input type="number" [(ngModel)]="config.maxCobradores" class="w-full bg-industrial-dark border border-industrial-border rounded p-2 text-white text-sm focus:border-caterpillar outline-none">
-                </div>
-                <div>
-                  <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Precio Mensual (₡)</label>
-                  <input type="number" [(ngModel)]="config.precioMensual" class="w-full bg-industrial-dark border border-industrial-border rounded p-2 text-white text-sm focus:border-caterpillar outline-none">
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Máx Clientes</label>
+                    <input type="number" [(ngModel)]="config.maxClientes" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
+                    <span class="text-[8px] text-industrial-muted block mt-0.5">-1 = ilimitado</span>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Máx Cob.</label>
+                    <input type="number" [(ngModel)]="config.maxCobradores" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Precio (₡)</label>
+                    <input type="number" [(ngModel)]="config.precioMensual" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+          <!-- Future sections will go here -->
         </div>
       </div>
 
@@ -275,7 +304,7 @@ import html2canvas from 'html2canvas';
             <div>
               <img src="/assets/images/logo-header.webp" class="h-8 w-auto mb-2 opacity-90" alt="Cat-Loan">
               <h2 class="text-white font-black uppercase text-lg leading-tight tracking-tight">Estado de Suscripción</h2>
-              <p class="text-[10px] text-industrial-muted font-mono uppercase tracking-wider">CAT-LOAN SAAS</p>
+              <p class="text-[10px] text-industrial-muted font-mono uppercase tracking-wider">CAT-LOAN</p>
             </div>
           </div>
           
@@ -324,7 +353,7 @@ export class AdminComponent implements OnInit {
   searchTerm = '';
   loading = signal(false);
 
-  showPlanModal = signal(false);
+  showSettingsPanel = signal(false);
   activePhoneDropdown = signal<string | null>(null);
   selectedTenantForReminder = signal<Tenant | null>(null);
   isGeneratingImage = signal(false);
@@ -345,19 +374,29 @@ export class AdminComponent implements OnInit {
   }
 
   async loadData() {
+    // Load independently so a failure in one doesn't block the others
+    try { this.tenants.set(await this.adminService.getTenants()); }
+    catch (err) { this.toastService.error('Error cargando prestamistas'); }
+
+    try { this.stats.set(await this.adminService.getStats()); }
+    catch (_) {}
+
+    try { this.logs.set(await this.adminService.getLogs()); }
+    catch (_) {}
+
+    const FALLBACK_PLANS: SaaSPlanConfig[] = [
+      { plan: 'BRONCE', maxClientes: 10, maxCobradores: 0, precioMensual: 5000 },
+      { plan: 'PLATA', maxClientes: 20, maxCobradores: 1, precioMensual: 7500 },
+      { plan: 'ORO', maxClientes: 35, maxCobradores: 2, precioMensual: 10000 },
+      { plan: 'PLATINO', maxClientes: 50, maxCobradores: 5, precioMensual: 20000 },
+      { plan: 'DIAMANTE', maxClientes: -1, maxCobradores: -1, precioMensual: 30000 }
+    ];
+
     try {
-      const [t, s, l, p] = await Promise.all([
-        this.adminService.getTenants(),
-        this.adminService.getStats(),
-        this.adminService.getLogs(),
-        this.adminService.getPlanConfigs()
-      ]);
-      this.tenants.set(t);
-      this.stats.set(s);
-      this.logs.set(l);
-      this.planConfigs.set(p);
-    } catch (err) {
-      this.toastService.error('Error al cargar datos del SaaS');
+      const p = await this.adminService.getPlanConfigs();
+      this.planConfigs.set(p && p.length > 0 ? p : FALLBACK_PLANS);
+    } catch (_) {
+      this.planConfigs.set(FALLBACK_PLANS);
     }
   }
 

@@ -182,6 +182,22 @@ export async function checkDatabaseConnection() {
 
       console.log('Seeding completed successfully.');
     }
+
+    // Always upsert SaaS Plan Configurations (safe to run on every startup)
+    const planConfigDefaults = [
+      { plan: 'BRONCE' as const, maxClientes: 10, maxCobradores: 0, precioMensual: 5000 },
+      { plan: 'PLATA' as const, maxClientes: 20, maxCobradores: 1, precioMensual: 7500 },
+      { plan: 'ORO' as const, maxClientes: 35, maxCobradores: 2, precioMensual: 10000 },
+      { plan: 'PLATINO' as const, maxClientes: 50, maxCobradores: 5, precioMensual: 20000 },
+      { plan: 'DIAMANTE' as const, maxClientes: -1, maxCobradores: -1, precioMensual: 30000 }
+    ];
+    for (const p of planConfigDefaults) {
+      await prisma.saaSPlanConfig.upsert({
+        where: { plan: p.plan },
+        update: {},  // Don't overwrite if admin already customized them
+        create: p
+      });
+    }
   } catch (error: any) {
     console.warn('PostgreSQL database not available or schema not applied. Running in memory fallback mode.', error.message);
     useMemoryStore = true;
