@@ -2,9 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
-import { Role, SubscriptionType } from '@prisma/client';
-
-type MetodoPago = 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
+import { Role, SubscriptionType, MetodoPago, LoanStatus } from '@prisma/client';
 
 // List all loans for the logged-in lender (or cobrador's prestamista)
 export async function getLoans(req: AuthenticatedRequest, res: Response) {
@@ -177,8 +175,8 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
 
   if ((prestamistaInfo as any)?.plan && (prestamistaInfo as any).plan !== 'DIAMANTE') {
     const loanCount = isUsingMemoryStore()
-      ? inMemoryStore.loans.filter(l => l.prestamistaId === prestamistaId && l.estado === 'ACTIVE').length
-      : await prisma.loan.count({ where: { prestamistaId, estado: 'ACTIVE' } });
+      ? inMemoryStore.loans.filter(l => l.prestamistaId === prestamistaId && l.estado === LoanStatus.ACTIVE).length
+      : await prisma.loan.count({ where: { prestamistaId, estado: LoanStatus.ACTIVE } });
       
     const planConfig = await PlanManager.getPlanConfig((prestamistaInfo as any).plan as any);
 
@@ -201,7 +199,7 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
       totalAPagar,
       cuotaSemanal: parsedCuota,
       diaCobro: parsedDia,
-      estado: 'ACTIVE',
+      estado: LoanStatus.ACTIVE,
       fechaInicio: new Date()
     };
     inMemoryStore.loans.push(newLoan);
@@ -221,7 +219,7 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
           totalAPagar,
           cuotaSemanal: parsedCuota,
           diaCobro: parsedDia,
-          estado: 'ACTIVE'
+          estado: LoanStatus.ACTIVE
         }
       });
       return loan;
@@ -252,9 +250,9 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
   }
 
   const parsedMonto = Number(montoAbonado);
-  const metodo: MetodoPago = (['EFECTIVO', 'SINPE', 'TRANSFERENCIA'].includes(metodoPago))
+  const metodo: MetodoPago = ([MetodoPago.EFECTIVO, MetodoPago.SINPE, MetodoPago.TRANSFERENCIA].includes(metodoPago as MetodoPago))
     ? metodoPago as MetodoPago
-    : 'EFECTIVO';
+    : MetodoPago.EFECTIVO;
   const numeroRecibo = `REC-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
 
   if (isUsingMemoryStore()) {
@@ -290,14 +288,14 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
         caja = { id: `caja-${Date.now()}`, cobradorId: creadoPorId, saldoEfectivo: 0, saldoSinpe: 0, saldoTransferencia: 0 };
         inMemoryStore.cajas.push(caja);
       }
-      if (metodo === 'EFECTIVO') caja.saldoEfectivo += parsedMonto;
-      else if (metodo === 'SINPE') caja.saldoSinpe += parsedMonto;
-      else if (metodo === 'TRANSFERENCIA') caja.saldoTransferencia += parsedMonto;
+      if (metodo === MetodoPago.EFECTIVO) caja.saldoEfectivo += parsedMonto;
+      else if (metodo === MetodoPago.SINPE) caja.saldoSinpe += parsedMonto;
+      else if (metodo === MetodoPago.TRANSFERENCIA) caja.saldoTransferencia += parsedMonto;
     }
 
     const newTotalAbonado = totalAbonado + parsedMonto;
     if (newTotalAbonado >= Number(loan.totalAPagar)) {
-      loan.estado = 'PAID';
+      loan.estado = LoanStatus.PAID;
     }
 
     return res.status(201).json(newPayment);
@@ -333,15 +331,15 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
       if (totalAbonado + parsedMonto >= Number(loan.totalAPagar)) {
         await tx.loan.update({
           where: { id: loanId },
-          data: { estado: 'PAID' }
+          data: { estado: LoanStatus.PAID }
         });
       }
 
       // Actualizar CajaCobrador si quien paga es COBRADOR
       if (userRole === Role.COBRADOR && creadoPorId) {
-        const updateField = metodo === 'EFECTIVO'
+        const updateField = metodo === MetodoPago.EFECTIVO
           ? { saldoEfectivo: { increment: parsedMonto } }
-          : metodo === 'SINPE'
+          : metodo === MetodoPago.SINPE
             ? { saldoSinpe: { increment: parsedMonto } }
             : { saldoTransferencia: { increment: parsedMonto } };
 

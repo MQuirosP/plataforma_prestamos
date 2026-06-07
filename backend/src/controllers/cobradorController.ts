@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
-import { Role } from '@prisma/client';
+import { Role, LiquidacionEstado } from '@prisma/client';
 
 /**
  * GET /api/caja/:cobradorId
@@ -116,7 +116,7 @@ export async function procesarLiquidacion(req: AuthenticatedRequest, res: Respon
       montoSinpe: caja.saldoSinpe,
       montoTransferencia: caja.saldoTransferencia,
       montoTotal,
-      estado: 'LIQUIDATED' as const,
+      estado: LiquidacionEstado.LIQUIDATED,
       notas: notas || null,
       fecha: new Date()
     };
@@ -151,7 +151,7 @@ export async function procesarLiquidacion(req: AuthenticatedRequest, res: Respon
           montoSinpe: caja.saldoSinpe,
           montoTransferencia: caja.saldoTransferencia,
           montoTotal,
-          estado: 'LIQUIDATED',
+          estado: LiquidacionEstado.LIQUIDATED,
           notas: notas || null
         }
       });
