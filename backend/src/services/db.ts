@@ -264,6 +264,8 @@ export async function checkDatabaseConnection() {
         data: {
           id: 'mock-lender-id-123',
           nombre: 'Juan Pérez Cobranzas',
+          username: 'lender',
+          password: '$2a$10$tZ2E2Ea5SjY3P0U.Z1Fw1e0yH2gR7kG3yO2N3mZ.tM7M1lM3mP9J.',
           email: 'lender@caterpillar-saas.com',
           telefono: '+525512345678',
           rol: 'PRESTAMISTA'
@@ -274,6 +276,8 @@ export async function checkDatabaseConnection() {
         data: {
           id: 'mock-admin-id-999',
           nombre: 'Administrador Caterpillar',
+          username: 'admin',
+          password: '$2a$10$tZ2E2Ea5SjY3P0U.Z1Fw1e0yH2gR7kG3yO2N3mZ.tM7M1lM3mP9J.',
           email: 'admin@caterpillar-saas.com',
           telefono: '+525599999999',
           rol: 'ADMIN'
@@ -284,6 +288,8 @@ export async function checkDatabaseConnection() {
         data: {
           id: 'expiring-lender-id-1',
           nombre: 'Pedro González (Por Vencer)',
+          username: 'pedro',
+          password: '$2a$10$tZ2E2Ea5SjY3P0U.Z1Fw1e0yH2gR7kG3yO2N3mZ.tM7M1lM3mP9J.',
           email: 'pedro@expiring.com',
           telefono: '+525544332211',
           rol: 'PRESTAMISTA'
@@ -294,6 +300,8 @@ export async function checkDatabaseConnection() {
         data: {
           id: 'expired-lender-id-2',
           nombre: 'Sofía Martínez (Expirada)',
+          username: 'sofia',
+          password: '$2a$10$tZ2E2Ea5SjY3P0U.Z1Fw1e0yH2gR7kG3yO2N3mZ.tM7M1lM3mP9J.',
           email: 'sofia@expired.com',
           telefono: '+525577889900',
           rol: 'PRESTAMISTA'
