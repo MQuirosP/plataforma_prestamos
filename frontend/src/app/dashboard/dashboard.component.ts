@@ -169,10 +169,16 @@ import { AdminService } from '../services/admin.service';
             </div>
 
             <!-- Client Info Meta Grid -->
-            <div class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-industrial-border/60 text-xs">
+            <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-industrial-border/60 text-[11px] leading-tight">
               <div>
                 <span class="text-industrial-muted block">Progreso:</span>
-                <span class="text-white font-bold block">Cuota {{ loan.cuotaActual }} de {{ loan.cuotasTotales }}</span>
+                <span class="text-white font-bold block">Cuota {{ loan.cuotaActual }}/{{ loan.cuotasTotales }}</span>
+              </div>
+              <div class="text-center">
+                <span class="text-industrial-muted block">Siguiente Abono:</span>
+                <span class="text-white font-bold block truncate" [title]="getNextPaymentDate(loan.diaCobro)">
+                  {{ getNextPaymentDate(loan.diaCobro) }}
+                </span>
               </div>
               <div class="text-right">
                 <span class="text-industrial-muted block">Cuota Semanal:</span>
@@ -692,6 +698,35 @@ export class DashboardComponent implements OnInit {
     if (dayKey === 'TODO') return list.filter(l => l.estado !== 'PAID').length;
     const dayNum = Number(dayKey);
     return list.filter(l => l.estado !== 'PAID' && l.diaCobro === dayNum).length;
+  }
+
+  getNextPaymentDate(diaCobro: number): string {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayNum = this.currentWeekday;
+    let diff = diaCobro - todayNum;
+    if (diff < 0) {
+      diff += 7;
+    }
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + diff);
+
+    const options: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' };
+    let result = targetDate.toLocaleDateString('es-ES', options);
+    
+    // Clean up trailing dots
+    result = result.replace(/\./g, '');
+    
+    // Capitalize first letter
+    result = result.charAt(0).toUpperCase() + result.slice(1);
+
+    if (diff === 0) {
+      return `Hoy (${result})`;
+    }
+    if (diff === 1) {
+      return `Mañana (${result})`;
+    }
+    return result;
   }
 
   filteredLoans(): Loan[] {
