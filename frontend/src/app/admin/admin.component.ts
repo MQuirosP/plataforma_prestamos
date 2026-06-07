@@ -73,8 +73,20 @@ import { LoanService } from '../services/loan.service';
             <div class="flex flex-col gap-3 mb-4 pb-4 border-b border-industrial-border/50">
               <div class="flex justify-between items-start">
                 <div class="flex-[2]">
-                  <h3 class="font-extrabold text-white text-sm">{{ tenant.nombre }} <span class="text-[10px] text-caterpillar ml-2">&#64;{{ tenant.username }}</span></h3>
-                  <span class="text-[11px] text-industrial-muted font-mono block mt-1">{{ tenant.telefono }} {{ tenant.email ? '| ' + tenant.email : '' }}</span>
+                  <h3 class="font-extrabold text-white text-sm">
+                    {{ tenant.nombre }} 
+                    <span class="text-[10px] text-caterpillar ml-2">&#64;{{ tenant.username }}</span>
+                  </h3>
+                  <div class="text-[11px] text-industrial-muted font-mono mt-1 flex items-center gap-2">
+                    <a [href]="getWhatsappLink(tenant)" target="_blank" class="hover:text-semantic-emerald flex items-center gap-1 transition">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                      {{ tenant.telefono }}
+                    </a>
+                    <span *ngIf="tenant.email">| {{ tenant.email }}</span>
+                    <span *ngIf="isExpiringSoon(tenant.fechaPruebaFin)" class="text-[9px] bg-semantic-red/20 text-semantic-red px-1.5 py-0.5 rounded border border-semantic-red/30 animate-pulse">
+                      ¡Vence en {{ getDaysLeft(tenant.fechaPruebaFin) }} días!
+                    </span>
+                  </div>
                 </div>
 
                 <div class="flex gap-6 px-4 items-start flex-[1.5] justify-center border-x border-industrial-border/30">
@@ -256,15 +268,42 @@ export class AdminComponent implements OnInit {
   }
 
   filteredTenants(): Tenant[] {
-    const term = this.searchTerm.toLowerCase().trim();
+    const term = this.searchTerm().toLowerCase();
     if (!term) return this.tenants();
-
     return this.tenants().filter(t => 
-      t.nombre.toLowerCase().includes(term) ||
+      t.nombre.toLowerCase().includes(term) || 
       t.username.toLowerCase().includes(term) ||
       (t.email && t.email.toLowerCase().includes(term)) ||
       t.telefono.includes(term)
     );
+  }
+
+  isExpiringSoon(fechaPruebaFin?: string): boolean {
+    if (!fechaPruebaFin) return false;
+    const expiry = new Date(fechaPruebaFin).getTime();
+    const now = new Date().getTime();
+    const daysLeft = (expiry - now) / (1000 * 60 * 60 * 24);
+    return daysLeft > 0 && daysLeft <= 7;
+  }
+
+  getDaysLeft(fechaPruebaFin?: string): number {
+    if (!fechaPruebaFin) return 0;
+    const expiry = new Date(fechaPruebaFin).getTime();
+    const now = new Date().getTime();
+    return Math.max(0, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
+  }
+
+  getWhatsappLink(tenant: Tenant): string {
+    const isExpiring = this.isExpiringSoon(tenant.fechaPruebaFin);
+    const cleanPhone = tenant.telefono.replace(/\D/g, '');
+    let text = `Hola ${tenant.nombre}, te saludamos de CAT-LOAN.`;
+    
+    if (isExpiring && tenant.fechaPruebaFin) {
+      const date = new Date(tenant.fechaPruebaFin).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+      text = `Hola ${tenant.nombre}, te recordamos que tu plan ${tenant.plan} en CAT-LOAN expira el próximo ${date}. Por favor, renueva tu suscripción pronto para evitar interrupciones.`;
+    }
+
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
   }
 
   async createTenant(e: Event) {
