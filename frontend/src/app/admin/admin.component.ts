@@ -159,6 +159,30 @@ import { LoanService } from '../services/loan.service';
         </section>
 
       </main>
+
+      <!-- Confirmation Modal -->
+      <div *ngIf="confirmModalConfig()" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden">
+          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
+          
+          <h3 class="text-white font-black uppercase tracking-tight text-lg mt-2 mb-2">
+            {{ confirmModalConfig()?.title }}
+          </h3>
+          <p class="text-industrial-muted text-sm mb-6">
+            {{ confirmModalConfig()?.message }}
+          </p>
+          
+          <div class="flex gap-3">
+            <button (click)="closeConfirmModal()" class="flex-1 bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-white text-xs font-bold py-3 rounded-lg transition duration-150">
+              Cancelar
+            </button>
+            <button (click)="executeConfirmAction()" [ngClass]="confirmModalConfig()?.danger ? 'bg-semantic-red hover:bg-red-600' : 'bg-caterpillar hover:bg-caterpillar-dark text-industrial-black'" class="flex-1 font-black uppercase text-xs tracking-wider py-3 rounded-lg transition duration-150">
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   `
 })
@@ -184,6 +208,8 @@ export class AdminComponent implements OnInit {
     telefono: '+506 ',
     plan: 'BRONCE'
   };
+
+  confirmModalConfig = signal<{ title: string; message: string; danger?: boolean; action: () => void } | null>(null);
 
   ngOnInit() {
     this.loadData();
@@ -234,17 +260,22 @@ export class AdminComponent implements OnInit {
     }
   }
 
-  async toggleSuspend(tenant: Tenant) {
-    const action = tenant.suspendido ? 'activar' : 'suspender';
-    if (!confirm(`¿Seguro que deseas ${action} a ${tenant.username}?`)) return;
-
-    try {
-      const nuevoEstado = await this.adminService.toggleSuspend(tenant.id);
-      this.tenants.update(curr => curr.map(t => t.id === tenant.id ? { ...t, suspendido: nuevoEstado } : t));
-      this.toastService.success(`Tenant ${nuevoEstado ? 'suspendido' : 'activado'}`);
-    } catch (err) {
-      this.toastService.error('Error al cambiar estado');
-    }
+  toggleSuspend(tenant: Tenant) {
+    const isSuspending = !tenant.suspendido;
+    this.confirmModalConfig.set({
+      title: isSuspending ? 'Suspender Cliente' : 'Activar Cliente',
+      message: `¿Seguro que deseas ${isSuspending ? 'suspender' : 'activar'} la cuenta de @${tenant.username}?`,
+      danger: isSuspending,
+      action: async () => {
+        try {
+          const nuevoEstado = await this.adminService.toggleSuspend(tenant.id);
+          this.tenants.update(curr => curr.map(t => t.id === tenant.id ? { ...t, suspendido: nuevoEstado } : t));
+          this.toastService.success(`Tenant ${nuevoEstado ? 'suspendido' : 'activado'}`);
+        } catch (err) {
+          this.toastService.error('Error al cambiar estado');
+        }
+      }
+    });
   }
 
   async changePlan(id: string, plan: string) {
@@ -257,12 +288,29 @@ export class AdminComponent implements OnInit {
     }
   }
 
-  async impersonate(tenant: Tenant) {
-    if (!confirm(`¿Ingresar al dashboard de ${tenant.nombre}?`)) return;
-    try {
-      await this.adminService.impersonate(tenant.id);
-    } catch (err) {
-      this.toastService.error('No se pudo suplantar la identidad');
+  impersonate(tenant: Tenant) {
+    this.confirmModalConfig.set({
+      title: 'Suplantar Identidad',
+      message: `Vas a ingresar al panel de @${tenant.username} con sus privilegios. Las acciones quedarán registradas bajo tu autoría.`,
+      action: async () => {
+        try {
+          await this.adminService.impersonate(tenant.id);
+        } catch (err) {
+          this.toastService.error('No se pudo suplantar la identidad');
+        }
+      }
+    });
+  }
+
+  closeConfirmModal() {
+    this.confirmModalConfig.set(null);
+  }
+
+  executeConfirmAction() {
+    const action = this.confirmModalConfig()?.action;
+    if (action) {
+      action();
+      this.closeConfirmModal();
     }
   }
 
