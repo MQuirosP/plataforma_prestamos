@@ -446,7 +446,7 @@ export class DashboardComponent implements OnInit {
       if (l.estado === 'PAID') return;
 
       const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-      const weeksActive = Math.max(1, Math.ceil((Date.now() - new Date(l.fechaInicio).getTime()) / (7 * 24 * 60 * 60 * 1000)));
+      const weeksActive = Math.max(0, Math.floor((Date.now() - new Date(l.fechaInicio).getTime()) / (7 * 24 * 60 * 60 * 1000)));
       const targetWeeklyExpectation = Number(l.cuotaSemanal) * weeksActive;
 
       if (paymentsTotal < targetWeeklyExpectation) {
@@ -471,7 +471,7 @@ export class DashboardComponent implements OnInit {
       if (l.estado === 'PAID') return false;
 
       const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-      const weeksActive = Math.max(1, Math.ceil((Date.now() - new Date(l.fechaInicio).getTime()) / (7 * 24 * 60 * 60 * 1000)));
+      const weeksActive = Math.max(0, Math.floor((Date.now() - new Date(l.fechaInicio).getTime()) / (7 * 24 * 60 * 60 * 1000)));
       const targetWeeklyExpectation = Number(l.cuotaSemanal) * weeksActive;
 
       const isAtrasado = paymentsTotal < targetWeeklyExpectation;
@@ -493,21 +493,50 @@ export class DashboardComponent implements OnInit {
     return Math.min(100, Math.round((paid / Number(this.selectedStatementLoan.totalAPagar)) * 100));
   }
 
+  getPrefixByCurrency(monedaCodigo: string | undefined): string {
+    if (!monedaCodigo) return '+506';
+    const mapping: Record<string, string> = {
+      'CRC': '+506',
+      'MXN': '+52',
+      'COP': '+57',
+      'CLP': '+56',
+      'PEN': '+51',
+      'GTQ': '+502',
+      'HNL': '+504',
+      'NIO': '+505',
+      'PAB': '+507',
+      'USD': '+1',
+      'DOP': '+1',
+      'EUR': '+34',
+      'VES': '+58',
+      'ARS': '+54',
+      'BOB': '+591',
+      'PYG': '+595',
+      'UYU': '+598',
+      'BRL': '+55'
+    };
+    return mapping[monedaCodigo.toUpperCase()] || '+506';
+  }
+
   getWhatsappLink(loan: Loan): string {
     const settings = this.loanService.settings();
-    const template = settings?.plantillaWhatsapp || "Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!";
+    const template = settings?.plantillaWhatsapp || "Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!";
     const formattedMsg = template
       .replace('{cliente}', loan.clienteNombre)
       .replace('{saldo}', String(loan.balancePendiente))
       .replace('{cuota}', String(loan.cuotaSemanal))
-      .replace('{moneda}', settings?.monedaSimbolo || '₡');
+      .replace(/\{moneda\}/g, settings?.monedaSimbolo || '₡');
     return `https://wa.me/${loan.clienteTelefono}?text=${encodeURIComponent(formattedMsg)}`;
   }
 
   openCreateModal() {
+    const settings = this.loanService.settings();
+    const currency = settings?.monedaCodigo || 'CRC';
+    const prefix = this.getPrefixByCurrency(currency);
+
     this.newLoanData = {
       clienteNombre: '',
-      clienteTelefono: '',
+      clienteTelefono: prefix,
       montoOriginal: null,
       cuotaSemanal: null,
       diaCobro: 1

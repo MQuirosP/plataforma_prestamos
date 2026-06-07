@@ -8,7 +8,7 @@ import { LoanService } from '../services/loan.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="min-h-screen flex flex-col justify-center items-center bg-industrial-black px-6 select-none font-sans relative">
+    <div class="min-h-screen flex flex-col justify-start md:justify-center items-center bg-industrial-black px-6 pt-10 md:pt-0 select-none font-sans relative">
       
       <!-- Security Loader Overlay -->
       <div *ngIf="showLoading()" class="absolute inset-0 bg-industrial-black/95 flex flex-col justify-center items-center z-50 transition-all duration-300">
@@ -74,12 +74,12 @@ import { LoanService } from '../services/loan.service';
           Iniciar sesión con Google
         </button>
 
-        <!-- Sandbox notice -->
-        <div class="text-[9px] text-industrial-muted font-mono text-center mt-6 uppercase leading-tight space-y-1.5">
-          <p>Entorno de desarrollo local configurado con Neon DB en AWS.</p>
-          <p>
-            <span class="text-caterpillar font-bold">Admin:</span> mario&#64;caterpillar.com |
-            <span class="text-caterpillar font-bold">Nuevo (Onboarding):</span> nuevo&#64;caterpillar.com
+        <!-- Footer -->
+        <div class="text-[10px] text-industrial-muted font-mono text-center mt-8 uppercase leading-normal">
+          <p>© 2026 CAT-LOAN. Todos los derechos reservados.</p>
+          <p class="mt-1.5">
+            ¿Necesitas ayuda? 
+            <a href="mailto:mquirosp78@gmail.com" class="text-caterpillar hover:underline font-extrabold">Contactar al administrador</a>
           </p>
         </div>
 

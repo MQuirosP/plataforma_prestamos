@@ -8,10 +8,10 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
     return res.status(401).json({ error: 'Auth sync requires verified JWT user details' });
   }
 
-  const { email, nombre, id: providerId } = jwtUser;
+  const normalizedEmail = email.trim().toLowerCase();
 
   if (isUsingMemoryStore()) {
-    let user = inMemoryStore.users.find(u => u.email === email);
+    let user = inMemoryStore.users.find(u => u.email === normalizedEmail);
     let isNewUser = false;
     if (!user) {
       isNewUser = true;
@@ -19,9 +19,9 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
       user = {
         id: providerId || `user-${Date.now()}`,
         nombre: nombre || 'Nuevo Prestamista',
-        email,
+        email: normalizedEmail,
         telefono: '+50600000000',
-        rol: 'PRESTAMISTA',
+        rol: normalizedEmail.includes('admin') ? 'ADMIN' : 'PRESTAMISTA',
         createdAt: new Date()
       };
       inMemoryStore.users.push(user);
@@ -42,7 +42,7 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
         monedaSimbolo: '₡',
         monedaCodigo: 'CRC',
         nombreNegocio: 'CAT-LOAN Credit',
-        plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!',
+        plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
         gananciaPorcentaje: 50
       });
     }
@@ -53,7 +53,7 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
 
   try {
     let user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       include: { subscriptions: true }
     });
 
@@ -66,9 +66,9 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
           data: {
             id: providerId || undefined,
             nombre: nombre || 'Nuevo Prestamista',
-            email,
+            email: normalizedEmail,
             telefono: '+50600000000',
-            rol: 'PRESTAMISTA'
+            rol: normalizedEmail.includes('admin') ? 'ADMIN' : 'PRESTAMISTA'
           }
         });
 

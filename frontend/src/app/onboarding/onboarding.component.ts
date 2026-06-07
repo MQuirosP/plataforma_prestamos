@@ -82,6 +82,31 @@ export class OnboardingComponent implements OnInit {
   countriesList = signal<Country[]>([]);
   loading = signal<boolean>(false);
 
+  getPrefixByCurrency(monedaCodigo: string | undefined): string {
+    if (!monedaCodigo) return '+506';
+    const mapping: Record<string, string> = {
+      'CRC': '+506',
+      'MXN': '+52',
+      'COP': '+57',
+      'CLP': '+56',
+      'PEN': '+51',
+      'GTQ': '+502',
+      'HNL': '+504',
+      'NIO': '+505',
+      'PAB': '+507',
+      'USD': '+1',
+      'DOP': '+1',
+      'EUR': '+34',
+      'VES': '+58',
+      'ARS': '+54',
+      'BOB': '+591',
+      'PYG': '+595',
+      'UYU': '+598',
+      'BRL': '+55'
+    };
+    return mapping[monedaCodigo.toUpperCase()] || '+506';
+  }
+
   async ngOnInit() {
     try {
       const list = await this.countriesService.getCountries();
@@ -113,6 +138,11 @@ export class OnboardingComponent implements OnInit {
       
       this.monedaCodigo = currencyCode;
       this.monedaSimbolo = currencySymbol || '$';
+      
+      const prefix = this.getPrefixByCurrency(currencyCode);
+      if (!this.telefono || this.telefono === '' || this.telefono.startsWith('+')) {
+        this.telefono = prefix;
+      }
     }
   }
 
@@ -135,7 +165,7 @@ export class OnboardingComponent implements OnInit {
         nombreNegocio: this.nombreNegocio,
         monedaSimbolo: this.monedaSimbolo,
         monedaCodigo: this.monedaCodigo,
-        plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!',
+        plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
         gananciaPorcentaje: 50,
         telefono: this.telefono as any // Pass telephone to save in user table
       } as any);

@@ -14,7 +14,7 @@ export async function getSettings(req: AuthenticatedRequest, res: Response) {
         monedaSimbolo: '₡',
         monedaCodigo: 'CRC',
         nombreNegocio: 'CAT-LOAN Credit',
-        plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!',
+        plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
         gananciaPorcentaje: 50
       };
       inMemoryStore.settings.push(settings);
@@ -70,7 +70,7 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response) {
         monedaSimbolo: monedaSimbolo || '₡',
         monedaCodigo: monedaCodigo || 'CRC',
         nombreNegocio: nombreNegocio || 'CAT-LOAN Credit',
-        plantillaWhatsapp: plantillaWhatsapp || 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {saldo} {moneda}. Tu cuota programada es de {cuota} {moneda}. Favor de enviar el abono a la brevedad. ¡Gracias!',
+        plantillaWhatsapp: plantillaWhatsapp || 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
         gananciaPorcentaje: parsedGanancia
       };
       inMemoryStore.settings.push(settings);

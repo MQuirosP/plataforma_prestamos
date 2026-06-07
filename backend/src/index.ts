@@ -18,11 +18,19 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, or dev testing)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    
+    // Check if origin matches allowed patterns:
+    // localhost, any .pages.dev subdomain, any .workers.dev subdomain
+    const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(origin);
+    const isPagesDev = /\.pages\.dev$/.test(origin) || origin === 'https://pages.dev';
+    const isWorkersDev = /\.workers\.dev$/.test(origin) || origin === 'https://workers.dev';
+    
+    if (isLocalhost || isPagesDev || isWorkersDev || allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
     }
-    return callback(null, true);
+    
+    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+    return callback(new Error(msg), false);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

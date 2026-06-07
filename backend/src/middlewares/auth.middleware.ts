@@ -24,10 +24,11 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
     return next();
   }
 
-  const token = authHeader.split(' ')[1];
+  let token = authHeader.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Bearer token required' });
   }
+  token = token.trim().toLowerCase();
 
   // If running in-memory store mode
   if (isUsingMemoryStore()) {
