@@ -6,11 +6,14 @@ import * as jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
 export async function login(req: Request, res: Response) {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ error: 'Username y contraseña son obligatorios' });
   }
+
+  username = username.trim().toLowerCase();
+  password = password.trim();
 
   try {
     const user = await prisma.user.findUnique({

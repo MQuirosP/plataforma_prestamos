@@ -56,6 +56,11 @@ import { LoanService } from '../services/loan.service';
                   class="w-full bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3.5 rounded-lg font-black uppercase text-xs tracking-wider transition duration-150 shadow-md">
             Iniciar Sesión
           </button>
+
+          <!-- Error Message Display -->
+          <div *ngIf="loanService.error()" class="mt-4 p-3 bg-semantic-red/10 border border-semantic-red/30 rounded text-semantic-red text-xs text-center font-bold">
+            {{ loanService.error() }}
+          </div>
         </form>
 
         <!-- Footer -->
