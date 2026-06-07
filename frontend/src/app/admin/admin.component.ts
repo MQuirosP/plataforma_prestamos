@@ -84,21 +84,20 @@ import { LoanService } from '../services/loan.service';
 
             <!-- Stats & Cobradores info -->
             <div class="my-3 py-3 border-y border-industrial-border/50 grid grid-cols-2 gap-4">
-              <div>
-                <span class="text-[9px] text-industrial-muted uppercase font-mono block mb-1">Clientes Activos</span>
-                <span class="text-sm font-black text-white">{{ tenant._count?.loans || 0 }}</span>
+              <div class="flex flex-col items-center text-center">
+                <span class="text-[9px] text-industrial-muted uppercase font-mono mb-1">Clientes Activos</span>
+                <span class="text-lg font-black text-white">{{ tenant._count?.loans || 0 }}</span>
               </div>
-              <div>
-                <span class="text-[9px] text-industrial-muted uppercase font-mono block mb-1">Equipo (Cobradores: {{ tenant._count?.cobradores || 0 }})</span>
-                <div *ngIf="tenant.cobradores?.length; else noCobradores" class="flex flex-col gap-1 mt-1">
+              <div class="flex flex-col items-center text-center">
+                <span class="text-[9px] text-industrial-muted uppercase font-mono mb-1">Cobradores</span>
+                <span class="text-lg font-black text-white">{{ tenant._count?.cobradores || 0 }}</span>
+                
+                <div *ngIf="tenant.cobradores?.length" class="flex flex-col gap-1 mt-2 w-full text-left">
                   <div *ngFor="let cob of tenant.cobradores" class="text-[10px] text-industrial-muted bg-industrial-surface p-1.5 rounded border border-industrial-border">
                     <span class="font-bold text-white">&#64;{{ cob.username }}</span><br>
                     {{ cob.nombre }} | {{ cob.telefono }}
                   </div>
                 </div>
-                <ng-template #noCobradores>
-                  <span class="text-[10px] text-industrial-muted italic mt-1 block">Sin cobradores asignados</span>
-                </ng-template>
               </div>
             </div>
 
