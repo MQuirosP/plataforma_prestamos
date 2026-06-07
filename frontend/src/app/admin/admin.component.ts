@@ -268,7 +268,7 @@ export class AdminComponent implements OnInit {
   }
 
   filteredTenants(): Tenant[] {
-    const term = this.searchTerm().toLowerCase();
+    const term = this.searchTerm.toLowerCase();
     if (!term) return this.tenants();
     return this.tenants().filter(t => 
       t.nombre.toLowerCase().includes(term) || 
