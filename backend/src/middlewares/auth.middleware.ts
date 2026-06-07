@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma, isUsingMemoryStore } from '../services/db';
 import * as jwt from 'jsonwebtoken';
+import { Role } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
@@ -45,11 +46,11 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
       return res.status(401).json({ error: 'Usuario no encontrado' });
     }
 
-    if (userDb.rol === 'PRESTAMISTA' && userDb.suspendido) {
+    if (userDb.rol === Role.PRESTAMISTA && userDb.suspendido) {
       return res.status(403).json({ error: 'Su suscripción se encuentra suspendida. Contacte al administrador.' });
     }
 
-    if (userDb.rol === 'COBRADOR' && userDb.prestamistaId) {
+    if (userDb.rol === Role.COBRADOR && userDb.prestamistaId) {
       const prestamistaDb = await prisma.user.findUnique({
         where: { id: userDb.prestamistaId }
       });

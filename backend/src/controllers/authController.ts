@@ -4,6 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import * as crypto from 'crypto';
+import { Role } from '@prisma/client';
 
 function parseCookies(req: Request): Record<string, string> {
   const list: Record<string, string> = {};
@@ -50,11 +51,11 @@ export async function login(req: Request, res: Response) {
     }
 
     // Si es prestamista o cobrador, verificar suspensión
-    if (user.rol === 'PRESTAMISTA' && user.suspendido) {
+    if (user.rol === Role.PRESTAMISTA && user.suspendido) {
       return res.status(403).json({ error: 'Su suscripción se encuentra suspendida. Contacte al administrador.' });
     }
     
-    if (user.rol === 'COBRADOR' && user.prestamistaId) {
+    if (user.rol === Role.COBRADOR && user.prestamistaId) {
       const prestamista = await prisma.user.findUnique({ where: { id: user.prestamistaId } });
       if (prestamista?.suspendido) {
         return res.status(403).json({ error: 'La suscripción de su administrador se encuentra suspendida.' });
@@ -206,11 +207,11 @@ export async function refresh(req: Request, res: Response) {
       return res.status(401).json({ error: 'Usuario no encontrado' });
     }
 
-    if (user.rol === 'PRESTAMISTA' && user.suspendido) {
+    if (user.rol === Role.PRESTAMISTA && user.suspendido) {
       return res.status(403).json({ error: 'Su suscripción se encuentra suspendida. Contacte al administrador.' });
     }
 
-    if (user.rol === 'COBRADOR' && user.prestamistaId) {
+    if (user.rol === Role.COBRADOR && user.prestamistaId) {
       let prestamista: any = null;
       if (isUsingMemoryStore()) {
         prestamista = inMemoryStore.users.find(u => u.id === user.prestamistaId);
