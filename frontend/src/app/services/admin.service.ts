@@ -91,7 +91,8 @@ export class AdminService {
     }
     
     localStorage.setItem('auth_token', res.token);
-    localStorage.setItem('auth_user', JSON.stringify(res.user));
+    // Append isImpersonating flag so UI knows to show the return button
+    localStorage.setItem('auth_user', JSON.stringify({ ...res.user, isImpersonating: true }));
     
     // Reload window to apply new auth state securely
     window.location.reload();
