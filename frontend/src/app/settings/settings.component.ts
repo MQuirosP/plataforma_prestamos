@@ -35,7 +35,13 @@ import { ToastService } from '../services/toast.service';
           <!-- Industrial stripe -->
           <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
 
-          <form (submit)="saveSettings($event)" class="space-y-4 pt-2">
+          <!-- Simple Close for Cobradores settings view -->
+          <div *ngIf="loanService.currentUser()?.rol === 'COBRADOR'" class="flex justify-between items-center pb-4 pt-2">
+            <h3 class="text-white font-extrabold text-sm uppercase tracking-tight">Configuración de Cuenta</h3>
+            <button (click)="goBack.emit()" class="text-xs text-caterpillar font-bold hover:underline">Regresar</button>
+          </div>
+
+          <form *ngIf="loanService.currentUser()?.rol === 'PRESTAMISTA'" (submit)="saveSettings($event)" class="space-y-4 pt-2">
             
             <!-- Nombre de Negocio -->
             <div>
@@ -118,19 +124,44 @@ import { ToastService } from '../services/toast.service';
                 Cancelar
               </button>
             </div>
+          </form>
 
-            <!-- Cerrar Sesión (Logout) -->
-            <div class="pt-6 border-t border-industrial-border/60 mt-6 text-center">
-              <button type="button" (click)="logout()"
-                      class="w-full flex items-center justify-center gap-2 bg-semantic-red/10 border border-semantic-red/30 hover:bg-semantic-red/20 text-semantic-red py-3 rounded-lg text-xs font-bold uppercase tracking-wider transition duration-150">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Cerrar Sesión Activa
+          <!-- Section: Cambiar Contraseña (Available to both Lenders and Collectors) -->
+          <div class="space-y-4 pt-4 border-t border-industrial-border/60">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-[10px] text-caterpillar uppercase font-mono tracking-widest">Cambiar Contraseña</span>
+              <div class="flex-1 h-px bg-industrial-border/50"></div>
+            </div>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Contraseña Actual</label>
+                <input type="password" [(ngModel)]="oldPassword" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+              </div>
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nueva Contraseña</label>
+                <input type="password" [(ngModel)]="newPassword" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+              </div>
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Confirmar Nueva Contraseña</label>
+                <input type="password" [(ngModel)]="confirmPassword" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+              </div>
+              <button type="button" (click)="changeUserPassword()" [disabled]="changingPassword()" class="w-full bg-caterpillar text-industrial-black font-black py-3.5 rounded-lg text-xs uppercase hover:bg-caterpillar-dark transition shadow-lg">
+                {{ changingPassword() ? 'Cambiando...' : 'Cambiar Contraseña' }}
               </button>
             </div>
+          </div>
 
-          </form>
+          <!-- Cerrar Sesión (Always at the bottom) -->
+          <div class="pt-6 border-t border-industrial-border/60 mt-6 text-center">
+            <button type="button" (click)="logout()"
+                    class="w-full flex items-center justify-center gap-2 bg-semantic-red/10 border border-semantic-red/30 hover:bg-semantic-red/20 text-semantic-red py-3 rounded-lg text-xs font-bold uppercase tracking-wider transition duration-150">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Cerrar Sesión Activa
+            </button>
+          </div>
         </div>
 
       </main>
@@ -158,6 +189,34 @@ export class SettingsComponent implements OnInit {
     plantillaWhatsapp: '',
     gananciaPorcentaje: 50
   };
+
+  oldPassword = '';
+  newPassword = '';
+  confirmPassword = '';
+  changingPassword = signal(false);
+
+  async changeUserPassword() {
+    if (!this.oldPassword || !this.newPassword || !this.confirmPassword) {
+      this.toastService.error('Todos los campos son requeridos');
+      return;
+    }
+    if (this.newPassword !== this.confirmPassword) {
+      this.toastService.error('Las contraseñas nuevas no coinciden');
+      return;
+    }
+    this.changingPassword.set(true);
+    try {
+      await this.loanService.changePassword(this.oldPassword, this.newPassword);
+      this.toastService.success('Contraseña cambiada exitosamente');
+      this.oldPassword = '';
+      this.newPassword = '';
+      this.confirmPassword = '';
+    } catch (err: any) {
+      this.toastService.error(err.error?.error || 'Error al cambiar contraseña');
+    } finally {
+      this.changingPassword.set(false);
+    }
+  }
 
   logout() {
     this.loanService.logout();

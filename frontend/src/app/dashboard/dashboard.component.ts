@@ -630,7 +630,12 @@ export class DashboardComponent implements OnInit {
       .replace('{saldo}', String(loan.balancePendiente))
       .replace('{cuota}', String(loan.cuotaSemanal))
       .replace(/\{moneda\}/g, settings?.monedaSimbolo || '₡');
-    return `https://wa.me/${loan.clienteTelefono}?text=${encodeURIComponent(formattedMsg)}`;
+    
+    let cleanPhone = loan.clienteTelefono.replace(/\D/g, '');
+    if (cleanPhone.length === 8) {
+      cleanPhone = '506' + cleanPhone;
+    }
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(formattedMsg)}`;
   }
 
   openCreateModal() {

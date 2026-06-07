@@ -80,84 +80,101 @@ import html2canvas from 'html2canvas';
           </div>
 
           <div *ngFor="let tenant of filteredTenants()" class="bg-industrial-dark border border-industrial-border rounded-xl p-4 transition hover:border-caterpillar/30">
-            <div class="flex flex-col gap-3 mb-4 pb-4 border-b border-industrial-border/50">
-              <div class="flex justify-between items-start">
-                <div class="flex-[2]">
-                  <h3 class="font-extrabold text-white text-sm">
-                    {{ tenant.nombre }} 
-                    <span class="text-[10px] text-caterpillar ml-2">&#64;{{ tenant.username }}</span>
-                  </h3>
-                  <div class="text-[11px] text-industrial-muted font-mono mt-1 flex items-center gap-2 relative">
-                    <button (click)="togglePhoneDropdown(tenant.id)" class="hover:text-semantic-emerald flex items-center gap-1 transition focus:outline-none">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                      {{ tenant.telefono }}
-                    </button>
-                    <!-- Dropdown Phone Options -->
-                    <div *ngIf="activePhoneDropdown() === tenant.id" class="absolute top-full left-0 mt-1 w-56 bg-industrial-surface border border-industrial-border rounded shadow-lg z-50 py-1 flex flex-col">
-                      <button (click)="sharePaymentReminder(tenant)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-caterpillar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Enviar Recordatorio (Imagen)
-                      </button>
-                      <a [href]="getWhatsappLink(tenant)" target="_blank" (click)="activePhoneDropdown.set(null)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-industrial-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                        Mensaje Personalizado
-                      </a>
-                    </div>
 
-                    <span *ngIf="tenant.email" class="ml-2">| {{ tenant.email }}</span>
-                    <span *ngIf="isExpiringSoon(tenant.fechaPruebaFin)" class="text-[9px] bg-semantic-red/20 text-semantic-red px-1.5 py-0.5 rounded border border-semantic-red/30 animate-pulse ml-2">
-                      ¡Vence en {{ getDaysLeft(tenant.fechaPruebaFin) }} días!
-                    </span>
-                  </div>
-                </div>
+            <!-- Row 1: Name + Status -->
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="min-w-0">
+                <h3 class="font-extrabold text-white text-sm leading-tight truncate">{{ tenant.nombre }}</h3>
+                <span class="text-[10px] text-caterpillar font-mono">&#64;{{ tenant.username }}</span>
+              </div>
+              <span [class]="tenant.suspendido ? 'bg-semantic-red/10 text-semantic-red border-semantic-red/30' : 'bg-semantic-emerald/10 text-semantic-emerald border-semantic-emerald/30'"
+                    class="shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border mt-0.5">
+                {{ tenant.suspendido ? 'SUSPENDIDO' : 'ACTIVO' }}
+              </span>
+            </div>
 
-                <div class="flex gap-6 px-4 items-start flex-[1.5] justify-center border-x border-industrial-border/30">
-                  <div class="flex flex-col items-center text-center">
-                    <span class="text-[9px] text-industrial-muted uppercase font-mono mb-1">Clientes Activos</span>
-                    <span class="text-sm font-black text-white leading-none">{{ tenant._count?.loans || 0 }}</span>
-                  </div>
-                  <div class="flex flex-col items-center text-center">
-                    <span class="text-[9px] text-industrial-muted uppercase font-mono mb-1">Cobradores</span>
-                    <span class="text-sm font-black text-white leading-none">{{ tenant._count?.cobradores || 0 }}</span>
-                  </div>
-                </div>
+            <!-- Row 2: Phone + Email -->
+            <div class="flex items-center gap-2 flex-wrap mb-3 relative">
+              <button (click)="togglePhoneDropdown(tenant.id)" class="hover:text-semantic-emerald flex items-center gap-1 text-[11px] text-industrial-muted font-mono transition focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                {{ tenant.telefono }}
+              </button>
+              <span *ngIf="tenant.email" class="text-[10px] text-industrial-muted font-mono truncate">{{ tenant.email }}</span>
+              <span *ngIf="isExpiringSoon(tenant.fechaPruebaFin)" class="text-[9px] bg-semantic-red/20 text-semantic-red px-1.5 py-0.5 rounded border border-semantic-red/30 animate-pulse">
+                ¡Vence en {{ getDaysLeft(tenant.fechaPruebaFin) }} días!
+              </span>
 
-                <div class="text-right flex-[1] flex justify-end">
-                  <span [class]="tenant.suspendido ? 'bg-semantic-red/10 text-semantic-red border-semantic-red/30' : 'bg-semantic-emerald/10 text-semantic-emerald border-semantic-emerald/30'" class="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border">
-                    {{ tenant.suspendido ? 'SUSPENDIDO' : 'ACTIVO' }}
-                  </span>
+              <!-- Phone dropdown -->
+              <div *ngIf="activePhoneDropdown() === tenant.id" class="absolute top-full left-0 mt-1 w-56 bg-industrial-surface border border-industrial-border rounded shadow-lg z-50 py-1 flex flex-col">
+                <button (click)="sharePaymentReminder(tenant)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-caterpillar shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Enviar Recordatorio (Imagen)
+                </button>
+                <a [href]="getWhatsappLink(tenant)" target="_blank" (click)="activePhoneDropdown.set(null)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-industrial-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                  Mensaje Personalizado
+                </a>
+              </div>
+            </div>
+
+            <!-- Row 3: Stats strip -->
+            <div class="flex gap-4 py-2 px-3 bg-industrial-surface/50 rounded-lg border border-industrial-border/40 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-[9px] text-industrial-muted uppercase font-mono">Clientes</span>
+                <span class="text-sm font-black text-white leading-none">{{ tenant._count?.loans || 0 }}</span>
+              </div>
+              <div class="w-px bg-industrial-border/50"></div>
+              <div class="flex items-center gap-2">
+                <span class="text-[9px] text-industrial-muted uppercase font-mono">Cobradores</span>
+                <span class="text-sm font-black text-white leading-none">{{ tenant._count?.cobradores || 0 }}</span>
+              </div>
+            </div>
+
+            <!-- Row 4: Cobradores chips (if any) -->
+            <div *ngIf="tenant.cobradores?.length" class="flex flex-wrap gap-1.5 mb-3">
+              <div *ngFor="let cob of tenant.cobradores" class="text-[9px] text-industrial-muted bg-industrial-surface px-2 py-0.5 rounded border border-industrial-border">
+                <span class="font-bold text-white">&#64;{{ cob.username }}</span> ({{ cob.nombre }})
+              </div>
+            </div>
+
+            <!-- Row 5: Vencimiento + Plan + Actions -->
+            <div class="flex flex-col gap-2 pt-3 border-t border-industrial-border/50">
+              <!-- Vencimiento row -->
+              <div class="flex items-center justify-between bg-industrial-surface/40 rounded-lg px-3 py-2 border border-industrial-border/30">
+                <div>
+                  <p class="text-[9px] text-industrial-muted uppercase font-mono">Vencimiento</p>
+                  <p class="text-xs font-bold" [class]="isPaymentOverdue(tenant) ? 'text-semantic-red' : 'text-white'">
+                    {{ getPaymentDateDisplay(tenant) }}
+                  </p>
                 </div>
+                <button *ngIf="canRenew(tenant)" (click)="renewTenant(tenant)" class="bg-caterpillar/10 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-3 py-1.5 rounded hover:bg-caterpillar hover:text-industrial-black transition">
+                  + 1 Mes
+                </button>
               </div>
 
-              <!-- Cobradores list -->
-              <div *ngIf="tenant.cobradores?.length" class="flex flex-wrap gap-2 w-full mt-1">
-                <div *ngFor="let cob of tenant.cobradores" class="text-[9px] text-industrial-muted bg-industrial-surface px-2 py-1 rounded border border-industrial-border">
-                  <span class="font-bold text-white">&#64;{{ cob.username }}</span> ({{ cob.nombre }})
+              <!-- Plan + Suspend + Impersonate -->
+              <div class="flex flex-col sm:flex-row gap-2">
+                <div class="sm:w-36 shrink-0">
+                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Plan</label>
+                  <select [ngModel]="tenant.plan" (ngModelChange)="changePlan(tenant.id, $event)" class="bg-industrial-surface border border-industrial-border text-white text-xs rounded p-2 w-full focus:outline-none">
+                    <option value="BRONCE">BRONCE</option>
+                    <option value="PLATA">PLATA</option>
+                    <option value="ORO">ORO</option>
+                    <option value="PLATINO">PLATINO</option>
+                    <option value="DIAMANTE">DIAMANTE</option>
+                  </select>
+                </div>
+                <div class="flex gap-2 sm:flex-1 sm:justify-end items-end">
+                  <button (click)="toggleSuspend(tenant)" class="flex-1 sm:flex-none bg-industrial-surface border border-industrial-border text-xs py-2 px-4 rounded text-white hover:border-caterpillar transition">
+                    {{ tenant.suspendido ? 'Activar' : 'Suspender' }}
+                  </button>
+                  <button (click)="impersonate(tenant)" class="flex-1 sm:flex-none bg-caterpillar text-industrial-black font-black text-xs py-2 px-4 rounded uppercase shadow hover:bg-caterpillar-dark transition">
+                    Ingresar Como
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center mt-4">
-              <div>
-                <label class="block text-[9px] text-industrial-muted uppercase mb-1">Plan Actual</label>
-                <select [ngModel]="tenant.plan" (ngModelChange)="changePlan(tenant.id, $event)" class="bg-industrial-surface border border-industrial-border text-white text-xs rounded p-2 w-full focus:outline-none">
-                  <option value="BRONCE">BRONCE</option>
-                  <option value="PLATA">PLATA</option>
-                  <option value="ORO">ORO</option>
-                  <option value="PLATINO">PLATINO</option>
-                  <option value="DIAMANTE">DIAMANTE</option>
-                </select>
-              </div>
-              
-              <div class="flex gap-2 md:col-span-2 justify-end items-end h-full mt-2 md:mt-0">
-                <button (click)="toggleSuspend(tenant)" class="flex-1 md:flex-none bg-industrial-surface border border-industrial-border text-xs py-2 px-4 rounded text-white hover:border-caterpillar transition">
-                  {{ tenant.suspendido ? 'Activar' : 'Suspender' }}
-                </button>
-                <button (click)="impersonate(tenant)" class="flex-1 md:flex-none bg-caterpillar text-industrial-black font-black text-xs py-2 px-4 rounded uppercase shadow hover:bg-caterpillar-dark transition">
-                  Ingresar Como
-                </button>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -293,7 +310,31 @@ import html2canvas from 'html2canvas';
             </div>
           </div>
 
-          <!-- Future sections will go here -->
+          <!-- Section: Cambiar Contraseña -->
+          <div class="px-6 py-5 border-t border-industrial-border">
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-[9px] text-caterpillar uppercase font-mono tracking-widest">Cambiar Contraseña</span>
+              <div class="flex-1 h-px bg-industrial-border"></div>
+            </div>
+            
+            <div class="space-y-3 bg-industrial-surface border border-industrial-border p-4 rounded-lg">
+              <div>
+                <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Contraseña Actual</label>
+                <input type="password" [(ngModel)]="oldPassword" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
+              </div>
+              <div>
+                <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Nueva Contraseña</label>
+                <input type="password" [(ngModel)]="newPassword" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
+              </div>
+              <div>
+                <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Confirmar Nueva Contraseña</label>
+                <input type="password" [(ngModel)]="confirmPassword" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
+              </div>
+              <button (click)="changeAdminPassword()" [disabled]="changingPassword()" class="w-full bg-caterpillar text-industrial-black font-black py-2 rounded text-xs uppercase hover:bg-caterpillar-dark transition mt-2">
+                {{ changingPassword() ? 'Cambiando...' : 'Cambiar Contraseña' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -320,7 +361,7 @@ import html2canvas from 'html2canvas';
               </div>
               <div class="text-right">
                 <p class="text-[9px] text-industrial-muted uppercase font-mono">Vencimiento</p>
-                <p class="text-sm text-white font-bold">{{ selectedTenantForReminder()?.fechaPruebaFin ? (selectedTenantForReminder()?.fechaPruebaFin | date:'dd/MM/yyyy') : 'N/A' }}</p>
+                <p class="text-sm text-white font-bold">{{ getReminderPaymentDate(selectedTenantForReminder()) }}</p>
               </div>
             </div>
             <div class="bg-industrial-surface p-4 rounded-lg border border-industrial-border/50">
@@ -342,6 +383,35 @@ export class AdminComponent implements OnInit {
   adminService = inject(AdminService);
   loanService = inject(LoanService);
   toastService = inject(ToastService);
+
+  oldPassword = '';
+  newPassword = '';
+  confirmPassword = '';
+  changingPassword = signal(false);
+
+  async changeAdminPassword() {
+    if (!this.oldPassword || !this.newPassword || !this.confirmPassword) {
+      this.toastService.error('Todos los campos son requeridos');
+      return;
+    }
+    if (this.newPassword !== this.confirmPassword) {
+      this.toastService.error('Las contraseñas nuevas no coinciden');
+      return;
+    }
+    this.changingPassword.set(true);
+    try {
+      await this.loanService.changePassword(this.oldPassword, this.newPassword);
+      this.toastService.success('Contraseña cambiada exitosamente');
+      this.oldPassword = '';
+      this.newPassword = '';
+      this.confirmPassword = '';
+      this.showSettingsPanel.set(false);
+    } catch (err: any) {
+      this.toastService.error(err.error?.error || 'Error al cambiar contraseña');
+    } finally {
+      this.changingPassword.set(false);
+    }
+  }
 
   activeTab = signal<'tenants' | 'create' | 'logs'>('tenants');
   
@@ -440,6 +510,69 @@ export class AdminComponent implements OnInit {
     return Math.max(0, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
   }
 
+  isPaymentOverdue(tenant: Tenant): boolean {
+    const dateStr = tenant.paymentDate || tenant.fechaPruebaFin;
+    if (!dateStr) return false;
+    const expiry = new Date(dateStr).getTime();
+    const now = new Date().getTime();
+    return expiry < now;
+  }
+
+  getPaymentDateDisplay(tenant: Tenant): string {
+    const dateStr = tenant.paymentDate || tenant.fechaPruebaFin;
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  canRenew(tenant: Tenant): boolean {
+    const dateStr = tenant.paymentDate || tenant.fechaPruebaFin;
+    if (!dateStr) return true;
+    const expiry = new Date(dateStr).getTime();
+    const now = new Date().getTime();
+    const daysLeft = (expiry - now) / (1000 * 60 * 60 * 24);
+    return daysLeft <= 7;
+  }
+
+  async renewTenant(tenant: Tenant) {
+    let currentBase = new Date();
+    const dateStr = tenant.paymentDate || tenant.fechaPruebaFin;
+    if (dateStr) {
+      const expiry = new Date(dateStr);
+      if (expiry.getTime() > currentBase.getTime()) {
+        currentBase = expiry;
+      }
+    }
+    const newDate = new Date(currentBase);
+    newDate.setMonth(newDate.getMonth() + 1);
+    
+    try {
+      const updatedDate = await this.adminService.updatePaymentDate(tenant.id, newDate.toISOString());
+      this.tenants.update(curr => curr.map(t => t.id === tenant.id ? { ...t, paymentDate: updatedDate || undefined } : t));
+      this.toastService.success(`Suscripción de @${tenant.username} renovada por 1 mes`);
+    } catch (err) {
+      this.toastService.error('Error al renovar la suscripción');
+    }
+  }
+
+  getReminderPaymentDate(tenant: Tenant | null): string {
+    if (!tenant) return 'N/A';
+    const dateStr = tenant.paymentDate || tenant.fechaPruebaFin;
+    if (dateStr) {
+      return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    const fallback = new Date();
+    fallback.setMonth(fallback.getMonth() + 1);
+    return fallback.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  formatWhatsappNumber(phone: string): string {
+    let clean = phone.replace(/\D/g, '');
+    if (clean.length === 8) {
+      clean = '506' + clean;
+    }
+    return clean;
+  }
+
   togglePhoneDropdown(id: string) {
     this.activePhoneDropdown.set(this.activePhoneDropdown() === id ? null : id);
   }
@@ -495,7 +628,7 @@ export class AdminComponent implements OnInit {
 
   getWhatsappLink(tenant: Tenant, skipText = false): string {
     const isExpiring = this.isExpiringSoon(tenant.fechaPruebaFin);
-    const cleanPhone = tenant.telefono.replace(/\D/g, '');
+    const cleanPhone = this.formatWhatsappNumber(tenant.telefono);
     if (skipText) return `https://wa.me/${cleanPhone}`;
     
     let text = `Hola ${tenant.nombre}, te saludamos de CAT-LOAN.`;

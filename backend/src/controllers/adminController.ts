@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
-import { prisma } from '../services/db';
+import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 
@@ -30,7 +30,7 @@ export async function getTenants(req: AuthenticatedRequest, res: Response) {
       where: { rol: 'PRESTAMISTA' },
       select: {
         id: true, nombre: true, username: true, email: true, telefono: true,
-        plan: true, suspendido: true, fechaPruebaFin: true, createdAt: true,
+        plan: true, suspendido: true, fechaPruebaFin: true, paymentDate: true, createdAt: true,
         _count: {
           select: {
             cobradores: true,
@@ -112,6 +112,43 @@ export async function changeTenantPlan(req: AuthenticatedRequest, res: Response)
   if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
   try {
     const { plan } = req.body;
+    const { PlanManager } = await import('../services/planManager.js');
+    const config = await PlanManager.getPlanConfig(plan);
+
+    // If the plan has maxCobradores limit (i.e. not -1)
+    if (config && config.maxCobradores !== -1) {
+      if (isUsingMemoryStore()) {
+        const activeCobradores = inMemoryStore.users.filter(u => u.prestamistaId === req.params.id && u.rol === 'COBRADOR' && !(u as any).suspendido);
+        if (activeCobradores.length > config.maxCobradores) {
+          inMemoryStore.users.forEach(u => {
+            if (u.prestamistaId === req.params.id && u.rol === 'COBRADOR') {
+              (u as any).suspendido = true;
+            }
+          });
+        }
+      } else {
+        const activeCobradoresCount = await prisma.user.count({
+          where: {
+            prestamistaId: req.params.id,
+            rol: 'COBRADOR',
+            suspendido: false
+          }
+        });
+        if (activeCobradoresCount > config.maxCobradores) {
+          // Suspend all cobradores for this lender
+          await prisma.user.updateMany({
+            where: {
+              prestamistaId: req.params.id,
+              rol: 'COBRADOR'
+            },
+            data: {
+              suspendido: true
+            }
+          });
+        }
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: { plan }
@@ -119,6 +156,30 @@ export async function changeTenantPlan(req: AuthenticatedRequest, res: Response)
 
     await logAudit('CAMBIO_PLAN', `El plan de ${user.username} cambió a ${plan}`, req, user.id);
     return res.json({ success: true, plan });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// 4b. Actualizar fecha de vencimiento (paymentDate)
+export async function updateTenantPaymentDate(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  try {
+    const { paymentDate } = req.body;
+    if (isUsingMemoryStore()) {
+      const user = inMemoryStore.users.find(u => u.id === req.params.id);
+      if (user) {
+        (user as any).paymentDate = paymentDate ? new Date(paymentDate) : null;
+      }
+      return res.json({ success: true, paymentDate });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { paymentDate: paymentDate ? new Date(paymentDate) : null }
+    });
+    await logAudit('ACTUALIZAR_VENCIMIENTO', `Fecha de vencimiento de ${user.username} actualizada`, req, user.id);
+    return res.json({ success: true, paymentDate: user.paymentDate });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

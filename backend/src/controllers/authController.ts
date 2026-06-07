@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { prisma } from '../services/db';
+import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
+import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
@@ -63,5 +64,49 @@ export async function login(req: Request, res: Response) {
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'Login falló', details: err.message });
+  }
+}
+
+export async function changePassword(req: AuthenticatedRequest, res: Response) {
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ error: 'No autorizado' });
+
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: 'La contraseña actual y la nueva son requeridas' });
+  }
+
+  try {
+    if (isUsingMemoryStore()) {
+      const user = inMemoryStore.users.find(u => u.id === userId);
+      if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+      const valid = await bcrypt.compare(oldPassword.trim(), (user as any).password);
+      if (!valid) {
+        return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+      }
+
+      const hash = await bcrypt.hash(newPassword.trim(), 10);
+      (user as any).password = hash;
+      return res.json({ success: true, message: 'Contraseña cambiada exitosamente' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const valid = await bcrypt.compare(oldPassword.trim(), user.password);
+    if (!valid) {
+      return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+    }
+
+    const hash = await bcrypt.hash(newPassword.trim(), 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hash }
+    });
+
+    return res.json({ success: true, message: 'Contraseña cambiada exitosamente' });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Error al cambiar contraseña', details: err.message });
   }
 }

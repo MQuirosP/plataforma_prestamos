@@ -150,6 +150,16 @@ export class LoanService {
     this.settings.set(null);
   }
 
+  async changePassword(oldPassword: string, newPassword: string): Promise<any> {
+    return firstValueFrom(
+      this.http.post<any>(
+        `${this.apiUrl}/auth/change-password`,
+        { oldPassword, newPassword },
+        this.getHeaders()
+      )
+    );
+  }
+
   async loadSettings() {
     try {
       const data = await firstValueFrom(

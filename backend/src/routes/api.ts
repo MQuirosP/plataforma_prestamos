@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { getLoans, createLoan, addPayment } from '../controllers/loanController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
-import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, impersonateTenant, getLogs, getStats, getPlanConfigs, updatePlanConfig } from '../controllers/adminController';
-import { login } from '../controllers/authController';
+import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, updateTenantPaymentDate, impersonateTenant, getLogs, getStats, getPlanConfigs, updatePlanConfig } from '../controllers/adminController';
+import { login, changePassword } from '../controllers/authController';
 import { getCajaCobrador, procesarLiquidacion } from '../controllers/cobradorController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { isUsingMemoryStore, inMemoryStore, prisma } from '../services/db';
@@ -14,6 +14,8 @@ router.post('/auth/login', login as any);
 
 // Apply auth middleware to all routes below
 router.use(authMiddleware as any);
+
+router.post('/auth/change-password', changePassword as any);
 
 // Loan management
 router.get('/loans', getLoans as any);
@@ -29,6 +31,7 @@ router.get('/admin/tenants', getTenants as any);
 router.post('/admin/tenants', createTenant as any);
 router.put('/admin/tenants/:id/suspender', toggleSuspendTenant as any);
 router.put('/admin/tenants/:id/plan', changeTenantPlan as any);
+router.put('/admin/tenants/:id/payment-date', updateTenantPaymentDate as any);
 router.post('/admin/impersonate/:prestamistaId', impersonateTenant as any);
 router.get('/admin/logs', getLogs as any);
 router.get('/admin/stats', getStats as any);

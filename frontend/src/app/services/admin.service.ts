@@ -13,6 +13,7 @@ export interface Tenant {
   plan: 'BRONCE' | 'PLATA' | 'ORO' | 'PLATINO' | 'DIAMANTE';
   suspendido: boolean;
   fechaPruebaFin?: string;
+  paymentDate?: string;
   createdAt: string;
   _count?: {
     cobradores: number;
@@ -90,6 +91,11 @@ export class AdminService {
   async changePlan(id: string, plan: string): Promise<string> {
     const res = await firstValueFrom(this.http.put<{ success: boolean; plan: string }>(`${this.apiUrl}/admin/tenants/${id}/plan`, { plan }, this.getHeaders()));
     return res.plan;
+  }
+
+  async updatePaymentDate(id: string, paymentDate: string | null): Promise<string | null> {
+    const res = await firstValueFrom(this.http.put<{ success: boolean; paymentDate: string | null }>(`${this.apiUrl}/admin/tenants/${id}/payment-date`, { paymentDate }, this.getHeaders()));
+    return res.paymentDate;
   }
 
   async getStats(): Promise<SaaSStats> {
