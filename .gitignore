@@ -32,3 +32,6 @@ pnpm-debug.log*
 # Prisma
 /backend/prisma/dev.db
 /backend/prisma/dev.db-journal
+
+# Graphify
+graphify-out/

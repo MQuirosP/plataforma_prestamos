@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getLoans, createLoan, addPayment } from '../controllers/loanController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
 import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, updateTenantPaymentDate, impersonateTenant, getLogs, getStats, getPlanConfigs, updatePlanConfig } from '../controllers/adminController';
-import { login, changePassword } from '../controllers/authController';
+import { login, changePassword, refresh, logout } from '../controllers/authController';
 import { getCajaCobrador, procesarLiquidacion } from '../controllers/cobradorController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { isUsingMemoryStore, inMemoryStore, prisma } from '../services/db';
@@ -11,6 +11,8 @@ const router = Router();
 
 // Public routes
 router.post('/auth/login', login as any);
+router.post('/auth/refresh', refresh as any);
+router.post('/auth/logout', logout as any);
 
 // Apply auth middleware to all routes below
 router.use(authMiddleware as any);

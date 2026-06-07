@@ -1,6 +1,21 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-export const prisma = new PrismaClient();
+const databaseUrl = process.env.DATABASE_URL;
+let prismaInstance: PrismaClient;
+
+if (databaseUrl) {
+  const pool = new Pool({ connectionString: databaseUrl });
+  const adapter = new PrismaPg(pool);
+  prismaInstance = new PrismaClient({ adapter });
+} else {
+  // Fallback instantiation (useful during builds or memory mode running)
+  prismaInstance = new PrismaClient();
+}
+
+export const prisma = prismaInstance;
+
 
 // In-Memory Database fallback for offline/development running without setup
 export interface MemoryUser {
@@ -77,6 +92,14 @@ export interface MemoryBusinessSettings {
   gananciaPorcentaje: number;
 }
 
+export interface MemoryRefreshToken {
+  id: string;
+  token: string;
+  userId: string;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
 class InMemoryStore {
   users: MemoryUser[] = [
     {
@@ -115,6 +138,7 @@ class InMemoryStore {
       gananciaPorcentaje: 50
     }
   ];
+  refreshTokens: MemoryRefreshToken[] = [];
 }
 
 export const inMemoryStore = new InMemoryStore();

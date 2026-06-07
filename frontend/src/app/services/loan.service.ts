@@ -1,6 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, BehaviorSubject, Observable, from, throwError } from 'rxjs';
+import { map, catchError, filter, take } from 'rxjs/operators';
 
 export interface Payment {
   id: string;
@@ -111,6 +112,57 @@ export class LoanService {
     }
   }
 
+  private isRefreshing = false;
+  private refreshTokenSubject = new BehaviorSubject<string | null>(null);
+
+  refreshTokenObservable(): Observable<string> {
+    if (!this.isRefreshing) {
+      this.isRefreshing = true;
+      this.refreshTokenSubject.next(null);
+
+      return from(this.refreshToken()).pipe(
+        map(token => {
+          this.isRefreshing = false;
+          this.refreshTokenSubject.next(token);
+          return token;
+        }),
+        catchError(err => {
+          this.isRefreshing = false;
+          this.refreshTokenSubject.next(null);
+          return throwError(() => err);
+        })
+      );
+    } else {
+      return this.refreshTokenSubject.pipe(
+        filter(token => token !== null),
+        take(1)
+      ) as Observable<string>;
+    }
+  }
+
+  async refreshToken(): Promise<string> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ token: string; user: any; subscription: any }>(
+          `${this.apiUrl}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        )
+      );
+      if (res && res.token) {
+        localStorage.setItem('auth_token', res.token);
+        localStorage.setItem('auth_user', JSON.stringify(res.user));
+        this.currentUser.set(res.user);
+        this.isExpired.set(res.subscription?.tipo === 'EXPIRED');
+        return res.token;
+      }
+      throw new Error('No token returned');
+    } catch (err) {
+      this.logout(false); // Logout locally without recursive loop
+      throw err;
+    }
+  }
+
   async login(username: string, password: string) {
     this.loading.set(true);
     this.error.set(null);
@@ -118,7 +170,8 @@ export class LoanService {
       const res = await firstValueFrom(
         this.http.post<{ token: string; user: any; subscription: any }>(
           `${this.apiUrl}/auth/login`,
-          { username, password }
+          { username, password },
+          { withCredentials: true }
         )
       );
 
@@ -140,7 +193,16 @@ export class LoanService {
     }
   }
 
-  logout() {
+  async logout(notifyBackend = true) {
+    if (notifyBackend) {
+      try {
+        await firstValueFrom(
+          this.http.post<any>(`${this.apiUrl}/auth/logout`, {}, { withCredentials: true })
+        );
+      } catch (err) {
+        console.warn('Failed to notify backend of logout:', err);
+      }
+    }
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     this.currentUser.set(null);
