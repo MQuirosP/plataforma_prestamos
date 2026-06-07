@@ -119,12 +119,12 @@ import html2canvas from 'html2canvas';
               </div>
 
               <!-- Row 3: Stats strip -->
-              <div class="grid grid-cols-2 gap-2 bg-industrial-surface/50 border border-industrial-border/60 rounded-xl p-3 mb-3 text-center">
+              <div class="flex items-center justify-around bg-industrial-surface/50 border border-industrial-border/60 rounded-xl p-3 mb-3">
                 <div class="flex items-center gap-2">
                   <span class="text-[9px] text-industrial-muted uppercase font-mono">Clientes</span>
                   <span class="text-sm font-black text-white leading-none">{{ tenant._count?.loans || 0 }}</span>
                 </div>
-                <div class="w-px bg-industrial-border/50"></div>
+                <div class="w-px h-4 bg-industrial-border/50"></div>
                 <div class="flex items-center gap-2">
                   <span class="text-[9px] text-industrial-muted uppercase font-mono">Cobradores</span>
                   <span class="text-sm font-black text-white leading-none">{{ tenant._count?.cobradores || 0 }}</span>
