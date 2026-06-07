@@ -21,6 +21,8 @@ function parseCookies(req: Request): Record<string, string> {
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
+const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY || '15m';
+const REFRESH_TOKEN_EXPIRY_DAYS = Number(process.env.REFRESH_TOKEN_EXPIRY_DAYS || '7');
 
 export async function login(req: Request, res: Response) {
   let { username, password } = req.body;
@@ -68,11 +70,11 @@ export async function login(req: Request, res: Response) {
         prestamistaId: user.prestamistaId
       },
       JWT_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: ACCESS_TOKEN_EXPIRY as any }
     );
 
     const refreshRaw = crypto.randomBytes(40).toString('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
     if (isUsingMemoryStore()) {
       inMemoryStore.refreshTokens.push({
@@ -229,11 +231,11 @@ export async function refresh(req: Request, res: Response) {
         prestamistaId: user.prestamistaId
       },
       JWT_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: ACCESS_TOKEN_EXPIRY as any }
     );
 
     const newRefreshRaw = crypto.randomBytes(40).toString('hex');
-    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const newExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
     if (isUsingMemoryStore()) {
       inMemoryStore.refreshTokens.push({
