@@ -181,7 +181,7 @@ export class AdminComponent implements OnInit {
     username: '',
     password: '',
     email: '',
-    telefono: '',
+    telefono: '+506 ',
     plan: 'BRONCE'
   };
 
@@ -224,7 +224,7 @@ export class AdminComponent implements OnInit {
     try {
       await this.adminService.createTenant(this.newTenant);
       this.toastService.success('Prestamista creado exitosamente');
-      this.newTenant = { nombre: '', username: '', password: '', email: '', telefono: '', plan: 'BRONCE' };
+      this.newTenant = { nombre: '', username: '', password: '', email: '', telefono: '+506 ', plan: 'BRONCE' };
       this.activeTab.set('tenants');
       await this.loadData();
     } catch (err: any) {
