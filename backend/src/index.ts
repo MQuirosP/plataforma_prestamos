@@ -5,6 +5,7 @@ import apiRouter from './routes/api';
 import { checkDatabaseConnection } from './services/db';
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // Environment-based origins
