@@ -406,9 +406,10 @@ import { ToastService } from '../services/toast.service';
               Cerrar
             </button>
           </div>
-          
         </div>
-        <!-- MODAL 4: Gestionar Cobradores -->
+      </div>
+
+      <!-- MODAL 4: Gestionar Cobradores -->
       <div *ngIf="showCobradoresModal()" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-industrial-dark w-full max-w-md rounded-2xl border border-industrial-border p-6 shadow-2xl relative overflow-hidden">
           <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
