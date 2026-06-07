@@ -72,7 +72,7 @@ export class OnboardingComponent implements OnInit {
   @Output() onboardingComplete = new EventEmitter<void>();
 
   // Form bindings
-  nombreNegocio = 'Caterpillar Cobros';
+  nombreNegocio = '';
   telefono = '';
   selectedCountryCca2 = signal<string>('CR');
   monedaSimbolo = '₡';

@@ -7,10 +7,10 @@
 
   <!-- Lender standard flow -->
   <ng-container *ngIf="loanService.currentUser()?.rol !== 'ADMIN'">
-    <!-- New User Onboarding Intercept -->
-    <app-onboarding *ngIf="loanService.isNewUser()" (onboardingComplete)="onOnboardingFinished()"></app-onboarding>
+    <!-- New User Onboarding Intercept (Skip for Cobradores) -->
+    <app-onboarding *ngIf="loanService.isNewUser() && loanService.currentUser()?.rol !== 'COBRADOR'" (onboardingComplete)="onOnboardingFinished()"></app-onboarding>
 
-    <ng-container *ngIf="!loanService.isNewUser()">
+    <ng-container *ngIf="!loanService.isNewUser() || loanService.currentUser()?.rol === 'COBRADOR'">
       <app-expired *ngIf="loanService.isExpired()"></app-expired>
       <ng-container *ngIf="!loanService.isExpired()">
         <app-settings *ngIf="currentScreen() === 'settings'" (goBack)="currentScreen.set('dashboard')"></app-settings>

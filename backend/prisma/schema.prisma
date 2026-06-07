@@ -59,6 +59,7 @@ model User {
   payments        Payment[]         @relation("PagosCreados")
   cajaCobrador    CajaCobrador?
   liquidaciones   Liquidacion[]     @relation("LiquidacionesCobrador")
+  invites         Invite[]
 }
 
 model BusinessSettings {
@@ -138,4 +139,14 @@ model Liquidacion {
   estado              LiquidacionEstado @default(PENDING)
   notas               String?
   fecha               DateTime          @default(now())
+}
+
+/// Token de invitación de un solo uso para registrar cobradores
+model Invite {
+  id            String   @id @default(uuid())
+  prestamistaId String
+  prestamista   User     @relation(fields: [prestamistaId], references: [id], onDelete: Cascade)
+  rol           Role     @default(COBRADOR)
+  usado         Boolean  @default(false)
+  createdAt     DateTime @default(now())
 }

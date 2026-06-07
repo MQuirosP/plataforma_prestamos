@@ -36,14 +36,14 @@ import { LoanService } from '../services/loan.service';
 
         <div class="text-center mb-8 mt-4">
           <img src="/assets/images/logo.png" class="w-12 h-12 object-contain mx-auto mb-3" alt="Logo">
-          <h2 class="text-2xl font-black text-white uppercase tracking-tight leading-tight">CAT-LOAN Credit</h2>
+          <h2 class="text-2xl font-black text-white uppercase tracking-tight leading-tight">Plataforma Crediticia</h2>
           <p class="text-[10px] text-caterpillar uppercase tracking-widest font-mono mt-1">SaaS Plataforma de Cobranza</p>
         </div>
 
         <form (submit)="onLogin($event)" class="space-y-4">
           <div>
             <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Correo Electrónico</label>
-            <input type="email" [(ngModel)]="email" name="email" required placeholder="ejemplo@caterpillar.com"
+            <input type="email" [(ngModel)]="email" name="email" required placeholder="ejemplo@correo.com"
                    class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar transition duration-150">
           </div>
           
@@ -77,7 +77,7 @@ import { LoanService } from '../services/loan.service';
 
         <!-- Footer -->
         <div class="text-[10px] text-industrial-muted font-mono text-center mt-8 uppercase leading-normal">
-          <p>© 2026 CAT-LOAN. Todos los derechos reservados.</p>
+          <p>© 2026 Mi Negocio Crediticio. Todos los derechos reservados.</p>
           <p class="mt-1.5">
             ¿Necesitas ayuda? 
             <a href="mailto:mquirosp78@gmail.com" class="text-caterpillar hover:underline font-extrabold">Contactar al administrador</a>
@@ -110,8 +110,9 @@ export class LoginComponent {
     if (!this.email || !this.password) return;
     
     this.triggerLoading(() => {
-      const prestamistaId = this.route.snapshot.queryParamMap.get('prestamistaId') || undefined;
-      this.loanService.login(this.email, 'Usuario Demo', prestamistaId);
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteToken = urlParams.get('inviteToken') || undefined;
+      this.loanService.login(this.email, 'Usuario Demo', inviteToken);
     });
   }
 
@@ -119,12 +120,13 @@ export class LoginComponent {
 
   loginWithGoogle() {
     this.triggerLoading(() => {
-      const targetEmail = this.email || 'nuevo@caterpillar-saas.com';
+      const targetEmail = this.email || 'nuevo@correo.com';
       const targetName = targetEmail.includes('mario') ? 'Mario Quirós Pizarro' : 'Prestamista Nuevo';
       
-      const prestamistaId = this.route.snapshot.queryParamMap.get('prestamistaId') || undefined;
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteToken = urlParams.get('inviteToken') || undefined;
       
-      this.loanService.login(targetEmail, targetName, prestamistaId);
+      this.loanService.login(targetEmail, targetName, inviteToken);
     });
   }
 

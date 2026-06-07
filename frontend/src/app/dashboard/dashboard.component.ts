@@ -25,24 +25,26 @@ import { ToastService } from '../services/toast.service';
         </div>
 
         <div class="flex items-center gap-1.5">
-          <!-- Add Loan button — principal action, hidden on mobile (uses FAB instead) -->
-          <button (click)="openCreateModal()" 
-                  class="hidden md:flex bg-caterpillar hover:bg-caterpillar-dark text-industrial-black px-3 py-2 rounded-lg font-bold transition duration-150 shadow-md items-center gap-1.5 text-xs"
-                  title="Agregar Préstamo">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-            </svg>
-            <span class="font-black uppercase tracking-tight">Nuevo</span>
-          </button>
+          <ng-container *ngIf="loanService.currentUser()?.rol !== 'COBRADOR'">
+            <!-- Add Loan button — principal action, hidden on mobile (uses FAB instead) -->
+            <button (click)="openCreateModal()" 
+                    class="hidden md:flex bg-caterpillar hover:bg-caterpillar-dark text-industrial-black px-3 py-2 rounded-lg font-bold transition duration-150 shadow-md items-center gap-1.5 text-xs"
+                    title="Agregar Préstamo">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+              <span class="font-black uppercase tracking-tight">Nuevo</span>
+            </button>
 
-          <!-- Invite Cobrador button -->
-          <button (click)="copyCobradorLink()" 
-                  class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-emerald-500 transition duration-150"
-                  title="Invitar Cobrador">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-          </button>
+            <!-- Invite Cobrador button -->
+            <button (click)="copyCobradorLink()" 
+                    class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-emerald-500 transition duration-150"
+                    title="Invitar Cobrador">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+            </button>
+          </ng-container>
 
           <!-- Settings button -->
           <button (click)="openSettings.emit()" 
@@ -689,15 +691,18 @@ export class DashboardComponent implements OnInit {
     this.toastService.success('Recibo exportado como imagen.');
   }
 
-  copyCobradorLink() {
-    const prestamistaId = this.loanService.currentUser()?.id;
-    if (!prestamistaId) {
-      this.toastService.error('No se pudo generar el enlace');
+  async copyCobradorLink() {
+    this.toastService.success('Generando enlace seguro de un solo uso...');
+    const token = await this.loanService.generateInvite();
+    
+    if (!token) {
+      this.toastService.error('No se pudo generar el enlace. Intente de nuevo.');
       return;
     }
-    const link = `${window.location.origin}/login?prestamistaId=${prestamistaId}&rol=COBRADOR`;
+    
+    const link = `${window.location.origin}/login?inviteToken=${token}`;
     navigator.clipboard.writeText(link).then(() => {
-      this.toastService.success('Enlace de invitación copiado al portapapeles');
+      this.toastService.success('Enlace copiado al portapapeles. ¡Solo se puede usar una vez!');
     }).catch(() => {
       this.toastService.error('Error al copiar el enlace');
     });

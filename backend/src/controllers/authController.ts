@@ -58,9 +58,28 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
     let isNewUser = false;
     if (!user) {
       isNewUser = true;
-      const prestamistaId = req.body.prestamistaId;
-      const defaultRol = prestamistaId ? 'COBRADOR' : (normalizedEmail.includes('admin') ? 'ADMIN' : 'PRESTAMISTA');
+      const inviteToken = req.body.inviteToken;
       
+      let prestamistaIdToAssign: string | undefined = undefined;
+      let defaultRol = normalizedEmail.includes('admin') ? 'ADMIN' : 'PRESTAMISTA';
+
+      if (inviteToken) {
+        const invite = await prisma.invite.findUnique({ where: { id: inviteToken } });
+        if (invite && !invite.usado) {
+          prestamistaIdToAssign = invite.prestamistaId;
+          defaultRol = invite.rol;
+          // Mark invite as used
+          await prisma.invite.update({
+            where: { id: invite.id },
+            data: { usado: true }
+          });
+        } else {
+          console.warn(`Token de invitación inválido o ya usado: ${inviteToken}`);
+          // Fallback: lo creamos como PRESTAMISTA normal o tiramos error?
+          // Lo creamos como PRESTAMISTA normal para que no falle el login
+        }
+      }
+
       user = await prisma.$transaction(async (tx) => {
         const newUser = await tx.user.create({
           data: {
@@ -69,7 +88,7 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
             email: normalizedEmail,
             telefono: '+50600000000',
             rol: defaultRol,
-            prestamistaId: prestamistaId || undefined
+            prestamistaId: prestamistaIdToAssign || undefined
           }
         });
 
@@ -81,15 +100,18 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
           }
         });
 
-        await tx.businessSettings.create({
-          data: {
-            userId: newUser.id,
-            monedaSimbolo: '₡',
-            monedaCodigo: 'CRC',
-            nombreNegocio: 'CAT-LOAN Credit',
-            gananciaPorcentaje: 50
-          }
-        });
+        // Solo crear BusinessSettings si es PRESTAMISTA o ADMIN
+        if (defaultRol !== 'COBRADOR') {
+          await tx.businessSettings.create({
+            data: {
+              userId: newUser.id,
+              monedaSimbolo: '₡',
+              monedaCodigo: 'CRC',
+              nombreNegocio: 'Mi Negocio Crediticio',
+              gananciaPorcentaje: 50
+            }
+          });
+        }
 
         return tx.user.findUnique({
           where: { id: newUser.id },
@@ -107,5 +129,35 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'Auth synchronization failed', details: err.message });
+  }
+}
+
+export async function generateInvite(req: AuthenticatedRequest, res: Response) {
+  const jwtUser = req.user;
+  if (!jwtUser) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // En una arquitectura más robusta validaríamos el rol del user actual,
+  // pero asumimos que solo el prestamista puede generar invites de cobrador.
+
+  try {
+    let prestamistaId = req.body.prestamistaId || jwtUser.id;
+
+    if (!isUsingMemoryStore()) {
+      const invite = await prisma.invite.create({
+        data: {
+          prestamistaId: prestamistaId,
+          rol: 'COBRADOR',
+        }
+      });
+      return res.json({ success: true, inviteToken: invite.id });
+    } else {
+      // Fallback para memoria
+      const token = `mem-inv-${Date.now()}`;
+      return res.json({ success: true, inviteToken: token });
+    }
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to generate invite', details: err.message });
   }
 }

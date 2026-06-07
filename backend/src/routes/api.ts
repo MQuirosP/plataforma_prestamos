@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getLoans, createLoan, addPayment } from '../controllers/loanController';
 import { getExpiringSubscribers, getAllSubscribers, renewUserSubscription } from '../controllers/adminController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
-import { syncUser } from '../controllers/authController';
+import { syncUser, generateInvite } from '../controllers/authController';
 import { getCajaCobrador, procesarLiquidacion } from '../controllers/cobradorController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { isUsingMemoryStore, inMemoryStore, prisma } from '../services/db';
@@ -12,8 +12,9 @@ const router = Router();
 // Apply auth middleware to all routes below
 router.use(authMiddleware as any);
 
-// Auth Sync profile
+// Auth Sync profile & Invites
 router.post('/auth/sync', syncUser as any);
+router.post('/invites', generateInvite as any);
 
 // Loan management
 router.get('/loans', getLoans as any);
