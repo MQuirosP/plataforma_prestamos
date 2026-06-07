@@ -10,7 +10,7 @@ import { ToastService, Toast } from '../services/toast.service';
     <div class="fixed top-20 right-5 z-[9999] w-full max-w-xs flex flex-col gap-2 pointer-events-none">
       <div *ngFor="let toast of toastService.toasts()"
            [class]="'pointer-events-auto flex items-center justify-between p-3.5 rounded-xl border shadow-2xl ' + 
-                   (toast.isLeaving ? 'animate-[slideOutRight_0.3s_ease-in_forwards] ' : 'animate-[slideInRight_0.3s_ease-out_forwards] ') + 
+                   (toast.isLeaving ? 'toast-leave ' : 'toast-enter ') + 
                    getToastClass(toast)">
         
         <div class="flex items-center gap-3">
@@ -44,6 +44,12 @@ import { ToastService, Toast } from '../services/toast.service';
     </div>
   `,
   styles: [`
+    .toast-enter {
+      animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    }
+    .toast-leave {
+      animation: slideOutRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    }
     @keyframes slideInRight {
       from {
         opacity: 0;

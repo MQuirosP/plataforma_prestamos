@@ -70,33 +70,35 @@ import { LoanService } from '../services/loan.service';
           </div>
 
           <div *ngFor="let tenant of filteredTenants()" class="bg-industrial-dark border border-industrial-border rounded-xl p-4 transition hover:border-caterpillar/30">
-            <div class="flex justify-between items-start mb-3">
-              <div>
-                <h3 class="font-extrabold text-white text-sm">{{ tenant.nombre }} <span class="text-[10px] text-caterpillar ml-2">&#64;{{ tenant.username }}</span></h3>
-                <span class="text-[11px] text-industrial-muted font-mono block mt-1">{{ tenant.telefono }} {{ tenant.email ? '| ' + tenant.email : '' }}</span>
-              </div>
-              <div class="text-right">
-                <span [class]="tenant.suspendido ? 'bg-semantic-red/10 text-semantic-red border-semantic-red/30' : 'bg-semantic-emerald/10 text-semantic-emerald border-semantic-emerald/30'" class="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border">
-                  {{ tenant.suspendido ? 'SUSPENDIDO' : 'ACTIVO' }}
-                </span>
-              </div>
-            </div>
+            <div class="flex flex-col gap-3 mb-4 pb-4 border-b border-industrial-border/50">
+              <div class="flex justify-between items-start">
+                <div class="flex-[2]">
+                  <h3 class="font-extrabold text-white text-sm">{{ tenant.nombre }} <span class="text-[10px] text-caterpillar ml-2">&#64;{{ tenant.username }}</span></h3>
+                  <span class="text-[11px] text-industrial-muted font-mono block mt-1">{{ tenant.telefono }} {{ tenant.email ? '| ' + tenant.email : '' }}</span>
+                </div>
 
-            <!-- Stats & Cobradores info -->
-            <div class="my-3 py-3 border-y border-industrial-border/50 grid grid-cols-2 gap-4">
-              <div class="flex flex-col items-center text-center">
-                <span class="text-[9px] text-industrial-muted uppercase font-mono mb-1">Clientes Activos</span>
-                <span class="text-lg font-black text-white">{{ tenant._count?.loans || 0 }}</span>
-              </div>
-              <div class="flex flex-col items-center text-center">
-                <span class="text-[9px] text-industrial-muted uppercase font-mono mb-1">Cobradores</span>
-                <span class="text-lg font-black text-white">{{ tenant._count?.cobradores || 0 }}</span>
-                
-                <div *ngIf="tenant.cobradores?.length" class="flex flex-col gap-1 mt-2 w-full text-left">
-                  <div *ngFor="let cob of tenant.cobradores" class="text-[10px] text-industrial-muted bg-industrial-surface p-1.5 rounded border border-industrial-border">
-                    <span class="font-bold text-white">&#64;{{ cob.username }}</span><br>
-                    {{ cob.nombre }} | {{ cob.telefono }}
+                <div class="flex gap-6 px-4 items-start flex-[1.5] justify-center border-x border-industrial-border/30">
+                  <div class="flex flex-col items-center text-center">
+                    <span class="text-[9px] text-industrial-muted uppercase font-mono mb-1">Clientes Activos</span>
+                    <span class="text-sm font-black text-white leading-none">{{ tenant._count?.loans || 0 }}</span>
                   </div>
+                  <div class="flex flex-col items-center text-center">
+                    <span class="text-[9px] text-industrial-muted uppercase font-mono mb-1">Cobradores</span>
+                    <span class="text-sm font-black text-white leading-none">{{ tenant._count?.cobradores || 0 }}</span>
+                  </div>
+                </div>
+
+                <div class="text-right flex-[1] flex justify-end">
+                  <span [class]="tenant.suspendido ? 'bg-semantic-red/10 text-semantic-red border-semantic-red/30' : 'bg-semantic-emerald/10 text-semantic-emerald border-semantic-emerald/30'" class="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border">
+                    {{ tenant.suspendido ? 'SUSPENDIDO' : 'ACTIVO' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Cobradores list -->
+              <div *ngIf="tenant.cobradores?.length" class="flex flex-wrap gap-2 w-full mt-1">
+                <div *ngFor="let cob of tenant.cobradores" class="text-[9px] text-industrial-muted bg-industrial-surface px-2 py-1 rounded border border-industrial-border">
+                  <span class="font-bold text-white">&#64;{{ cob.username }}</span> ({{ cob.nombre }})
                 </div>
               </div>
             </div>
