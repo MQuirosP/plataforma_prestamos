@@ -149,10 +149,10 @@ import html2canvas from 'html2canvas';
                 </div>
 
                 <!-- Plan + Suspend + Impersonate -->
-                <div class="flex flex-col sm:flex-row gap-2">
-                  <div class="sm:w-32 shrink-0">
+                <div class="space-y-3">
+                  <div>
                     <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Plan</label>
-                    <select [ngModel]="tenant.plan" (ngModelChange)="changePlan(tenant.id, $event)" class="bg-industrial-surface border border-industrial-border text-white text-xs rounded p-2 w-full focus:outline-none">
+                    <select [ngModel]="tenant.plan" (ngModelChange)="changePlan(tenant.id, $event)" class="bg-industrial-surface border border-industrial-border text-white text-xs rounded p-2.5 w-full focus:outline-none">
                       <option value="BRONCE">BRONCE</option>
                       <option value="PLATA">PLATA</option>
                       <option value="ORO">ORO</option>
@@ -160,11 +160,11 @@ import html2canvas from 'html2canvas';
                       <option value="DIAMANTE">DIAMANTE</option>
                     </select>
                   </div>
-                  <div class="flex gap-2 sm:flex-1 sm:justify-end items-end">
-                    <button (click)="toggleSuspend(tenant)" class="flex-1 sm:flex-none bg-industrial-surface border border-industrial-border text-xs py-2 px-3 rounded text-white hover:border-caterpillar transition">
+                  <div class="flex gap-2 w-full">
+                    <button (click)="toggleSuspend(tenant)" class="flex-1 bg-industrial-surface border border-industrial-border text-xs py-2 px-3 rounded text-white hover:border-caterpillar transition">
                       {{ tenant.suspendido ? 'Activar' : 'Suspender' }}
                     </button>
-                    <button (click)="impersonate(tenant)" class="flex-1 sm:flex-none bg-caterpillar text-industrial-black font-black text-xs py-2 px-3 rounded uppercase shadow hover:bg-caterpillar-dark transition">
+                    <button (click)="impersonate(tenant)" class="flex-1 bg-caterpillar text-industrial-black font-black text-xs py-2 px-3 rounded uppercase shadow hover:bg-caterpillar-dark transition text-center">
                       Ingresar
                     </button>
                   </div>
