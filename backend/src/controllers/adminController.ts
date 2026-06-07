@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
+import { Role, PlanSaaS } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
@@ -24,10 +25,10 @@ async function logAudit(tipoEvento: string, descripcion: string, req: Authentica
 
 // 1. Obtener todos los prestamistas (tenants)
 export async function getTenants(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const tenants = await prisma.user.findMany({
-      where: { rol: 'PRESTAMISTA' },
+      where: { rol: Role.PRESTAMISTA },
       select: {
         id: true, nombre: true, username: true, email: true, telefono: true,
         plan: true, suspendido: true, fechaPruebaFin: true, paymentDate: true, createdAt: true,
@@ -51,7 +52,7 @@ export async function getTenants(req: AuthenticatedRequest, res: Response) {
 
 // 2. Crear un nuevo Prestamista (Tenant)
 export async function createTenant(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   const { nombre, username, password, email, telefono, plan } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username y password requeridos' });
 
@@ -64,8 +65,8 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
         password: hash,
         email,
         telefono: telefono || '+50600000000',
-        rol: 'PRESTAMISTA',
-        plan: plan || 'BRONCE'
+        rol: Role.PRESTAMISTA,
+        plan: plan || PlanSaaS.BRONCE
       }
     });
 
@@ -89,7 +90,7 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
 
 // 3. Suspender o Activar Tenant
 export async function toggleSuspendTenant(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const user = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!user) return res.status(404).json({ error: 'Cliente no encontrado' });
@@ -109,7 +110,7 @@ export async function toggleSuspendTenant(req: AuthenticatedRequest, res: Respon
 
 // 4. Cambiar Plan
 export async function changeTenantPlan(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const { plan } = req.body;
     const { PlanManager } = await import('../services/planManager.js');
@@ -118,7 +119,7 @@ export async function changeTenantPlan(req: AuthenticatedRequest, res: Response)
     // If the plan has maxCobradores limit (i.e. not -1)
     if (config && config.maxCobradores !== -1) {
       if (isUsingMemoryStore()) {
-        const activeCobradores = inMemoryStore.users.filter(u => u.prestamistaId === req.params.id && u.rol === 'COBRADOR' && !(u as any).suspendido);
+        const activeCobradores = inMemoryStore.users.filter(u => u.prestamistaId === req.params.id && u.rol === Role.COBRADOR && !(u as any).suspendido);
         if (activeCobradores.length > config.maxCobradores) {
           inMemoryStore.users.forEach(u => {
             if (u.prestamistaId === req.params.id && u.rol === 'COBRADOR') {
@@ -130,7 +131,7 @@ export async function changeTenantPlan(req: AuthenticatedRequest, res: Response)
         const activeCobradoresCount = await prisma.user.count({
           where: {
             prestamistaId: req.params.id,
-            rol: 'COBRADOR',
+            rol: Role.COBRADOR,
             suspendido: false
           }
         });
@@ -139,7 +140,7 @@ export async function changeTenantPlan(req: AuthenticatedRequest, res: Response)
           await prisma.user.updateMany({
             where: {
               prestamistaId: req.params.id,
-              rol: 'COBRADOR'
+              rol: Role.COBRADOR
             },
             data: {
               suspendido: true
@@ -163,7 +164,7 @@ export async function changeTenantPlan(req: AuthenticatedRequest, res: Response)
 
 // 4b. Actualizar fecha de vencimiento (paymentDate)
 export async function updateTenantPaymentDate(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const { paymentDate } = req.body;
     if (isUsingMemoryStore()) {
@@ -187,11 +188,11 @@ export async function updateTenantPaymentDate(req: AuthenticatedRequest, res: Re
 
 // 5. Suplantación (Impersonate)
 export async function impersonateTenant(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const targetId = req.params.prestamistaId;
     const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
-    if (!targetUser || targetUser.rol !== 'PRESTAMISTA') {
+    if (!targetUser || targetUser.rol !== Role.PRESTAMISTA) {
       return res.status(404).json({ error: 'Prestamista no encontrado' });
     }
 
@@ -216,7 +217,7 @@ export async function impersonateTenant(req: AuthenticatedRequest, res: Response
 
 // 6. Obtener Logs de Auditoría
 export async function getLogs(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const logs = await prisma.logActividadSaaS.findMany({
       orderBy: { fecha: 'desc' },
@@ -230,18 +231,18 @@ export async function getLogs(req: AuthenticatedRequest, res: Response) {
 
 // 7. Obtener Stats
 export async function getStats(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
-    const totalPrestamistas = await prisma.user.count({ where: { rol: 'PRESTAMISTA' } });
-    const totalCobradores = await prisma.user.count({ where: { rol: 'COBRADOR' } });
+    const totalPrestamistas = await prisma.user.count({ where: { rol: Role.PRESTAMISTA } });
+    const totalCobradores = await prisma.user.count({ where: { rol: Role.COBRADOR } });
     const totalPrestamos = await prisma.loan.count();
     
     // Distribución de planes
-    const bronce = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'BRONCE' } });
-    const plata = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'PLATA' } });
-    const oro = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'ORO' } });
-    const platino = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'PLATINO' } });
-    const diamante = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'DIAMANTE' } });
+    const bronce = await prisma.user.count({ where: { rol: Role.PRESTAMISTA, plan: PlanSaaS.BRONCE } });
+    const plata = await prisma.user.count({ where: { rol: Role.PRESTAMISTA, plan: PlanSaaS.PLATA } });
+    const oro = await prisma.user.count({ where: { rol: Role.PRESTAMISTA, plan: PlanSaaS.ORO } });
+    const platino = await prisma.user.count({ where: { rol: Role.PRESTAMISTA, plan: PlanSaaS.PLATINO } });
+    const diamante = await prisma.user.count({ where: { rol: Role.PRESTAMISTA, plan: PlanSaaS.DIAMANTE } });
 
     // Volumen de transacciones (Pagos)
     const pagos = await prisma.payment.aggregate({
@@ -262,7 +263,7 @@ export async function getStats(req: AuthenticatedRequest, res: Response) {
 
 // 8. Obtener configuración de los planes SaaS
 export async function getPlanConfigs(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const { PlanManager } = await import('../services/planManager.js');
     const configs = await PlanManager.getAllPlanConfigs();
@@ -274,7 +275,7 @@ export async function getPlanConfigs(req: AuthenticatedRequest, res: Response) {
 
 // 9. Actualizar configuración de un plan SaaS
 export async function updatePlanConfig(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const { plan, maxClientes, maxCobradores, precioMensual } = req.body;
     const { PlanManager } = await import('../services/planManager.js');

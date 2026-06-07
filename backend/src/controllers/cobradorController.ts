@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
+import { Role } from '@prisma/client';
 
 /**
  * GET /api/caja/:cobradorId
@@ -10,12 +11,12 @@ export async function getCajaCobrador(req: AuthenticatedRequest, res: Response) 
   const { cobradorId } = req.params;
   const requestorRole = req.user?.rol;
 
-  if (requestorRole !== 'ADMIN' && requestorRole !== 'PRESTAMISTA') {
+  if (requestorRole !== Role.ADMIN && requestorRole !== Role.PRESTAMISTA) {
     return res.status(403).json({ error: 'Acceso denegado. Solo el prestamista puede ver la caja.' });
   }
 
   if (isUsingMemoryStore()) {
-    const cobrador = inMemoryStore.users.find(u => u.id === cobradorId && u.rol === 'COBRADOR');
+    const cobrador = inMemoryStore.users.find(u => u.id === cobradorId && u.rol === Role.COBRADOR);
     if (!cobrador) {
       return res.status(404).json({ error: 'Cobrador no encontrado' });
     }
@@ -39,7 +40,7 @@ export async function getCajaCobrador(req: AuthenticatedRequest, res: Response) 
       where: { id: cobradorId }
     });
 
-    if (!cobrador || cobrador.rol !== 'COBRADOR') {
+    if (!cobrador || cobrador.rol !== Role.COBRADOR) {
       return res.status(404).json({ error: 'Cobrador no encontrado' });
     }
 
@@ -86,7 +87,7 @@ export async function procesarLiquidacion(req: AuthenticatedRequest, res: Respon
   const requestorRole = req.user?.rol;
   const prestamistaId = req.user?.id;
 
-  if (requestorRole !== 'ADMIN' && requestorRole !== 'PRESTAMISTA') {
+  if (requestorRole !== Role.ADMIN && requestorRole !== Role.PRESTAMISTA) {
     return res.status(403).json({ error: 'Acceso denegado. Solo el prestamista puede procesar liquidaciones.' });
   }
 

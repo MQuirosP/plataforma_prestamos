@@ -3,10 +3,11 @@ import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
 import * as bcrypt from 'bcryptjs';
+import { Role } from '@prisma/client';
 
 // Crear un nuevo cobrador bajo la cuenta del prestamista actual
 export async function createCobrador(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'PRESTAMISTA') return res.status(403).json({ error: 'Denegado. Solo prestamistas pueden crear cobradores.' });
+  if (req.user?.rol !== Role.PRESTAMISTA) return res.status(403).json({ error: 'Denegado. Solo prestamistas pueden crear cobradores.' });
   const prestamistaId = req.user.id;
   const { nombre, username, password, telefono } = req.body;
 
@@ -22,7 +23,7 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response) {
 
     if (prestamistaInfo?.plan && prestamistaInfo.plan !== 'DIAMANTE') {
       const cobradorCount = await prisma.user.count({
-        where: { prestamistaId, rol: 'COBRADOR' }
+        where: { prestamistaId, rol: Role.COBRADOR }
       });
       const planConfig = await PlanManager.getPlanConfig(prestamistaInfo.plan as any);
 
@@ -41,7 +42,7 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response) {
         username,
         password: hash,
         telefono: telefono || '+50600000000',
-        rol: 'COBRADOR',
+        rol: Role.COBRADOR,
         prestamistaId
       }
     });
@@ -73,10 +74,10 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response) {
 }
 
 export async function getCobradores(req: AuthenticatedRequest, res: Response) {
-  if (req.user?.rol !== 'PRESTAMISTA') return res.status(403).json({ error: 'Denegado' });
+  if (req.user?.rol !== Role.PRESTAMISTA) return res.status(403).json({ error: 'Denegado' });
   try {
     const cobradores = await prisma.user.findMany({
-      where: { prestamistaId: req.user.id, rol: 'COBRADOR' },
+      where: { prestamistaId: req.user.id, rol: Role.COBRADOR },
       select: { id: true, nombre: true, username: true, telefono: true, createdAt: true }
     });
     return res.json(cobradores);
