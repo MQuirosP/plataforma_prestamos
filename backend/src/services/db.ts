@@ -10,6 +10,7 @@ export interface MemoryUser {
   telefono: string;
   rol: 'ADMIN' | 'PRESTAMISTA' | 'COBRADOR';
   prestamistaId?: string; // Solo para COBRADOR
+  plan?: string;
   createdAt: Date;
 }
 

@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma } from '../services/db';
-import { PlanManager } from '../services/planManager';
+import { PlanManager } from '../services/planManager.js';
 import * as bcrypt from 'bcryptjs';
 
 // Crear un nuevo cobrador bajo la cuenta del prestamista actual

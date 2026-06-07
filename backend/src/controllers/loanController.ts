@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
-import { PlanManager } from '../services/planManager';
+import { PlanManager } from '../services/planManager.js';
 
 type MetodoPago = 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
 
@@ -168,16 +168,16 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
         select: { plan: true }
       });
 
-  if (prestamistaInfo?.plan && prestamistaInfo.plan !== 'DIAMANTE') {
+  if ((prestamistaInfo as any)?.plan && (prestamistaInfo as any).plan !== 'DIAMANTE') {
     const loanCount = isUsingMemoryStore()
       ? inMemoryStore.loans.filter(l => l.prestamistaId === prestamistaId && l.estado === 'ACTIVE').length
       : await prisma.loan.count({ where: { prestamistaId, estado: 'ACTIVE' } });
       
-    const planConfig = await PlanManager.getPlanConfig(prestamistaInfo.plan as any);
+    const planConfig = await PlanManager.getPlanConfig((prestamistaInfo as any).plan as any);
 
     if (planConfig.maxClientes !== -1 && loanCount >= planConfig.maxClientes) {
       return res.status(403).json({ 
-        error: `Límite de plan ${prestamistaInfo.plan} alcanzado (máximo ${planConfig.maxClientes} clientes). Por favor, suba de categoría.` 
+        error: `Límite de plan ${(prestamistaInfo as any).plan} alcanzado (máximo ${planConfig.maxClientes} clientes). Por favor, suba de categoría.` 
       });
     }
   }

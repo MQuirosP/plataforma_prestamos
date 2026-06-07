@@ -203,7 +203,7 @@ export async function getStats(req: AuthenticatedRequest, res: Response) {
 export async function getPlanConfigs(req: AuthenticatedRequest, res: Response) {
   if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
   try {
-    const { PlanManager } = await import('../services/planManager');
+    const { PlanManager } = await import('../services/planManager.js');
     const configs = await PlanManager.getAllPlanConfigs();
     return res.json(configs);
   } catch (err: any) {
@@ -216,7 +216,7 @@ export async function updatePlanConfig(req: AuthenticatedRequest, res: Response)
   if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
   try {
     const { plan, maxClientes, maxCobradores, precioMensual } = req.body;
-    const { PlanManager } = await import('../services/planManager');
+    const { PlanManager } = await import('../services/planManager.js');
     const config = await PlanManager.updatePlanConfig(plan, maxClientes, maxCobradores, precioMensual);
     
     await logAudit('ACTUALIZAR_PLAN', `El admin actualizó los límites y precio del plan ${plan}`, req);
