@@ -219,11 +219,54 @@ export async function impersonateTenant(req: AuthenticatedRequest, res: Response
 export async function getLogs(req: AuthenticatedRequest, res: Response) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
-    const logs = await prisma.logActividadSaaS.findMany({
-      orderBy: { fecha: 'desc' },
-      take: 100
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const tipoEvento = req.query.tipoEvento as string | undefined;
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
+
+    const where: any = {};
+
+    if (tipoEvento) {
+      where.tipoEvento = tipoEvento;
+    }
+
+    if (startDate || endDate) {
+      where.fecha = {};
+      if (startDate) {
+        where.fecha.gte = new Date(startDate);
+      }
+      if (endDate) {
+        // Para que incluya todo el día seleccionado, podemos establecer el final del día
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.fecha.lte = end;
+      }
+    }
+
+    const [total, logs] = await Promise.all([
+      prisma.logActividadSaaS.count({ where }),
+      prisma.logActividadSaaS.findMany({
+        where,
+        orderBy: { fecha: 'desc' },
+        skip,
+        take: limit
+      })
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return res.json({
+      data: logs,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages
+      }
     });
-    return res.json(logs);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { LoanService } from './loan.service';
@@ -57,6 +57,16 @@ export interface SaaSLog {
   prestamistaId?: string;
 }
 
+export interface SaaSLogResponse {
+  data: SaaSLog[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -102,8 +112,25 @@ export class AdminService {
     return firstValueFrom(this.http.get<SaaSStats>(`${this.apiUrl}/admin/stats`, this.getHeaders()));
   }
 
-  async getLogs(): Promise<SaaSLog[]> {
-    return firstValueFrom(this.http.get<SaaSLog[]>(`${this.apiUrl}/admin/logs`, this.getHeaders()));
+  async getLogs(params: {
+    page?: number;
+    limit?: number;
+    tipoEvento?: string;
+    startDate?: string;
+    endDate?: string;
+  } = {}): Promise<SaaSLogResponse> {
+    let httpParams = new HttpParams();
+    if (params.page !== undefined) httpParams = httpParams.set('page', params.page.toString());
+    if (params.limit !== undefined) httpParams = httpParams.set('limit', params.limit.toString());
+    if (params.tipoEvento) httpParams = httpParams.set('tipoEvento', params.tipoEvento);
+    if (params.startDate) httpParams = httpParams.set('startDate', params.startDate);
+    if (params.endDate) httpParams = httpParams.set('endDate', params.endDate);
+
+    const headers = this.getHeaders();
+    return firstValueFrom(this.http.get<SaaSLogResponse>(`${this.apiUrl}/admin/logs`, {
+      ...headers,
+      params: httpParams
+    }));
   }
 
   async impersonate(prestamistaId: string) {

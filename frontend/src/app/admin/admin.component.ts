@@ -213,7 +213,29 @@ import html2canvas from 'html2canvas';
         </section>
 
         <!-- Logs Tab -->
-        <section *ngIf="activeTab() === 'logs'" class="space-y-3">
+        <section *ngIf="activeTab() === 'logs'" class="space-y-4">
+          <!-- Filtros de Auditoría -->
+          <div class="bg-industrial-dark border border-industrial-border rounded-xl p-4 flex flex-col md:flex-row gap-3 items-end">
+            <div class="flex-1 w-full">
+              <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Tipo de Actividad</label>
+              <select [ngModel]="filterTipoEvento()" (ngModelChange)="onFilterTipoEventoChange($event)" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2.5 text-white text-xs focus:border-caterpillar outline-none">
+                <option value="">Todos los eventos</option>
+                <option *ngFor="let ev of eventTypes" [value]="ev">{{ ev }}</option>
+              </select>
+            </div>
+            <div class="w-full md:w-36">
+              <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Desde</label>
+              <input type="date" [ngModel]="filterStartDate()" (ngModelChange)="onFilterStartDateChange($event)" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs focus:border-caterpillar outline-none">
+            </div>
+            <div class="w-full md:w-36">
+              <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Hasta</label>
+              <input type="date" [ngModel]="filterEndDate()" (ngModelChange)="onFilterEndDateChange($event)" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs focus:border-caterpillar outline-none">
+            </div>
+            <button (click)="clearLogsFilters()" class="w-full md:w-auto bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-industrial-light text-xs font-bold px-4 py-2.5 rounded-lg transition shrink-0">
+              Limpiar
+            </button>
+          </div>
+
           <div *ngFor="let log of logs()" class="bg-industrial-surface border border-industrial-border rounded-lg p-3 text-xs">
             <div class="flex justify-between items-start mb-1">
               <span class="font-bold text-white">{{ log.tipoEvento }}</span>
@@ -224,6 +246,23 @@ import html2canvas from 'html2canvas';
               <span>IP: {{ log.ip }}</span>
               <span *ngIf="log.prestamistaId">Cliente ID: {{ log.prestamistaId }}</span>
             </div>
+          </div>
+
+          <div *ngIf="logs().length === 0" class="text-center py-8 text-industrial-muted text-xs">
+            No se encontraron registros de auditoría.
+          </div>
+
+          <!-- Paginación de Auditoría -->
+          <div *ngIf="logsTotalPages() > 1" class="flex items-center justify-between border-t border-industrial-border/60 pt-4 mt-2">
+            <button [disabled]="logsPage() <= 1" (click)="changeLogsPage(logsPage() - 1)" class="bg-industrial-surface border border-industrial-border px-3.5 py-2 rounded-lg text-xs font-bold text-industrial-light hover:text-white disabled:opacity-40 disabled:hover:text-industrial-light transition">
+              Anterior
+            </button>
+            <span class="text-[10px] text-industrial-muted font-mono uppercase">
+              Página {{ logsPage() }} de {{ logsTotalPages() }} (Total: {{ logsTotal() }})
+            </span>
+            <button [disabled]="logsPage() >= logsTotalPages()" (click)="changeLogsPage(logsPage() + 1)" class="bg-industrial-surface border border-industrial-border px-3.5 py-2 rounded-lg text-xs font-bold text-industrial-light hover:text-white disabled:opacity-40 disabled:hover:text-industrial-light transition">
+              Siguiente
+            </button>
           </div>
         </section>
 
@@ -443,6 +482,24 @@ export class AdminComponent implements OnInit {
   stats = signal<SaaSStats | null>(null);
   logs = signal<SaaSLog[]>([]);
   planConfigs = signal<SaaSPlanConfig[]>([]);
+
+  // Logs filters & pagination state
+  filterTipoEvento = signal<string>('');
+  filterStartDate = signal<string>('');
+  filterEndDate = signal<string>('');
+  logsPage = signal<number>(1);
+  logsTotalPages = signal<number>(1);
+  logsTotal = signal<number>(0);
+  logsLimit = 20;
+
+  eventTypes = [
+    'CREAR_TENANT',
+    'SUSPENDER_TENANT',
+    'CAMBIO_PLAN',
+    'IMPERSONATE',
+    'ACTUALIZAR_PLAN',
+    'CREAR_COBRADOR'
+  ];
   
   searchTerm = '';
   loading = signal(false);
@@ -475,8 +532,7 @@ export class AdminComponent implements OnInit {
     try { this.stats.set(await this.adminService.getStats()); }
     catch (_) {}
 
-    try { this.logs.set(await this.adminService.getLogs()); }
-    catch (_) {}
+    await this.loadLogs();
 
     const FALLBACK_PLANS: SaaSPlanConfig[] = [
       { plan: 'BRONCE', maxClientes: 10, maxCobradores: 0, precioMensual: 5000 },
@@ -492,6 +548,55 @@ export class AdminComponent implements OnInit {
     } catch (_) {
       this.planConfigs.set(FALLBACK_PLANS);
     }
+  }
+
+  async loadLogs() {
+    try {
+      const res = await this.adminService.getLogs({
+        page: this.logsPage(),
+        limit: this.logsLimit,
+        tipoEvento: this.filterTipoEvento() || undefined,
+        startDate: this.filterStartDate() || undefined,
+        endDate: this.filterEndDate() || undefined
+      });
+      this.logs.set(res.data);
+      this.logsTotalPages.set(res.meta.totalPages);
+      this.logsTotal.set(res.meta.total);
+    } catch (_) {
+      this.toastService.error('Error al cargar logs de auditoría');
+    }
+  }
+
+  async onFilterTipoEventoChange(val: string) {
+    this.filterTipoEvento.set(val);
+    this.logsPage.set(1);
+    await this.loadLogs();
+  }
+
+  async onFilterStartDateChange(val: string) {
+    this.filterStartDate.set(val);
+    this.logsPage.set(1);
+    await this.loadLogs();
+  }
+
+  async onFilterEndDateChange(val: string) {
+    this.filterEndDate.set(val);
+    this.logsPage.set(1);
+    await this.loadLogs();
+  }
+
+  async clearLogsFilters() {
+    this.filterTipoEvento.set('');
+    this.filterStartDate.set('');
+    this.filterEndDate.set('');
+    this.logsPage.set(1);
+    await this.loadLogs();
+  }
+
+  async changeLogsPage(page: number) {
+    if (page < 1 || page > this.logsTotalPages()) return;
+    this.logsPage.set(page);
+    await this.loadLogs();
   }
 
   getPlanPrice(plan?: string): number {
