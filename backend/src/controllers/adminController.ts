@@ -236,10 +236,10 @@ export async function getLogs(req: AuthenticatedRequest, res: Response) {
     if (startDate || endDate) {
       where.fecha = {};
       if (startDate) {
-        where.fecha.gte = new Date(`${startDate}T00:00:00`);
+        where.fecha.gte = new Date(`${startDate}T00:00:00-06:00`);
       }
       if (endDate) {
-        where.fecha.lte = new Date(`${endDate}T23:59:59.999`);
+        where.fecha.lte = new Date(`${endDate}T23:59:59.999-06:00`);
       }
     }
 
