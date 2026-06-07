@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
+import { Role } from '@prisma/client';
 
 type MetodoPago = 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
 
@@ -11,11 +12,17 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
   let prestamistaId = req.user?.id || 'mock-lender-id-123';
 
   // Si es COBRADOR, usar su prestamistaId para ver los préstamos de su jefe
-  if (userRole === 'COBRADOR') {
-    const cobrador = isUsingMemoryStore()
-      ? inMemoryStore.users.find(u => u.id === req.user?.id)
-      : null;
-    prestamistaId = (cobrador as any)?.prestamistaId || prestamistaId;
+  if (userRole === Role.COBRADOR) {
+    if (isUsingMemoryStore()) {
+      const cobrador = inMemoryStore.users.find(u => u.id === req.user?.id);
+      prestamistaId = (cobrador as any)?.prestamistaId || prestamistaId;
+    } else {
+      const cobrador = await prisma.user.findUnique({
+        where: { id: req.user?.id },
+        select: { prestamistaId: true }
+      });
+      prestamistaId = cobrador?.prestamistaId || prestamistaId;
+    }
   }
 
   let isExpired = false;
@@ -104,7 +111,7 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
   const userRole = req.user?.rol;
 
   // COBRADOR no puede crear préstamos
-  if (userRole === 'COBRADOR') {
+  if (userRole === Role.COBRADOR) {
     return res.status(403).json({ error: 'Los cobradores no pueden crear préstamos.' });
   }
 
@@ -277,7 +284,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
     inMemoryStore.payments.push(newPayment as any);
 
     // Actualizar CajaCobrador si es COBRADOR
-    if (userRole === 'COBRADOR' && creadoPorId) {
+    if (userRole === Role.COBRADOR && creadoPorId) {
       let caja = inMemoryStore.cajas.find(c => c.cobradorId === creadoPorId);
       if (!caja) {
         caja = { id: `caja-${Date.now()}`, cobradorId: creadoPorId, saldoEfectivo: 0, saldoSinpe: 0, saldoTransferencia: 0 };
@@ -331,7 +338,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
       }
 
       // Actualizar CajaCobrador si quien paga es COBRADOR
-      if (userRole === 'COBRADOR' && creadoPorId) {
+      if (userRole === Role.COBRADOR && creadoPorId) {
         const updateField = metodo === 'EFECTIVO'
           ? { saldoEfectivo: { increment: parsedMonto } }
           : metodo === 'SINPE'
