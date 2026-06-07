@@ -80,7 +80,7 @@ import html2canvas from 'html2canvas';
           </div>
 
           <!-- Horizontal Scrollable Chips -->
-          <div class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-none">
+          <div (wheel)="onWheelScroll($event)" class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-none whitespace-nowrap">
             <button 
               (click)="activeSubFilter.set('TODO')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
@@ -721,6 +721,14 @@ export class AdminComponent implements OnInit {
       (t.email && t.email.toLowerCase().includes(term)) ||
       t.telefono.includes(term)
     );
+  }
+
+  onWheelScroll(event: WheelEvent) {
+    if (event.deltaY !== 0) {
+      event.preventDefault();
+      const container = event.currentTarget as HTMLElement;
+      container.scrollLeft += event.deltaY;
+    }
   }
 
   isExpiringSoon(tenant: Tenant): boolean {

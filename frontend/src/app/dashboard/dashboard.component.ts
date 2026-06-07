@@ -96,7 +96,7 @@ import { AdminService } from '../services/admin.service';
         </section>
 
         <!-- Dynamic Cobranza Wall Selector Tabs (Sleek horizontal chips) -->
-        <div class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-none">
+        <div (wheel)="onWheelScroll($event)" class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-none whitespace-nowrap">
           <button 
             (click)="activeTab.set('atrasados')"
             [class]="'shrink-0 px-4 py-2 rounded-full text-[11px] font-bold uppercase transition border ' + 
@@ -121,7 +121,7 @@ import { AdminService } from '../services/admin.service';
         </div>
 
         <!-- Row 2: Days of the week filter (Sleek horizontal chips, shown only on 'atrasados' or 'dia' tabs) -->
-        <div *ngIf="activeTab() !== 'hoy'" class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 mb-2 scrollbar-none border-t border-industrial-border/30 pt-3">
+        <div *ngIf="activeTab() !== 'hoy'" (wheel)="onWheelScroll($event)" class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 mb-2 scrollbar-none border-t border-industrial-border/30 pt-3 whitespace-nowrap">
           <button 
             (click)="activeDayFilter.set('TODO')"
             [class]="'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition border ' + 
@@ -722,6 +722,14 @@ export class DashboardComponent implements OnInit {
       }
       return !isAtrasado && !isHoy;
     });
+  }
+
+  onWheelScroll(event: WheelEvent) {
+    if (event.deltaY !== 0) {
+      event.preventDefault();
+      const container = event.currentTarget as HTMLElement;
+      container.scrollLeft += event.deltaY;
+    }
   }
 
   getProgressPercentage(): number {
