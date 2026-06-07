@@ -463,8 +463,6 @@ import { ToastService } from '../services/toast.service';
       </div>
 
     </div>
-
-    </div>
   `,
   styles: [`
     /* Custom scrollbar styling inside statement scroll container */
