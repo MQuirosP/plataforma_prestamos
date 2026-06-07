@@ -8,6 +8,7 @@ export interface Payment {
   montoAbonado: number;
   numeroRecibo: string;
   notas?: string;
+  metodoPago?: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
   fechaPago: string;
 }
 
@@ -248,13 +249,14 @@ export class LoanService {
     }
   }
 
-  async addPayment(loanId: string, montoAbonado: number, notas: string) {
+  async addPayment(loanId: string, montoAbonado: number, notas: string, metodoPago: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA' = 'EFECTIVO') {
     this.loading.set(true);
     try {
       const newPayment = await firstValueFrom(
         this.http.post<Payment>(`${this.apiUrl}/loans/${loanId}/payments`, {
           montoAbonado,
-          notas
+          notas,
+          metodoPago
         }, this.getHeaders())
       );
 

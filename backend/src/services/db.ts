@@ -8,7 +8,8 @@ export interface MemoryUser {
   nombre: string;
   email: string;
   telefono: string;
-  rol: 'ADMIN' | 'PRESTAMISTA';
+  rol: 'ADMIN' | 'PRESTAMISTA' | 'COBRADOR';
+  prestamistaId?: string; // Solo para COBRADOR
   createdAt: Date;
 }
 
@@ -39,7 +40,30 @@ export interface MemoryPayment {
   montoAbonado: number;
   numeroRecibo: string;
   notas?: string;
+  metodoPago: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
+  creadoPorId?: string;
   fechaPago: Date;
+}
+
+export interface MemoryCajaCobrador {
+  id: string;
+  cobradorId: string;
+  saldoEfectivo: number;
+  saldoSinpe: number;
+  saldoTransferencia: number;
+}
+
+export interface MemoryLiquidacion {
+  id: string;
+  prestamistaId: string;
+  cobradorId: string;
+  montoEfectivo: number;
+  montoSinpe: number;
+  montoTransferencia: number;
+  montoTotal: number;
+  estado: 'PENDING' | 'LIQUIDATED';
+  notas?: string | null;
+  fecha: Date;
 }
 
 export interface MemoryBusinessSettings {
@@ -85,8 +109,27 @@ class InMemoryStore {
       telefono: '+525577889900',
       rol: 'PRESTAMISTA',
       createdAt: new Date()
+    },
+    {
+      id: 'mock-cobrador-id-001',
+      nombre: 'Carlos Cobrador Demo',
+      email: 'cobrador@demo.com',
+      telefono: '+525500000001',
+      rol: 'COBRADOR',
+      prestamistaId: 'mock-lender-id-123',
+      createdAt: new Date()
     }
   ];
+  cajas: MemoryCajaCobrador[] = [
+    {
+      id: 'caja-1',
+      cobradorId: 'mock-cobrador-id-001',
+      saldoEfectivo: 0,
+      saldoSinpe: 0,
+      saldoTransferencia: 0
+    }
+  ];
+  liquidaciones: MemoryLiquidacion[] = [];
 
   subscriptions: MemorySubscription[] = [
     {

@@ -10,6 +10,7 @@ generator client {
 enum Role {
   ADMIN
   PRESTAMISTA
+  COBRADOR
 }
 
 enum SubscriptionType {
@@ -23,16 +24,41 @@ enum LoanStatus {
   PAID
 }
 
+enum MetodoPago {
+  EFECTIVO
+  SINPE
+  TRANSFERENCIA
+}
+
+enum TipoIdentificacion {
+  CEDULA_NACIONAL
+  PASAPORTE
+  RESIDENCIA_DIMEX
+  OTRO
+}
+
+enum LiquidacionEstado {
+  PENDING
+  LIQUIDATED
+}
+
 model User {
-  id            String            @id @default(uuid())
-  nombre        String
-  email         String            @unique
-  telefono      String
-  rol           Role              @default(PRESTAMISTA)
-  createdAt     DateTime          @default(now())
-  subscriptions Subscription[]
-  loans         Loan[]
-  settings      BusinessSettings?
+  id              String            @id @default(uuid())
+  nombre          String
+  email           String            @unique
+  telefono        String
+  rol             Role              @default(PRESTAMISTA)
+  /// Solo aplica cuando rol = COBRADOR — apunta al prestamista dueño
+  prestamistaId   String?
+  prestamista     User?             @relation("CobradorPrestamista", fields: [prestamistaId], references: [id])
+  cobradores      User[]            @relation("CobradorPrestamista")
+  createdAt       DateTime          @default(now())
+  subscriptions   Subscription[]
+  loans           Loan[]
+  settings        BusinessSettings?
+  payments        Payment[]         @relation("PagosCreados")
+  cajaCobrador    CajaCobrador?
+  liquidaciones   Liquidacion[]     @relation("LiquidacionesCobrador")
 }
 
 model BusinessSettings {
@@ -56,26 +82,60 @@ model Subscription {
 }
 
 model Loan {
-  id              String     @id @default(uuid())
-  prestamistaId   String
-  prestamista     User       @relation(fields: [prestamistaId], references: [id], onDelete: Cascade)
-  clienteNombre   String
-  clienteTelefono String
-  montoOriginal   Decimal
-  totalAPagar     Decimal
-  cuotaSemanal    Decimal
-  diaCobro        Int        // 1 = Lunes, 7 = Domingo
-  estado          LoanStatus @default(ACTIVE)
-  fechaInicio     DateTime   @default(now())
-  payments        Payment[]
+  id                  String     @id @default(uuid())
+  prestamistaId       String
+  prestamista         User       @relation(fields: [prestamistaId], references: [id], onDelete: Cascade)
+  clienteNombre       String
+  clienteTelefono     String
+  /// Tipo de identificación del cliente
+  tipoIdentificacion  TipoIdentificacion? @default(CEDULA_NACIONAL)
+  /// Número de identificación para búsqueda rápida
+  numeroIdentificacion String?
+  montoOriginal       Decimal
+  totalAPagar         Decimal
+  cuotaSemanal        Decimal
+  diaCobro            Int        // 1 = Lunes, 7 = Domingo
+  estado              LoanStatus @default(ACTIVE)
+  fechaInicio         DateTime   @default(now())
+  payments            Payment[]
 }
 
 model Payment {
-  id           String   @id @default(uuid())
-  loanId       String
-  loan         Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
-  montoAbonado Decimal
-  numeroRecibo String   @unique
-  notas        String?
-  fechaPago    DateTime @default(now())
+  id            String     @id @default(uuid())
+  loanId        String
+  loan          Loan       @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  montoAbonado  Decimal
+  numeroRecibo  String     @unique
+  notas         String?
+  metodoPago    MetodoPago @default(EFECTIVO)
+  /// ID del cobrador que registró este pago (auditoría)
+  creadoPorId   String?
+  creadoPor     User?      @relation("PagosCreados", fields: [creadoPorId], references: [id])
+  fechaPago     DateTime   @default(now())
+}
+
+/// Acumulador de caja en tiempo real por cobrador y método de pago
+model CajaCobrador {
+  id                  String   @id @default(uuid())
+  cobradorId          String   @unique
+  cobrador            User     @relation(fields: [cobradorId], references: [id], onDelete: Cascade)
+  saldoEfectivo       Decimal  @default(0)
+  saldoSinpe          Decimal  @default(0)
+  saldoTransferencia  Decimal  @default(0)
+  updatedAt           DateTime @updatedAt
+}
+
+/// Registro de liquidaciones: el prestamista verifica y cierra la caja del cobrador
+model Liquidacion {
+  id                  String            @id @default(uuid())
+  prestamistaId       String
+  cobradorId          String
+  cobrador            User              @relation("LiquidacionesCobrador", fields: [cobradorId], references: [id])
+  montoEfectivo       Decimal
+  montoSinpe          Decimal
+  montoTransferencia  Decimal
+  montoTotal          Decimal
+  estado              LiquidacionEstado @default(PENDING)
+  notas               String?
+  fecha               DateTime          @default(now())
 }

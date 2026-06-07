@@ -8,14 +8,14 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
     return res.status(401).json({ error: 'Auth sync requires verified JWT user details' });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
+  const { email: rawEmail, nombre, id: providerId } = jwtUser;
+  const normalizedEmail = (rawEmail || '').trim().toLowerCase();
 
   if (isUsingMemoryStore()) {
     let user = inMemoryStore.users.find(u => u.email === normalizedEmail);
     let isNewUser = false;
     if (!user) {
       isNewUser = true;
-      // Create memory user
       user = {
         id: providerId || `user-${Date.now()}`,
         nombre: nombre || 'Nuevo Prestamista',
@@ -26,16 +26,14 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
       };
       inMemoryStore.users.push(user);
 
-      // Create trial subscription
       inMemoryStore.subscriptions.push({
         id: `sub-${Date.now()}`,
         userId: user.id,
         tipo: 'TRIAL',
-        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         createdAt: new Date()
       });
 
-      // Create default settings (Costa Rica)
       inMemoryStore.settings.push({
         id: `sett-${Date.now()}`,
         userId: user.id,
@@ -60,7 +58,6 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
     let isNewUser = false;
     if (!user) {
       isNewUser = true;
-      // Create user transactional setup
       user = await prisma.$transaction(async (tx) => {
         const newUser = await tx.user.create({
           data: {
@@ -72,7 +69,6 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
           }
         });
 
-        // Initialize subscription
         await tx.subscription.create({
           data: {
             userId: newUser.id,
@@ -81,7 +77,6 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
           }
         });
 
-        // Initialize Costa Rica business settings
         await tx.businessSettings.create({
           data: {
             userId: newUser.id,

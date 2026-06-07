@@ -25,9 +25,20 @@ import { ToastService } from '../services/toast.service';
         </div>
 
         <div class="flex items-center gap-1.5">
-          <!-- Settings Toggle button -->
+          <!-- Add Loan button — principal action, hidden on mobile (uses FAB instead) -->
+          <button (click)="openCreateModal()" 
+                  class="hidden md:flex bg-caterpillar hover:bg-caterpillar-dark text-industrial-black px-3 py-2 rounded-lg font-bold transition duration-150 shadow-md items-center gap-1.5 text-xs"
+                  title="Agregar Préstamo">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+            </svg>
+            <span class="font-black uppercase tracking-tight">Nuevo</span>
+          </button>
+
+          <!-- Settings button -->
           <button (click)="openSettings.emit()" 
-                  class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-caterpillar transition duration-150">
+                  class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-caterpillar transition duration-150"
+                  title="Configuración">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -36,22 +47,10 @@ import { ToastService } from '../services/toast.service';
 
           <!-- Logout button -->
           <button (click)="logout()" 
-                  class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-semantic-red transition duration-150">
+                  class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-semantic-red transition duration-150"
+                  title="Cerrar Sesión">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
-
-          <!-- Quick dev toggle subscription status -->
-          <button (click)="toggleSub()" 
-                  class="text-[10px] bg-industrial-surface border border-industrial-border px-2.5 py-2 rounded-lg text-caterpillar hover:text-white font-mono transition duration-150">
-            🔒 [{{ loanService.isExpired() ? 'Expirado' : 'Activo' }}]
-          </button>
-          
-          <button (click)="openCreateModal()" 
-                  class="bg-caterpillar hover:bg-caterpillar-dark text-industrial-black p-2 rounded-lg font-bold transition duration-150 shadow-md">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
             </svg>
           </button>
         </div>
@@ -156,6 +155,16 @@ import { ToastService } from '../services/toast.service';
         </section>
       </main>
 
+      <!-- FAB: Floating Action Button (mobile only) -->
+      <button (click)="openCreateModal()"
+              class="fixed bottom-6 right-5 z-40 md:hidden bg-caterpillar hover:bg-caterpillar-dark text-industrial-black w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 active:scale-95"
+              title="Agregar Préstamo"
+              style="box-shadow: 0 4px 24px 0 rgba(255, 193, 7, 0.45);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+
       <!-- MODAL 1: Create Loan Form -->
       <div *ngIf="showCreateModal()" class="fixed inset-0 z-50 bg-black/80 flex items-end justify-center backdrop-blur-sm">
         <div class="bg-industrial-dark w-full max-w-md rounded-t-2xl border-t border-industrial-border p-6 pb-8">
@@ -251,6 +260,18 @@ import { ToastService } from '../services/toast.service';
                 <input type="number" [(ngModel)]="abonoMonto" name="abonoMonto" required 
                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
               </div>
+              <!-- Método de Pago -->
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Método de Pago</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <button type="button" (click)="abonoMetodoPago = 'EFECTIVO'" 
+                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoMetodoPago === 'EFECTIVO' ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">💵 Efectivo</button>
+                  <button type="button" (click)="abonoMetodoPago = 'SINPE'" 
+                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoMetodoPago === 'SINPE' ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">📲 SINPE</button>
+                  <button type="button" (click)="abonoMetodoPago = 'TRANSFERENCIA'" 
+                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoMetodoPago === 'TRANSFERENCIA' ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">🏦 Transfer.</button>
+                </div>
+              </div>
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Notas / Observaciones</label>
                 <input type="text" [(ngModel)]="abonoNotas" name="abonoNotas" placeholder="Opcional..." 
@@ -343,6 +364,10 @@ import { ToastService } from '../services/toast.service';
                   <div>
                     <span class="text-[9px] text-industrial-muted font-mono block">{{ pay.numeroRecibo }}</span>
                     <span class="text-[9px] text-white block">{{ pay.fechaPago | date:'dd/MM HH:mm' }}</span>
+                    <span *ngIf="pay.metodoPago" 
+                          [class]="'text-[8px] font-bold uppercase rounded px-1 mt-0.5 inline-block ' + (pay.metodoPago === 'EFECTIVO' ? 'bg-amber-900/50 text-amber-400' : pay.metodoPago === 'SINPE' ? 'bg-blue-900/50 text-blue-400' : 'bg-purple-900/50 text-purple-400')">
+                      {{ pay.metodoPago }}
+                    </span>
                   </div>
                   <div class="text-right">
                     <span class="text-white font-black block">
@@ -409,6 +434,7 @@ export class DashboardComponent implements OnInit {
   };
   abonoMonto: number | null = null;
   abonoNotas: string = '';
+  abonoMetodoPago: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA' = 'EFECTIVO';
 
   // Get current weekday mapped to 1-7
   get currentWeekday(): number {
@@ -575,6 +601,7 @@ export class DashboardComponent implements OnInit {
     this.selectedLoanForAbono = loan;
     this.abonoMonto = null;
     this.abonoNotas = '';
+    this.abonoMetodoPago = 'EFECTIVO';
     this.showAbonoModal.set(true);
   }
 
@@ -589,7 +616,8 @@ export class DashboardComponent implements OnInit {
       await this.loanService.addPayment(
         this.selectedLoanForAbono.id,
         this.abonoMonto,
-        this.abonoNotas
+        this.abonoNotas,
+        this.abonoMetodoPago
       );
       this.showAbonoModal.set(false);
       this.recalculateCounts();

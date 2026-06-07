@@ -6,7 +6,7 @@ export interface AuthenticatedRequest extends Request {
     id: string; // The real database UUID
     nombre: string;
     email: string;
-    rol: 'ADMIN' | 'PRESTAMISTA';
+    rol: 'ADMIN' | 'PRESTAMISTA' | 'COBRADOR';
   };
 }
 
@@ -70,11 +70,18 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
         rol: token.includes('admin') ? 'ADMIN' : 'PRESTAMISTA'
       };
     } else {
+      // Auto-upgrade role if email contains 'admin' keyword (in case the DB record predates the admin logic)
+      let effectiveRole = user.rol as any;
+      if (effectiveRole !== 'ADMIN' && user.email.includes('admin')) {
+        effectiveRole = 'ADMIN';
+        // Update DB record asynchronously
+        prisma.user.update({ where: { id: user.id }, data: { rol: 'ADMIN' } }).catch(() => {});
+      }
       req.user = {
         id: user.id,
         nombre: user.nombre,
         email: user.email,
-        rol: user.rol as any
+        rol: effectiveRole
       };
     }
     

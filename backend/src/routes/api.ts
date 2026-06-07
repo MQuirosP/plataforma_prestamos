@@ -3,6 +3,7 @@ import { getLoans, createLoan, addPayment } from '../controllers/loanController'
 import { getExpiringSubscribers, getAllSubscribers, renewUserSubscription } from '../controllers/adminController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
 import { syncUser } from '../controllers/authController';
+import { getCajaCobrador, procesarLiquidacion } from '../controllers/cobradorController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { isUsingMemoryStore, inMemoryStore, prisma } from '../services/db';
 
@@ -27,6 +28,10 @@ router.post('/settings', updateSettings as any);
 router.get('/admin/expiring-subscriptions', getExpiringSubscribers as any);
 router.get('/admin/subscribers', getAllSubscribers as any);
 router.post('/admin/renew-subscription', renewUserSubscription as any);
+
+// Cobrador: caja y liquidaciones
+router.get('/caja/:cobradorId', getCajaCobrador as any);
+router.post('/liquidaciones/procesar', procesarLiquidacion as any);
 
 // Developer Helper: Endpoint to toggle the current user's subscription status between ACTIVE and EXPIRED
 // This allows the user to test the Expired Subscription View block screen on the frontend immediately.
