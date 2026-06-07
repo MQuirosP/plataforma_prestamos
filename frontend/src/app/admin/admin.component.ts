@@ -178,7 +178,7 @@ import { LoanService } from '../services/loan.service';
             <p class="text-industrial-muted">{{ log.descripcion }}</p>
             <div class="mt-1 flex gap-3 text-[9px] text-industrial-muted font-mono opacity-70">
               <span>IP: {{ log.ip }}</span>
-              <span *ngIf="log.prestamistaId">Tenant: {{ log.prestamistaId }}</span>
+              <span *ngIf="log.prestamistaId">Cliente ID: {{ log.prestamistaId }}</span>
             </div>
           </div>
         </section>
@@ -295,7 +295,7 @@ export class AdminComponent implements OnInit {
         try {
           const nuevoEstado = await this.adminService.toggleSuspend(tenant.id);
           this.tenants.update(curr => curr.map(t => t.id === tenant.id ? { ...t, suspendido: nuevoEstado } : t));
-          this.toastService.success(`Tenant ${nuevoEstado ? 'suspendido' : 'activado'}`);
+          this.toastService.success(`Cliente ${nuevoEstado ? 'suspendido' : 'activado'}`);
         } catch (err) {
           this.toastService.error('Error al cambiar estado');
         }

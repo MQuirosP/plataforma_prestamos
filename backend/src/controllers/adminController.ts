@@ -92,7 +92,7 @@ export async function toggleSuspendTenant(req: AuthenticatedRequest, res: Respon
   if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
   try {
     const user = await prisma.user.findUnique({ where: { id: req.params.id } });
-    if (!user) return res.status(404).json({ error: 'Tenant no encontrado' });
+    if (!user) return res.status(404).json({ error: 'Cliente no encontrado' });
 
     const newStatus = !user.suspendido;
     await prisma.user.update({
