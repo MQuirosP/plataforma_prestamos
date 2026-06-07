@@ -79,6 +79,52 @@ import html2canvas from 'html2canvas';
             <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar prestamista..." class="w-full bg-industrial-surface border border-industrial-border rounded-xl p-3.5 pl-10 text-white text-xs focus:outline-none focus:border-caterpillar">
           </div>
 
+          <!-- Horizontal Scrollable Chips -->
+          <div class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-none">
+            <button 
+              (click)="activeSubFilter.set('TODO')"
+              [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
+                (activeSubFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+            >
+              Todos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('TODO') }}</span>
+            </button>
+            <button 
+              (click)="activeSubFilter.set('ACTIVO')"
+              [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
+                (activeSubFilter() === 'ACTIVO' ? 'bg-semantic-emerald/20 text-semantic-emerald border-semantic-emerald/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+            >
+              Activos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('ACTIVO') }}</span>
+            </button>
+            <button 
+              (click)="activeSubFilter.set('POR_VENCER')"
+              [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
+                (activeSubFilter() === 'POR_VENCER' ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+            >
+              Por Vencer <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('POR_VENCER') }}</span>
+            </button>
+            <button 
+              (click)="activeSubFilter.set('VENCIDO')"
+              [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
+                (activeSubFilter() === 'VENCIDO' ? 'bg-semantic-red/20 text-semantic-red border-semantic-red/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+            >
+              Vencidos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('VENCIDO') }}</span>
+            </button>
+            <button 
+              (click)="activeSubFilter.set('SUSPENDIDO')"
+              [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
+                (activeSubFilter() === 'SUSPENDIDO' ? 'bg-industrial-surface border-industrial-border text-industrial-muted' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+            >
+              Suspendidos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('SUSPENDIDO') }}</span>
+            </button>
+            <button 
+              (click)="activeSubFilter.set('TRIAL')"
+              [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
+                (activeSubFilter() === 'TRIAL' ? 'bg-blue-500/10 text-blue-400 border-blue-500/50' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+            >
+              Demos/Trials <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('TRIAL') }}</span>
+            </button>
+          </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div *ngFor="let tenant of filteredTenants()" class="bg-industrial-dark border border-industrial-border rounded-xl p-4 transition hover:border-caterpillar/30">
 
@@ -477,6 +523,7 @@ export class AdminComponent implements OnInit {
   }
 
   activeTab = signal<'tenants' | 'create' | 'logs'>('tenants');
+  activeSubFilter = signal<string>('TODO');
   
   tenants = signal<Tenant[]>([]);
   stats = signal<SaaSStats | null>(null);
@@ -637,10 +684,38 @@ export class AdminComponent implements OnInit {
     return "¡Gracias por ser cliente DIAMANTE!";
   }
 
+  getTenantCount(filterKey: string): number {
+    const list = this.tenants();
+    if (filterKey === 'TODO') return list.length;
+    if (filterKey === 'ACTIVO') return list.filter(t => !t.suspendido && !this.isPaymentOverdue(t)).length;
+    if (filterKey === 'POR_VENCER') return list.filter(t => !t.suspendido && this.isExpiringSoon(t)).length;
+    if (filterKey === 'VENCIDO') return list.filter(t => !t.suspendido && this.isPaymentOverdue(t)).length;
+    if (filterKey === 'SUSPENDIDO') return list.filter(t => t.suspendido).length;
+    if (filterKey === 'TRIAL') {
+      return list.filter(t => !t.paymentDate || t.plan === 'BRONCE').length;
+    }
+    return 0;
+  }
+
   filteredTenants(): Tenant[] {
     const term = this.searchTerm.toLowerCase();
-    if (!term) return this.tenants();
-    return this.tenants().filter(t => 
+    let list = this.tenants();
+
+    const sf = this.activeSubFilter();
+    if (sf === 'ACTIVO') {
+      list = list.filter(t => !t.suspendido && !this.isPaymentOverdue(t));
+    } else if (sf === 'POR_VENCER') {
+      list = list.filter(t => !t.suspendido && this.isExpiringSoon(t));
+    } else if (sf === 'VENCIDO') {
+      list = list.filter(t => !t.suspendido && this.isPaymentOverdue(t));
+    } else if (sf === 'SUSPENDIDO') {
+      list = list.filter(t => t.suspendido);
+    } else if (sf === 'TRIAL') {
+      list = list.filter(t => !t.paymentDate || t.plan === 'BRONCE');
+    }
+
+    if (!term) return list;
+    return list.filter(t => 
       t.nombre.toLowerCase().includes(term) || 
       t.username.toLowerCase().includes(term) ||
       (t.email && t.email.toLowerCase().includes(term)) ||

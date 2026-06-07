@@ -95,21 +95,57 @@ import { AdminService } from '../services/admin.service';
           </div>
         </section>
 
-        <!-- Dynamic Cobranza Wall Selector Tabs -->
-        <section class="bg-industrial-dark border border-industrial-border p-1 rounded-xl mb-4 flex gap-1">
-          <button (click)="activeTab.set('atrasados')" 
-                  [class]="'flex-1 py-2.5 text-xs font-bold uppercase rounded-lg transition-all ' + (activeTab() === 'atrasados' ? 'bg-semantic-red text-white shadow-md' : 'text-industrial-muted hover:text-white')">
-            Atrasados ({{ atrasadosCount() }})
+        <!-- Dynamic Cobranza Wall Selector Tabs (Sleek horizontal chips) -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-none">
+          <button 
+            (click)="activeTab.set('atrasados')"
+            [class]="'shrink-0 px-4 py-2 rounded-full text-[11px] font-bold uppercase transition border ' + 
+              (activeTab() === 'atrasados' ? 'bg-semantic-red/20 text-semantic-red border-semantic-red/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+          >
+            Atrasados <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ atrasadosCount() }}</span>
           </button>
-          <button (click)="activeTab.set('hoy')" 
-                  [class]="'flex-1 py-2.5 text-xs font-bold uppercase rounded-lg transition-all ' + (activeTab() === 'hoy' ? 'bg-caterpillar text-industrial-black shadow-md' : 'text-industrial-muted hover:text-white')">
-            Vencen Hoy ({{ hoyCount() }})
+          <button 
+            (click)="activeTab.set('hoy')"
+            [class]="'shrink-0 px-4 py-2 rounded-full text-[11px] font-bold uppercase transition border ' + 
+              (activeTab() === 'hoy' ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+          >
+            Vencen Hoy <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ hoyCount() }}</span>
           </button>
-          <button (click)="activeTab.set('dia')" 
-                  [class]="'flex-1 py-2.5 text-xs font-bold uppercase rounded-lg transition-all ' + (activeTab() === 'dia' ? 'bg-industrial-surface border border-industrial-border text-white shadow-md' : 'text-industrial-muted hover:text-white')">
-            Al Día ({{ alDiaCount() }})
+          <button 
+            (click)="activeTab.set('dia')"
+            [class]="'shrink-0 px-4 py-2 rounded-full text-[11px] font-bold uppercase transition border ' + 
+              (activeTab() === 'dia' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+          >
+            Al Día <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ alDiaCount() }}</span>
           </button>
-        </section>
+        </div>
+
+        <!-- Row 2: Days of the week filter (Sleek horizontal chips, shown only on 'atrasados' or 'dia' tabs) -->
+        <div *ngIf="activeTab() !== 'hoy'" class="flex items-center gap-2 overflow-x-auto pb-3 pt-1 mb-2 scrollbar-none border-t border-industrial-border/30 pt-3">
+          <button 
+            (click)="activeDayFilter.set('TODO')"
+            [class]="'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition border ' + 
+              (activeDayFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/30 text-industrial-muted border-industrial-border/40 hover:text-white')"
+          >
+            Todos los Días <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[8px] font-mono">{{ getLoansCountForDay('TODO') }}</span>
+          </button>
+          <button 
+            *ngFor="let day of [
+              { key: '1', label: 'Lunes' },
+              { key: '2', label: 'Martes' },
+              { key: '3', label: 'Miércoles' },
+              { key: '4', label: 'Jueves' },
+              { key: '5', label: 'Viernes' },
+              { key: '6', label: 'Sábado' },
+              { key: '7', label: 'Domingo' }
+            ]"
+            (click)="activeDayFilter.set(day.key)"
+            [class]="'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition border ' + 
+              (activeDayFilter() === day.key ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/30 text-industrial-muted border-industrial-border/40 hover:text-white')"
+          >
+            {{ day.label }} <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[8px] font-mono">{{ getLoansCountForDay(day.key) }}</span>
+          </button>
+        </div>
 
         <!-- Cobranza Wall List -->
         <section class="space-y-3">
@@ -553,6 +589,7 @@ export class DashboardComponent implements OnInit {
 
   // States
   activeTab = signal<'atrasados' | 'hoy' | 'dia'>('hoy');
+  activeDayFilter = signal<string>('TODO');
   showCreateModal = signal<boolean>(false);
   showAbonoModal = signal<boolean>(false);
   showStatementModal = signal<boolean>(false);
@@ -642,12 +679,25 @@ export class DashboardComponent implements OnInit {
     this.alDiaCount.set(aldia);
   }
 
+  getLoansCountForDay(dayKey: string): number {
+    const list = this.loans();
+    if (dayKey === 'TODO') return list.filter(l => l.estado !== 'PAID').length;
+    const dayNum = Number(dayKey);
+    return list.filter(l => l.estado !== 'PAID' && l.diaCobro === dayNum).length;
+  }
+
   filteredLoans(): Loan[] {
     const list = this.loans();
     const today = this.currentWeekday;
+    const dayF = this.activeDayFilter();
 
     return list.filter(l => {
       if (l.estado === 'PAID') return false;
+
+      // Filter by day of week if specified (and tab is not 'hoy')
+      if (this.activeTab() !== 'hoy' && dayF !== 'TODO' && l.diaCobro !== Number(dayF)) {
+        return false;
+      }
 
       const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
       const weeksActive = Math.max(0, Math.floor((Date.now() - new Date(l.fechaInicio).getTime()) / (7 * 24 * 60 * 60 * 1000)));
