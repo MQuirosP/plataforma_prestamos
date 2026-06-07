@@ -301,93 +301,164 @@ import { AdminService } from '../services/admin.service';
         </div>
       </div>
 
-      <!-- MODAL 3: Account Statement Visual Pro -->
+      <!-- MODAL 3: Account Statement / Receipt Visual Pro -->
       <div *ngIf="showStatementModal()" class="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
         <div class="w-full max-w-sm flex flex-col items-center">
           
-          <!-- Shared Account Statement Card Wrapper -->
+          <!-- Toggle Selectors (Outside of the screenshot wrapper to keep it clean) -->
+          <div *ngIf="lastPayment()" class="flex bg-industrial-surface p-1 rounded-xl border border-industrial-border mb-4 w-full">
+            <button (click)="showAsReceipt.set(true)" 
+                    [class.bg-industrial-dark]="showAsReceipt()" 
+                    [class.text-caterpillar]="showAsReceipt()" 
+                    class="flex-1 text-[10px] font-black uppercase py-2.5 rounded-lg transition text-industrial-muted">
+              Recibo de Abono
+            </button>
+            <button (click)="showAsReceipt.set(false)" 
+                    [class.bg-industrial-dark]="!showAsReceipt()" 
+                    [class.text-caterpillar]="!showAsReceipt()" 
+                    class="flex-1 text-[10px] font-black uppercase py-2.5 rounded-lg transition text-industrial-muted">
+              Estado de Cuenta
+            </button>
+          </div>
+
+          <!-- Shared Account Statement / Receipt Card Wrapper -->
           <div id="statement-card" class="w-full bg-industrial-dark border border-industrial-border rounded-2xl p-6 shadow-2xl relative overflow-hidden text-industrial-light">
             <!-- Caterpillar Caution Stripe Accent -->
             <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
 
-            <div class="text-center border-b border-industrial-border/60 pb-4 mt-2 mb-4">
-              <h2 class="text-xs text-caterpillar uppercase tracking-widest font-mono">Estado de Cuenta Oficial</h2>
-              <p class="text-[9px] text-industrial-muted uppercase tracking-wider font-mono">
-                {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN Credit' }}
-              </p>
-            </div>
+            <!-- VIEW 1: RECIBO DE ABONO -->
+            <div *ngIf="showAsReceipt() && lastPayment()" class="space-y-4">
+              <div class="text-center border-b border-industrial-border/60 pb-4 mt-2 mb-4">
+                <h2 class="text-xs text-caterpillar uppercase tracking-widest font-mono">Recibo de Abono Oficial</h2>
+                <p class="text-[9px] text-industrial-muted uppercase tracking-wider font-mono">
+                  {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN Credit' }}
+                </p>
+              </div>
 
-            <!-- Client Metadata -->
-            <div class="space-y-1 text-sm mb-4">
-              <div class="flex justify-between">
-                <span class="text-industrial-muted">Cliente:</span>
-                <span class="text-white font-extrabold">{{ selectedStatementLoan?.clienteNombre }}</span>
+              <!-- Receipt Number and Date -->
+              <div class="flex justify-between text-[9px] text-industrial-muted font-mono mb-4">
+                <span>Nº Recibo: {{ lastPayment()?.numeroRecibo }}</span>
+                <span>{{ lastPayment()?.fechaPago | date:'dd/MM/yyyy HH:mm' }}</span>
               </div>
-              <div class="flex justify-between">
-                <span class="text-industrial-muted">Teléfono:</span>
-                <span class="text-white font-mono">{{ selectedStatementLoan?.clienteTelefono }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-industrial-muted">F. Inicio:</span>
-                <span class="text-white font-mono">{{ selectedStatementLoan?.fechaInicio | date:'dd/MM/yyyy' }}</span>
-              </div>
-            </div>
 
-            <!-- Financial Status Box -->
-            <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl space-y-2 mb-4">
-              <div class="flex justify-between text-xs">
-                <span class="text-industrial-muted">Monto Original:</span>
-                <span class="text-white font-bold">
-                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.totalAPagar | number:'1.0-0' }}
+              <!-- Details Grid -->
+              <div class="space-y-2 text-xs border-b border-industrial-border/60 pb-4 mb-4">
+                <div class="flex justify-between">
+                  <span class="text-industrial-muted">Cliente:</span>
+                  <span class="text-white font-extrabold">{{ selectedStatementLoan?.clienteNombre }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-industrial-muted">Método de Pago:</span>
+                  <span class="text-white font-bold">{{ lastPayment()?.metodoPago }}</span>
+                </div>
+                <div *ngIf="lastPayment()?.notas" class="flex justify-between">
+                  <span class="text-industrial-muted">Notas:</span>
+                  <span class="text-white italic text-[11px]">{{ lastPayment()?.notas }}</span>
+                </div>
+              </div>
+
+              <!-- Payment highlight -->
+              <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl text-center mb-4">
+                <span class="text-[10px] text-industrial-muted uppercase font-mono block mb-1">Monto Abonado</span>
+                <span class="text-2xl text-caterpillar font-black">
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ lastPayment()?.montoAbonado | number:'1.0-0' }}
                 </span>
               </div>
-              <div class="flex justify-between text-xs">
-                <span class="text-industrial-muted">Total Abonado:</span>
-                <span class="text-semantic-emerald font-bold">
-                  +{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (selectedStatementLoan?.totalAPagar || 0) - (selectedStatementLoan?.balancePendiente || 0) | number:'1.0-0' }}
-                </span>
-              </div>
-              <div class="flex justify-between text-sm pt-2 border-t border-industrial-border/60 font-black">
-                <span class="text-white">BALANCE RESTANTE:</span>
-                <span class="text-caterpillar">
+
+              <!-- Remaining Balance -->
+              <div class="flex justify-between items-center text-xs font-mono uppercase tracking-wider mb-2">
+                <span class="text-industrial-muted">Balance Restante:</span>
+                <span class="text-white font-extrabold text-sm">
                   {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.balancePendiente | number:'1.0-0' }}
                 </span>
               </div>
-            </div>
 
-            <!-- Payment Progress -->
-            <div class="space-y-1.5 text-xs mb-4">
-              <div class="flex justify-between">
-                <span class="text-industrial-muted">Progreso Cuotas:</span>
-                <span class="text-white font-bold">Cuota {{ selectedStatementLoan?.cuotaActual }} de {{ selectedStatementLoan?.cuotasTotales }}</span>
-              </div>
-              <div class="w-full bg-industrial-surface h-2.5 rounded-full overflow-hidden border border-industrial-border">
-                <div class="bg-caterpillar h-full rounded-full transition-all duration-300"
-                     [style.width.%]="getProgressPercentage()"></div>
+              <div class="text-center pt-2 text-[10px] text-industrial-muted italic">
+                ¡Gracias por su abono!
               </div>
             </div>
 
-            <!-- Receipt Lists -->
-            <div>
-              <span class="text-xs text-industrial-muted uppercase font-mono block mb-2">Historial de Abonos</span>
-              <div class="max-h-36 overflow-y-auto space-y-2 pr-1 border border-industrial-border/40 p-2 rounded-lg bg-industrial-surface/50">
-                <div *ngIf="selectedStatementLoan?.payments?.length === 0" class="text-[10px] text-industrial-muted text-center py-4">
-                  No se han registrado abonos aún
+            <!-- VIEW 2: ESTADO DE CUENTA COMPLETO -->
+            <div *ngIf="!showAsReceipt() || !lastPayment()" class="space-y-4">
+              <div class="text-center border-b border-industrial-border/60 pb-4 mt-2 mb-4">
+                <h2 class="text-xs text-caterpillar uppercase tracking-widest font-mono">Estado de Cuenta Oficial</h2>
+                <p class="text-[9px] text-industrial-muted uppercase tracking-wider font-mono">
+                  {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN Credit' }}
+                </p>
+              </div>
+
+              <!-- Client Metadata -->
+              <div class="space-y-1 text-sm mb-4">
+                <div class="flex justify-between">
+                  <span class="text-industrial-muted">Cliente:</span>
+                  <span class="text-white font-extrabold">{{ selectedStatementLoan?.clienteNombre }}</span>
                 </div>
-                <div *ngFor="let pay of selectedStatementLoan?.payments" class="text-xs flex justify-between bg-industrial-dark p-2 border border-industrial-border rounded-lg">
-                  <div>
-                    <span class="text-[9px] text-industrial-muted font-mono block">{{ pay.numeroRecibo }}</span>
-                    <span class="text-[9px] text-white block">{{ pay.fechaPago | date:'dd/MM HH:mm' }}</span>
-                    <span *ngIf="pay.metodoPago" 
-                          [class]="'text-[8px] font-bold uppercase rounded px-1 mt-0.5 inline-block ' + (pay.metodoPago === 'EFECTIVO' ? 'bg-amber-900/50 text-amber-400' : pay.metodoPago === 'SINPE' ? 'bg-blue-900/50 text-blue-400' : 'bg-purple-900/50 text-purple-400')">
-                      {{ pay.metodoPago }}
-                    </span>
+                <div class="flex justify-between">
+                  <span class="text-industrial-muted">Teléfono:</span>
+                  <span class="text-white font-mono">{{ selectedStatementLoan?.clienteTelefono }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-industrial-muted">F. Inicio:</span>
+                  <span class="text-white font-mono">{{ selectedStatementLoan?.fechaInicio | date:'dd/MM/yyyy' }}</span>
+                </div>
+              </div>
+
+              <!-- Financial Status Box -->
+              <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl space-y-2 mb-4">
+                <div class="flex justify-between text-xs">
+                  <span class="text-industrial-muted">Monto Original:</span>
+                  <span class="text-white font-bold">
+                    {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.totalAPagar | number:'1.0-0' }}
+                  </span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-industrial-muted">Total Abonado:</span>
+                  <span class="text-semantic-emerald font-bold">
+                    +{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (selectedStatementLoan?.totalAPagar || 0) - (selectedStatementLoan?.balancePendiente || 0) | number:'1.0-0' }}
+                  </span>
+                </div>
+                <div class="flex justify-between text-sm pt-2 border-t border-industrial-border/60 font-black">
+                  <span class="text-white">BALANCE RESTANTE:</span>
+                  <span class="text-caterpillar">
+                    {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.balancePendiente | number:'1.0-0' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Payment Progress -->
+              <div class="space-y-1.5 text-xs mb-4">
+                <div class="flex justify-between">
+                  <span class="text-industrial-muted">Progreso Cuotas:</span>
+                  <span class="text-white font-bold">Cuota {{ selectedStatementLoan?.cuotaActual }} de {{ selectedStatementLoan?.cuotasTotales }}</span>
+                </div>
+                <div class="w-full bg-industrial-surface h-2.5 rounded-full overflow-hidden border border-industrial-border">
+                  <div class="bg-caterpillar h-full rounded-full transition-all duration-300"
+                       [style.width.%]="getProgressPercentage()"></div>
+                </div>
+              </div>
+
+              <!-- Receipt Lists -->
+              <div>
+                <span class="text-xs text-industrial-muted uppercase font-mono block mb-2">Historial de Abonos</span>
+                <div class="max-h-36 overflow-y-auto space-y-2 pr-1 border border-industrial-border/40 p-2 rounded-lg bg-industrial-surface/50">
+                  <div *ngIf="selectedStatementLoan?.payments?.length === 0" class="text-[10px] text-industrial-muted text-center py-4">
+                    No se han registrado abonos aún
                   </div>
-                  <div class="text-right">
-                    <span class="text-white font-black block">
-                      {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
-                    </span>
-                    <span class="text-[8px] text-industrial-muted block" *ngIf="pay.notas">{{ pay.notas }}</span>
+                  <div *ngFor="let pay of selectedStatementLoan?.payments" class="text-xs flex justify-between bg-industrial-dark p-2 border border-industrial-border rounded-lg">
+                    <div>
+                      <span class="text-[9px] text-industrial-muted font-mono block">{{ pay.numeroRecibo }}</span>
+                      <span class="text-[9px] text-white block">{{ pay.fechaPago | date:'dd/MM HH:mm' }}</span>
+                      <span *ngIf="pay.metodoPago" 
+                            [class]="'text-[8px] font-bold uppercase rounded px-1 mt-0.5 inline-block ' + (pay.metodoPago === 'EFECTIVO' ? 'bg-amber-900/50 text-amber-400' : pay.metodoPago === 'SINPE' ? 'bg-blue-900/50 text-blue-400' : 'bg-purple-900/50 text-purple-400')">
+                        {{ pay.metodoPago }}
+                      </span>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-white font-black block">
+                        {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
+                      </span>
+                      <span class="text-[8px] text-industrial-muted block" *ngIf="pay.notas">{{ pay.notas }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -402,7 +473,7 @@ import { AdminService } from '../services/admin.service';
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.63-2.315a1.5 1.5 0 11.536.536l-4.63 2.315a1.5 1.5 0 11-.536-.536zm0 2.516l4.63 2.315a1.5 1.5 0 11-.536.536l-4.63-2.315a1.5 1.5 0 11.536-.536z" />
               </svg>
-              Compartir Recibo
+              Compartir Comprobante
             </button>
             <button (click)="showStatementModal.set(false)" 
                     class="bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-white text-xs font-bold px-4 py-3 rounded-lg transition duration-150">
@@ -486,6 +557,10 @@ export class DashboardComponent implements OnInit {
   showAbonoModal = signal<boolean>(false);
   showStatementModal = signal<boolean>(false);
   showCobradoresModal = signal<boolean>(false);
+
+  // Receipt and Account Statement toggles
+  showAsReceipt = signal<boolean>(false);
+  lastPayment = signal<Payment | null>(null);
 
   cobradores = signal<any[]>([]);
   loadingCobrador = signal<boolean>(false);
@@ -696,7 +771,7 @@ export class DashboardComponent implements OnInit {
     }
 
     try {
-      await this.loanService.addPayment(
+      const newPayment = await this.loanService.addPayment(
         this.selectedLoanForAbono.id,
         this.abonoMonto,
         this.abonoNotas,
@@ -708,7 +783,10 @@ export class DashboardComponent implements OnInit {
       
       const updated = this.loans().find(l => l.id === this.selectedLoanForAbono?.id);
       if (updated) {
-        this.openStatement(updated);
+        this.selectedStatementLoan = updated;
+        this.lastPayment.set(newPayment);
+        this.showAsReceipt.set(true);
+        this.showStatementModal.set(true);
       }
     } catch (err: any) {
       this.toastService.error(err.error?.error || 'No se pudo aplicar el abono');
@@ -717,6 +795,8 @@ export class DashboardComponent implements OnInit {
 
   openStatement(loan: Loan) {
     this.selectedStatementLoan = loan;
+    this.lastPayment.set(null); // No payment context, so we don't show the Receipt toggle option
+    this.showAsReceipt.set(false);
     this.showStatementModal.set(true);
   }
 
@@ -758,11 +838,15 @@ export class DashboardComponent implements OnInit {
             cleanPhone = '506' + cleanPhone;
           }
 
-          const msg = `Hola ${loan.clienteNombre}, adjunto envío tu estado de cuenta digital: ${imageUrl}`;
+          const isReceipt = this.showAsReceipt() && this.lastPayment();
+          const msg = isReceipt
+            ? `Hola ${loan.clienteNombre}, adjunto envío tu comprobante de abono: ${imageUrl}`
+            : `Hola ${loan.clienteNombre}, adjunto envío tu estado de cuenta digital: ${imageUrl}`;
+
           const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
           
           window.open(whatsappUrl, '_blank');
-          this.toastService.success('Recibo enviado a WhatsApp.');
+          this.toastService.success(isReceipt ? 'Recibo enviado a WhatsApp.' : 'Estado de cuenta enviado.');
         } catch (uploadErr) {
           this.downloadFallback(canvas);
         }
@@ -774,11 +858,13 @@ export class DashboardComponent implements OnInit {
   }
 
   downloadFallback(canvas: HTMLCanvasElement) {
+    const isReceipt = this.showAsReceipt() && this.lastPayment();
+    const namePrefix = isReceipt ? 'Recibo' : 'EstadoCuenta';
     const link = document.createElement('a');
-    link.download = `EstadoCuenta_${this.selectedStatementLoan?.clienteNombre}.png`;
+    link.download = `${namePrefix}_${this.selectedStatementLoan?.clienteNombre}.png`;
     link.href = canvas.toDataURL();
     link.click();
-    this.toastService.success('Recibo exportado como imagen.');
+    this.toastService.success(isReceipt ? 'Recibo exportado como imagen.' : 'Estado de cuenta exportado.');
   }
 
   async openCobradoresModal() {
