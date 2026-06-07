@@ -35,7 +35,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             return next(retryReq);
           }),
           catchError((refreshErr) => {
-            loanService.logout(false);
+            if (refreshErr.status === 401 || refreshErr.status === 403) {
+              loanService.logout(false);
+            }
             return throwError(() => refreshErr);
           })
         );

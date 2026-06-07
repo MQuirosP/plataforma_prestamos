@@ -223,9 +223,10 @@ export async function checkDatabaseConnection() {
       });
     }
   } catch (error: any) {
-    console.warn('PostgreSQL database not available or schema not applied. Running in memory fallback mode.', error.message);
-    useMemoryStore = true;
+    console.error('PostgreSQL database connection failed during boot. Will retry on request.', error.message);
+    useMemoryStore = false; // Do not fallback to memory store
   }
+
 }
 
 export function isUsingMemoryStore() {

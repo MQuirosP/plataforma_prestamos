@@ -157,8 +157,11 @@ export class LoanService {
         return res.token;
       }
       throw new Error('No token returned');
-    } catch (err) {
-      this.logout(false); // Logout locally without recursive loop
+    } catch (err: any) {
+      // Only logout if the server explicitly rejects the session (401 or 403)
+      if (err.status === 401 || err.status === 403) {
+        this.logout(false);
+      }
       throw err;
     }
   }
