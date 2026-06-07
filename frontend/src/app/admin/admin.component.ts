@@ -606,10 +606,34 @@ export class AdminComponent implements OnInit {
   }
 
   getPromoMessage(plan: string) {
-    if (plan === 'BRONCE') return "Pásate a PLATA por ₡7,500 y obtén hasta 20 clientes y 1 cobrador.";
-    if (plan === 'PLATA') return "Pásate a ORO por ₡10,000 y obtén hasta 35 clientes y 2 cobradores.";
-    if (plan === 'ORO') return "Pásate a PLATINO por ₡20,000 y obtén hasta 50 clientes y 5 cobradores.";
-    if (plan === 'PLATINO') return "Pásate a DIAMANTE por ₡30,000 y maneja clientes ilimitados.";
+    const configs = this.planConfigs();
+    const plata = configs.find(c => c.plan === 'PLATA');
+    const oro = configs.find(c => c.plan === 'ORO');
+    const platino = configs.find(c => c.plan === 'PLATINO');
+    const diamante = configs.find(c => c.plan === 'DIAMANTE');
+
+    if (plan === 'BRONCE') {
+      const price = plata ? plata.precioMensual : 7500;
+      const clientes = plata ? plata.maxClientes : 20;
+      const cobradores = plata ? plata.maxCobradores : 1;
+      return `Pásate a PLATA por ₡${price.toLocaleString()} y obtén hasta ${clientes} clientes y ${cobradores} cobrador${cobradores > 1 ? 'es' : ''}.`;
+    }
+    if (plan === 'PLATA') {
+      const price = oro ? oro.precioMensual : 10000;
+      const clientes = oro ? oro.maxClientes : 35;
+      const cobradores = oro ? oro.maxCobradores : 2;
+      return `Pásate a ORO por ₡${price.toLocaleString()} y obtén hasta ${clientes} clientes y ${cobradores} cobrador${cobradores > 1 ? 'es' : ''}.`;
+    }
+    if (plan === 'ORO') {
+      const price = platino ? platino.precioMensual : 20000;
+      const clientes = platino ? platino.maxClientes : 50;
+      const cobradores = platino ? platino.maxCobradores : 5;
+      return `Pásate a PLATINO por ₡${price.toLocaleString()} y obtén hasta ${clientes} clientes y ${cobradores} cobrador${cobradores > 1 ? 'es' : ''}.`;
+    }
+    if (plan === 'PLATINO') {
+      const price = diamante ? diamante.precioMensual : 30000;
+      return `Pásate a DIAMANTE por ₡${price.toLocaleString()} y maneja clientes ilimitados.`;
+    }
     return "¡Gracias por ser cliente DIAMANTE!";
   }
 
