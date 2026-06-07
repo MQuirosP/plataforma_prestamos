@@ -61,6 +61,7 @@ model User {
   plan            PlanSaaS          @default(BRONCE)
   suspendido      Boolean           @default(false)
   fechaPruebaFin  DateTime?
+  paymentDate     DateTime?
   /// Solo aplica cuando rol = COBRADOR — apunta al prestamista dueño
   prestamistaId   String?
   prestamista     User?             @relation("CobradorPrestamista", fields: [prestamistaId], references: [id])
@@ -173,4 +174,14 @@ model LogActividadSaaS {
   descripcion   String
   ip            String?
   prestamistaId String?
+}
+
+/// Configuracion dinamica de precios y limites por cada PlanSaaS
+model SaaSPlanConfig {
+  id            String   @id @default(uuid())
+  plan          PlanSaaS @unique
+  maxClientes   Int
+  maxCobradores Int
+  precioMensual Decimal
+  updatedAt     DateTime @updatedAt
 }

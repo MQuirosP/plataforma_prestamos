@@ -7,27 +7,11 @@ async function main() {
 
   const validUntil = new Date('2050-12-31T23:59:59.000Z');
 
-  // List of accounts to seed
   const accounts = [
     {
       nombre: 'Mario Quirós (Admin)',
       email: 'mario.quiros.admin@gmail.com',
       rol: 'ADMIN' as const
-    },
-    {
-      nombre: 'Mario Quirós (Admin Placeholder)',
-      email: 'TU_CORREO_ADMIN@gmail.com',
-      rol: 'ADMIN' as const
-    },
-    {
-      nombre: 'Mario Quirós (Prestamista)',
-      email: 'mario.quiros.prestamista@gmail.com',
-      rol: 'PRESTAMISTA' as const
-    },
-    {
-      nombre: 'Mario Quirós (Prestamista Placeholder)',
-      email: 'TU_CORREO_PRUEBAS@gmail.com',
-      rol: 'PRESTAMISTA' as const
     }
   ];
 
@@ -79,6 +63,25 @@ async function main() {
   }
 
   console.log('⚙️ Default Business Settings initialized for all seed users.');
+
+  // Seed SaaS Plan Configurations
+  const planConfigs = [
+    { plan: 'BRONCE' as const, maxClientes: 10, maxCobradores: 0, precioMensual: 5000 },
+    { plan: 'PLATA' as const, maxClientes: 20, maxCobradores: 1, precioMensual: 7500 },
+    { plan: 'ORO' as const, maxClientes: 35, maxCobradores: 2, precioMensual: 10000 },
+    { plan: 'PLATINO' as const, maxClientes: 50, maxCobradores: 5, precioMensual: 20000 },
+    { plan: 'DIAMANTE' as const, maxClientes: -1, maxCobradores: -1, precioMensual: 30000 }
+  ];
+
+  for (const p of planConfigs) {
+    await prisma.saaSPlanConfig.upsert({
+      where: { plan: p.plan },
+      update: { maxClientes: p.maxClientes, maxCobradores: p.maxCobradores, precioMensual: p.precioMensual },
+      create: p
+    });
+  }
+  console.log('⚙️ Default SaaS Plan Configs initialized.');
+
   console.log('✅ Seeding completed successfully.');
 }
 

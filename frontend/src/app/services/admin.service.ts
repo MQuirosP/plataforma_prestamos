@@ -26,6 +26,13 @@ export interface Tenant {
   }[];
 }
 
+export interface SaaSPlanConfig {
+  plan: 'BRONCE' | 'PLATA' | 'ORO' | 'PLATINO' | 'DIAMANTE';
+  maxClientes: number;
+  maxCobradores: number;
+  precioMensual: number;
+}
+
 export interface SaaSStats {
   totalPrestamistas: number;
   totalCobradores: number;
@@ -121,4 +128,14 @@ export class AdminService {
       window.location.reload();
     }
   }
+
+  async getPlanConfigs(): Promise<SaaSPlanConfig[]> {
+    return firstValueFrom(this.http.get<SaaSPlanConfig[]>(`${this.apiUrl}/admin/plan-configs`, this.getHeaders()));
+  }
+
+  async updatePlanConfig(config: SaaSPlanConfig): Promise<SaaSPlanConfig> {
+    const res = await firstValueFrom(this.http.put<{ success: boolean; config: SaaSPlanConfig }>(`${this.apiUrl}/admin/plan-configs`, config, this.getHeaders()));
+    return res.config;
+  }
 }
+

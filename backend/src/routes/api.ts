@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getLoans, createLoan, addPayment } from '../controllers/loanController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
-import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, impersonateTenant, getLogs, getStats } from '../controllers/adminController';
+import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, impersonateTenant, getLogs, getStats, getPlanConfigs, updatePlanConfig } from '../controllers/adminController';
 import { login } from '../controllers/authController';
 import { getCajaCobrador, procesarLiquidacion } from '../controllers/cobradorController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
@@ -32,6 +32,8 @@ router.put('/admin/tenants/:id/plan', changeTenantPlan as any);
 router.post('/admin/impersonate/:prestamistaId', impersonateTenant as any);
 router.get('/admin/logs', getLogs as any);
 router.get('/admin/stats', getStats as any);
+router.get('/admin/plan-configs', getPlanConfigs as any);
+router.put('/admin/plan-configs', updatePlanConfig as any);
 
 // Cobrador: caja y liquidaciones
 router.get('/caja/:cobradorId', getCajaCobrador as any);

@@ -37,13 +37,12 @@ import { LoanService } from '../services/loan.service';
         <div class="text-center mb-8 mt-4">
           <img src="/assets/images/logo.png" class="w-12 h-12 object-contain mx-auto mb-3" alt="Logo">
           <h2 class="text-2xl font-black text-white uppercase tracking-tight leading-tight">Plataforma Crediticia</h2>
-          <p class="text-[10px] text-caterpillar uppercase tracking-widest font-mono mt-1">SaaS Plataforma de Cobranza</p>
         </div>
 
         <form (submit)="onLogin($event)" class="space-y-4">
           <div>
             <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nombre de Usuario</label>
-            <input type="text" [(ngModel)]="username" name="username" required placeholder="tu_usuario"
+            <input type="text" [(ngModel)]="username" name="username" required placeholder="ingresa tu usuario"
                    class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar transition duration-150">
           </div>
           

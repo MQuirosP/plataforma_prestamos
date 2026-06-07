@@ -198,3 +198,30 @@ export async function getStats(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+// 8. Obtener configuración de los planes SaaS
+export async function getPlanConfigs(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  try {
+    const { PlanManager } = await import('../services/planManager');
+    const configs = await PlanManager.getAllPlanConfigs();
+    return res.json(configs);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// 9. Actualizar configuración de un plan SaaS
+export async function updatePlanConfig(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.rol !== 'ADMIN') return res.status(403).json({ error: 'Denegado' });
+  try {
+    const { plan, maxClientes, maxCobradores, precioMensual } = req.body;
+    const { PlanManager } = await import('../services/planManager');
+    const config = await PlanManager.updatePlanConfig(plan, maxClientes, maxCobradores, precioMensual);
+    
+    await logAudit('ACTUALIZAR_PLAN', `El admin actualizó los límites y precio del plan ${plan}`, req);
+    return res.json({ success: true, config });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
+import { PlanManager } from '../services/planManager';
 
 type MetodoPago = 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
 
@@ -160,26 +161,24 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
   }
 
   // CHECK PLAN LIMITS
-  if (!isUsingMemoryStore()) {
-    const prestamistaInfo = await prisma.user.findUnique({
-      where: { id: prestamistaId },
-      select: { plan: true }
-    });
+  const prestamistaInfo = isUsingMemoryStore()
+    ? inMemoryStore.users.find(u => u.id === prestamistaId)
+    : await prisma.user.findUnique({
+        where: { id: prestamistaId },
+        select: { plan: true }
+      });
 
-    if (prestamistaInfo?.plan !== 'DIAMANTE') {
-      const loanCount = await prisma.loan.count({ where: { prestamistaId, estado: 'ACTIVE' } });
-      if (prestamistaInfo?.plan === 'BRONCE' && loanCount >= 10) {
-        return res.status(400).json({ error: 'Límite de plan Bronce alcanzado (máximo 10 clientes). Por favor, suba de categoría.' });
-      }
-      if (prestamistaInfo?.plan === 'PLATA' && loanCount >= 20) {
-        return res.status(400).json({ error: 'Límite de plan Plata alcanzado (máximo 20 clientes). Por favor, suba de categoría.' });
-      }
-      if (prestamistaInfo?.plan === 'ORO' && loanCount >= 35) {
-        return res.status(400).json({ error: 'Límite de plan Oro alcanzado (máximo 35 clientes). Por favor, suba de categoría.' });
-      }
-      if (prestamistaInfo?.plan === 'PLATINO' && loanCount >= 50) {
-        return res.status(400).json({ error: 'Límite de plan Platino alcanzado (máximo 50 clientes). Por favor, suba de categoría.' });
-      }
+  if (prestamistaInfo?.plan && prestamistaInfo.plan !== 'DIAMANTE') {
+    const loanCount = isUsingMemoryStore()
+      ? inMemoryStore.loans.filter(l => l.prestamistaId === prestamistaId && l.estado === 'ACTIVE').length
+      : await prisma.loan.count({ where: { prestamistaId, estado: 'ACTIVE' } });
+      
+    const planConfig = await PlanManager.getPlanConfig(prestamistaInfo.plan as any);
+
+    if (planConfig.maxClientes !== -1 && loanCount >= planConfig.maxClientes) {
+      return res.status(403).json({ 
+        error: `Límite de plan ${prestamistaInfo.plan} alcanzado (máximo ${planConfig.maxClientes} clientes). Por favor, suba de categoría.` 
+      });
     }
   }
 

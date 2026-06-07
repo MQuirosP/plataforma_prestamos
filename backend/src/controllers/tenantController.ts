@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma } from '../services/db';
+import { PlanManager } from '../services/planManager';
 import * as bcrypt from 'bcryptjs';
 
 // Crear un nuevo cobrador bajo la cuenta del prestamista actual
@@ -14,27 +15,21 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response) {
   }
 
   try {
-    // 1. Verificar límites de plan
     const prestamistaInfo = await prisma.user.findUnique({
       where: { id: prestamistaId },
       select: { plan: true }
     });
 
-    if (prestamistaInfo?.plan !== 'DIAMANTE') {
+    if (prestamistaInfo?.plan && prestamistaInfo.plan !== 'DIAMANTE') {
       const cobradorCount = await prisma.user.count({
         where: { prestamistaId, rol: 'COBRADOR' }
       });
-      if (prestamistaInfo?.plan === 'BRONCE' && cobradorCount >= 0) {
-        return res.status(400).json({ error: 'Límite de plan Bronce alcanzado (no permite cobradores). Por favor, contacte al administrador.' });
-      }
-      if (prestamistaInfo?.plan === 'PLATA' && cobradorCount >= 1) {
-        return res.status(400).json({ error: 'Límite de plan Plata alcanzado (máximo 1 cobrador). Por favor, contacte al administrador.' });
-      }
-      if (prestamistaInfo?.plan === 'ORO' && cobradorCount >= 2) {
-        return res.status(400).json({ error: 'Límite de plan Oro alcanzado (máximo 2 cobradores). Por favor, contacte al administrador.' });
-      }
-      if (prestamistaInfo?.plan === 'PLATINO' && cobradorCount >= 5) {
-        return res.status(400).json({ error: 'Límite de plan Platino alcanzado (máximo 5 cobradores). Por favor, contacte al administrador.' });
+      const planConfig = await PlanManager.getPlanConfig(prestamistaInfo.plan as any);
+
+      if (planConfig.maxCobradores !== -1 && cobradorCount >= planConfig.maxCobradores) {
+        return res.status(403).json({ 
+          error: `Límite de plan ${prestamistaInfo.plan} alcanzado (máximo ${planConfig.maxCobradores} cobradores). Por favor, contacte al administrador.` 
+        });
       }
     }
 

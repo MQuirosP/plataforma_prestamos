@@ -1,9 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdminService, Tenant, SaaSStats, SaaSLog } from '../services/admin.service';
+import { AdminService, Tenant, SaaSStats, SaaSLog, SaaSPlanConfig } from '../services/admin.service';
 import { ToastService } from '../services/toast.service';
 import { LoanService } from '../services/loan.service';
+import html2canvas from 'html2canvas';
 
 @Component({
   selector: 'app-admin',
@@ -22,11 +23,16 @@ import { LoanService } from '../services/loan.service';
           </div>
         </div>
 
-        <button (click)="logout()" class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-semantic-red transition duration-150">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-        </button>
+        <div class="flex gap-2">
+          <button (click)="showPlanModal.set(true)" class="bg-industrial-surface border border-industrial-border px-3 py-1.5 rounded-lg text-white hover:border-caterpillar text-[10px] font-bold uppercase transition">
+            Configurar Planes
+          </button>
+          <button (click)="logout()" class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-semantic-red transition duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       <!-- Main Layout -->
@@ -77,13 +83,25 @@ import { LoanService } from '../services/loan.service';
                     {{ tenant.nombre }} 
                     <span class="text-[10px] text-caterpillar ml-2">&#64;{{ tenant.username }}</span>
                   </h3>
-                  <div class="text-[11px] text-industrial-muted font-mono mt-1 flex items-center gap-2">
-                    <a [href]="getWhatsappLink(tenant)" target="_blank" class="hover:text-semantic-emerald flex items-center gap-1 transition">
+                  <div class="text-[11px] text-industrial-muted font-mono mt-1 flex items-center gap-2 relative">
+                    <button (click)="togglePhoneDropdown(tenant.id)" class="hover:text-semantic-emerald flex items-center gap-1 transition focus:outline-none">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                       {{ tenant.telefono }}
-                    </a>
-                    <span *ngIf="tenant.email">| {{ tenant.email }}</span>
-                    <span *ngIf="isExpiringSoon(tenant.fechaPruebaFin)" class="text-[9px] bg-semantic-red/20 text-semantic-red px-1.5 py-0.5 rounded border border-semantic-red/30 animate-pulse">
+                    </button>
+                    <!-- Dropdown Phone Options -->
+                    <div *ngIf="activePhoneDropdown() === tenant.id" class="absolute top-full left-0 mt-1 w-56 bg-industrial-surface border border-industrial-border rounded shadow-lg z-50 py-1 flex flex-col">
+                      <button (click)="sharePaymentReminder(tenant)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-caterpillar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Enviar Recordatorio (Imagen)
+                      </button>
+                      <a [href]="getWhatsappLink(tenant)" target="_blank" (click)="activePhoneDropdown.set(null)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-industrial-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                        Mensaje Personalizado
+                      </a>
+                    </div>
+
+                    <span *ngIf="tenant.email" class="ml-2">| {{ tenant.email }}</span>
+                    <span *ngIf="isExpiringSoon(tenant.fechaPruebaFin)" class="text-[9px] bg-semantic-red/20 text-semantic-red px-1.5 py-0.5 rounded border border-semantic-red/30 animate-pulse ml-2">
                       ¡Vence en {{ getDaysLeft(tenant.fechaPruebaFin) }} días!
                     </span>
                   </div>
@@ -119,11 +137,7 @@ import { LoanService } from '../services/loan.service';
               <div>
                 <label class="block text-[9px] text-industrial-muted uppercase mb-1">Plan Actual</label>
                 <select [ngModel]="tenant.plan" (ngModelChange)="changePlan(tenant.id, $event)" class="bg-industrial-surface border border-industrial-border text-white text-xs rounded p-2 w-full focus:outline-none">
-                  <option value="BRONCE">BRONCE (10 Clientes)</option>
-                  <option value="PLATA">PLATA (20 Clientes)</option>
-                  <option value="ORO">ORO (35 Clientes)</option>
-                  <option value="PLATINO">PLATINO (50 Clientes)</option>
-                  <option value="DIAMANTE">DIAMANTE (Ilimitado)</option>
+                  <option *ngFor="let conf of planConfigs()" [value]="conf.plan">{{ conf.plan }}</option>
                 </select>
               </div>
               
@@ -166,11 +180,7 @@ import { LoanService } from '../services/loan.service';
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Plan Inicial</label>
                 <select [(ngModel)]="newTenant.plan" name="plan" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:border-caterpillar">
-                  <option value="BRONCE">BRONCE</option>
-                  <option value="PLATA">PLATA</option>
-                  <option value="ORO">ORO</option>
-                  <option value="PLATINO">PLATINO</option>
-                  <option value="DIAMANTE">DIAMANTE</option>
+                  <option *ngFor="let conf of planConfigs()" [value]="conf.plan">{{ conf.plan }}</option>
                 </select>
               </div>
             </div>
@@ -220,6 +230,82 @@ import { LoanService } from '../services/loan.service';
         </div>
       </div>
 
+      <!-- Plan Config Modal -->
+      <div *ngIf="showPlanModal()" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-industrial-dark border border-industrial-border rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-white font-black uppercase tracking-tight text-lg">Configuración de Planes</h3>
+            <button (click)="showPlanModal.set(false)" class="text-industrial-muted hover:text-white focus:outline-none">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          
+          <div class="space-y-6">
+            <div *ngFor="let config of planConfigs()" class="bg-industrial-surface border border-industrial-border p-4 rounded-lg">
+              <div class="flex justify-between items-center mb-4 border-b border-industrial-border pb-2">
+                <h4 class="text-caterpillar font-black text-lg">{{ config.plan }}</h4>
+                <button (click)="savePlanConfig(config)" class="bg-caterpillar text-industrial-black px-3 py-1.5 rounded text-[10px] uppercase font-bold hover:bg-caterpillar-dark transition">
+                  Guardar
+                </button>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Máx Clientes</label>
+                  <input type="number" [(ngModel)]="config.maxClientes" class="w-full bg-industrial-dark border border-industrial-border rounded p-2 text-white text-sm focus:border-caterpillar outline-none">
+                  <span class="text-[8px] text-industrial-muted mt-0.5 block">(-1 para ilimitado)</span>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Máx Cobradores</label>
+                  <input type="number" [(ngModel)]="config.maxCobradores" class="w-full bg-industrial-dark border border-industrial-border rounded p-2 text-white text-sm focus:border-caterpillar outline-none">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Precio Mensual (₡)</label>
+                  <input type="number" [(ngModel)]="config.precioMensual" class="w-full bg-industrial-dark border border-industrial-border rounded p-2 text-white text-sm focus:border-caterpillar outline-none">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden DOM Element for Image Generation -->
+      <div *ngIf="selectedTenantForReminder()" class="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none w-[400px]">
+        <div id="reminder-card" class="bg-industrial-dark border border-industrial-border p-6 font-sans">
+          <div class="flex justify-between items-start mb-6 border-b border-industrial-border pb-4">
+            <div>
+              <img src="/assets/images/logo-header.webp" class="h-8 w-auto mb-2 opacity-90" alt="Cat-Loan">
+              <h2 class="text-white font-black uppercase text-lg leading-tight tracking-tight">Estado de Suscripción</h2>
+              <p class="text-[10px] text-industrial-muted font-mono uppercase tracking-wider">CAT-LOAN SAAS</p>
+            </div>
+          </div>
+          
+          <div class="space-y-4 mb-6">
+            <div>
+              <p class="text-[9px] text-industrial-muted uppercase font-mono">Cliente</p>
+              <p class="text-sm text-white font-bold">{{ selectedTenantForReminder()?.nombre }}</p>
+            </div>
+            <div class="flex justify-between">
+              <div>
+                <p class="text-[9px] text-industrial-muted uppercase font-mono">Plan Actual</p>
+                <p class="text-lg text-caterpillar font-black">{{ selectedTenantForReminder()?.plan }}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-[9px] text-industrial-muted uppercase font-mono">Vencimiento</p>
+                <p class="text-sm text-white font-bold">{{ selectedTenantForReminder()?.fechaPruebaFin ? (selectedTenantForReminder()?.fechaPruebaFin | date:'dd/MM/yyyy') : 'N/A' }}</p>
+              </div>
+            </div>
+            <div class="bg-industrial-surface p-4 rounded-lg border border-industrial-border/50">
+              <p class="text-[9px] text-industrial-muted uppercase font-mono mb-1">Costo de Renovación</p>
+              <p class="text-2xl text-white font-black">₡{{ getPlanPrice(selectedTenantForReminder()?.plan) | number:'1.0-0' }}</p>
+            </div>
+          </div>
+
+          <div class="bg-caterpillar/10 border border-caterpillar/30 p-3 rounded text-center">
+            <p class="text-[10px] text-caterpillar font-bold">{{ getPromoMessage(selectedTenantForReminder()?.plan || '') }}</p>
+          </div>
+        </div>
+      </div>
+
     </div>
   `
 })
@@ -233,9 +319,15 @@ export class AdminComponent implements OnInit {
   tenants = signal<Tenant[]>([]);
   stats = signal<SaaSStats | null>(null);
   logs = signal<SaaSLog[]>([]);
+  planConfigs = signal<SaaSPlanConfig[]>([]);
   
   searchTerm = '';
   loading = signal(false);
+
+  showPlanModal = signal(false);
+  activePhoneDropdown = signal<string | null>(null);
+  selectedTenantForReminder = signal<Tenant | null>(null);
+  isGeneratingImage = signal(false);
 
   newTenant = {
     nombre: '',
@@ -254,17 +346,33 @@ export class AdminComponent implements OnInit {
 
   async loadData() {
     try {
-      const [t, s, l] = await Promise.all([
+      const [t, s, l, p] = await Promise.all([
         this.adminService.getTenants(),
         this.adminService.getStats(),
-        this.adminService.getLogs()
+        this.adminService.getLogs(),
+        this.adminService.getPlanConfigs()
       ]);
       this.tenants.set(t);
       this.stats.set(s);
       this.logs.set(l);
+      this.planConfigs.set(p);
     } catch (err) {
       this.toastService.error('Error al cargar datos del SaaS');
     }
+  }
+
+  getPlanPrice(plan?: string): number {
+    if (!plan) return 0;
+    const config = this.planConfigs().find(c => c.plan === plan);
+    return config ? config.precioMensual : 0;
+  }
+
+  getPromoMessage(plan: string) {
+    if (plan === 'BRONCE') return "Pásate a PLATA por ₡7,500 y obtén hasta 20 clientes y 1 cobrador.";
+    if (plan === 'PLATA') return "Pásate a ORO por ₡10,000 y obtén hasta 35 clientes y 2 cobradores.";
+    if (plan === 'ORO') return "Pásate a PLATINO por ₡20,000 y obtén hasta 50 clientes y 5 cobradores.";
+    if (plan === 'PLATINO') return "Pásate a DIAMANTE por ₡30,000 y maneja clientes ilimitados.";
+    return "¡Gracias por ser cliente DIAMANTE!";
   }
 
   filteredTenants(): Tenant[] {
@@ -293,9 +401,64 @@ export class AdminComponent implements OnInit {
     return Math.max(0, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
   }
 
-  getWhatsappLink(tenant: Tenant): string {
+  togglePhoneDropdown(id: string) {
+    this.activePhoneDropdown.set(this.activePhoneDropdown() === id ? null : id);
+  }
+
+  async sharePaymentReminder(tenant: Tenant) {
+    this.selectedTenantForReminder.set(tenant);
+    this.activePhoneDropdown.set(null);
+    this.isGeneratingImage.set(true);
+
+    setTimeout(async () => {
+      const element = document.getElementById('reminder-card');
+      if (!element) {
+        this.isGeneratingImage.set(false);
+        return;
+      }
+
+      try {
+        const canvas = await html2canvas(element, { backgroundColor: '#121212', scale: 2 });
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+
+          const file = new File([blob], `Recordatorio_${tenant.nombre}.png`, { type: 'image/png' });
+          const text = `Hola ${tenant.nombre}, te adjuntamos el recordatorio de tu suscripción a CAT-LOAN.`;
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({ files: [file], title: 'Recordatorio de Pago', text });
+            } catch (shareErr) {
+              this.fallbackClipboard(blob, tenant);
+            }
+          } else {
+            this.fallbackClipboard(blob, tenant);
+          }
+        }, 'image/png');
+      } catch (err) {
+        this.toastService.error('Error al generar la imagen');
+      } finally {
+        this.isGeneratingImage.set(false);
+        setTimeout(() => this.selectedTenantForReminder.set(null), 500);
+      }
+    }, 100);
+  }
+
+  async fallbackClipboard(blob: Blob, tenant: Tenant) {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      this.toastService.success('Imagen copiada al portapapeles. Pégala en WhatsApp.');
+      window.open(this.getWhatsappLink(tenant, true), '_blank');
+    } catch (e) {
+      this.toastService.error('No se pudo copiar la imagen al portapapeles');
+    }
+  }
+
+  getWhatsappLink(tenant: Tenant, skipText = false): string {
     const isExpiring = this.isExpiringSoon(tenant.fechaPruebaFin);
     const cleanPhone = tenant.telefono.replace(/\D/g, '');
+    if (skipText) return `https://wa.me/${cleanPhone}`;
+    
     let text = `Hola ${tenant.nombre}, te saludamos de CAT-LOAN.`;
     
     if (isExpiring && tenant.fechaPruebaFin) {
@@ -349,6 +512,16 @@ export class AdminComponent implements OnInit {
       this.toastService.success(`Plan actualizado a ${newPlan}`);
     } catch (err) {
       this.toastService.error('Error al cambiar plan');
+    }
+  }
+
+  async savePlanConfig(config: SaaSPlanConfig) {
+    try {
+      const updated = await this.adminService.updatePlanConfig(config);
+      this.toastService.success(`Plan ${config.plan} actualizado`);
+      this.planConfigs.update(curr => curr.map(c => c.plan === config.plan ? updated : c));
+    } catch (err) {
+      this.toastService.error(`Error actualizando plan ${config.plan}`);
     }
   }
 
