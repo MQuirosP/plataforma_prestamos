@@ -303,4 +303,16 @@ export class LoanService {
       this.http.post<any>(`${this.apiUrl}/admin/renew-subscription`, { userId, days }, this.getHeaders())
     );
   }
+
+  async getCobradores() {
+    return firstValueFrom(
+      this.http.get<any[]>(`${this.apiUrl}/cobradores`, this.getHeaders())
+    );
+  }
+
+  async createCobrador(data: any) {
+    return firstValueFrom(
+      this.http.post<any>(`${this.apiUrl}/cobradores`, data, this.getHeaders())
+    );
+  }
 }

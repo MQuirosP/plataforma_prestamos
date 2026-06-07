@@ -36,12 +36,12 @@ import { ToastService } from '../services/toast.service';
               <span class="font-black uppercase tracking-tight">Nuevo</span>
             </button>
 
-            <!-- Invite Cobrador button -->
-            <button (click)="copyCobradorLink()" 
+            <!-- Manage Cobradores button -->
+            <button (click)="openCobradoresModal()" 
                     class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-emerald-500 transition duration-150"
-                    title="Invitar Cobrador">
+                    title="Gestionar Equipo">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </button>
           </ng-container>
@@ -408,7 +408,60 @@ import { ToastService } from '../services/toast.service';
           </div>
           
         </div>
+        <!-- MODAL 4: Gestionar Cobradores -->
+      <div *ngIf="showCobradoresModal()" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-industrial-dark w-full max-w-md rounded-2xl border border-industrial-border p-6 shadow-2xl relative overflow-hidden">
+          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
+          
+          <div class="flex justify-between items-center mb-4 mt-2">
+            <h2 class="text-lg font-black text-white uppercase tracking-tight">Gestión de Equipo</h2>
+            <button (click)="showCobradoresModal.set(false)" class="text-industrial-muted hover:text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Existing Team -->
+          <div class="mb-6 max-h-40 overflow-y-auto space-y-2">
+            <h3 class="text-xs text-industrial-muted uppercase font-mono mb-2 border-b border-industrial-border/50 pb-1">Cobradores Actuales</h3>
+            <div *ngIf="cobradores().length === 0" class="text-[10px] text-industrial-muted text-center py-2">
+              Aún no tienes cobradores en tu equipo.
+            </div>
+            <div *ngFor="let cobrador of cobradores()" class="flex justify-between items-center bg-industrial-surface p-2 rounded-lg border border-industrial-border">
+              <div>
+                <span class="text-white font-bold text-sm block">{{ cobrador.nombre }}</span>
+                <span class="text-caterpillar text-[10px] font-mono block">&#64;{{ cobrador.username }}</span>
+              </div>
+              <span class="text-[9px] text-industrial-muted font-mono">{{ cobrador.telefono }}</span>
+            </div>
+          </div>
+
+          <!-- Add New Member Form -->
+          <form (submit)="onCreateCobrador($event)" class="space-y-3 bg-industrial-surface/30 p-3 rounded-xl border border-industrial-border border-dashed">
+            <h3 class="text-xs text-caterpillar uppercase font-mono mb-2">Crear Nuevo Cobrador</h3>
+            
+            <input type="text" [(ngModel)]="newCobradorData.nombre" name="nombre" placeholder="Nombre completo" required 
+                   class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2.5 text-white text-xs focus:border-caterpillar outline-none">
+            
+            <input type="text" [(ngModel)]="newCobradorData.username" name="username" placeholder="Nombre de usuario (login)" required 
+                   class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2.5 text-white text-xs focus:border-caterpillar outline-none">
+            
+            <input type="text" [(ngModel)]="newCobradorData.password" name="password" placeholder="Contraseña de acceso" required 
+                   class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2.5 text-white text-xs focus:border-caterpillar outline-none">
+            
+            <input type="text" [(ngModel)]="newCobradorData.telefono" name="telefono" placeholder="Teléfono (+506...)" required 
+                   class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2.5 text-white text-xs focus:border-caterpillar outline-none">
+            
+            <button type="submit" [disabled]="loadingCobrador()"
+                    class="w-full bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-2.5 rounded-lg font-black uppercase tracking-wider text-xs transition mt-2">
+              {{ loadingCobrador() ? 'Guardando...' : '+ Agregar Cobrador' }}
+            </button>
+          </form>
+        </div>
       </div>
+
+    </div>
 
     </div>
   `,
@@ -430,6 +483,11 @@ export class DashboardComponent implements OnInit {
   showCreateModal = signal<boolean>(false);
   showAbonoModal = signal<boolean>(false);
   showStatementModal = signal<boolean>(false);
+  showCobradoresModal = signal<boolean>(false);
+
+  cobradores = signal<any[]>([]);
+  loadingCobrador = signal<boolean>(false);
+  newCobradorData = { nombre: '', username: '', password: '', telefono: '+506 ' };
 
   // Selected entities
   selectedLoanForAbono: Loan | null = null;
@@ -691,8 +749,33 @@ export class DashboardComponent implements OnInit {
     this.toastService.success('Recibo exportado como imagen.');
   }
 
-  async copyCobradorLink() {
-    this.toastService.error('La invitación ha sido deshabilitada. Contacte a soporte o use el panel.');
+  async openCobradoresModal() {
+    this.showCobradoresModal.set(true);
+    try {
+      const list = await this.loanService.getCobradores();
+      this.cobradores.set(list);
+    } catch (err) {
+      this.toastService.error('Error al cargar equipo');
+    }
+  }
+
+  async onCreateCobrador(event: Event) {
+    event.preventDefault();
+    if (!this.newCobradorData.nombre || !this.newCobradorData.username || !this.newCobradorData.password) return;
+    
+    this.loadingCobrador.set(true);
+    try {
+      await this.loanService.createCobrador(this.newCobradorData);
+      this.toastService.success('Cobrador agregado al equipo');
+      this.newCobradorData = { nombre: '', username: '', password: '', telefono: '+506 ' };
+      
+      const list = await this.loanService.getCobradores();
+      this.cobradores.set(list);
+    } catch (err: any) {
+      this.toastService.error(err.error?.error || 'Error al crear cobrador');
+    } finally {
+      this.loadingCobrador.set(false);
+    }
   }
 
   toggleSub() {
