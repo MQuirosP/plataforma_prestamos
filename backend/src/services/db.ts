@@ -208,6 +208,7 @@ class InMemoryStore {
       montoAbonado: 3000,
       numeroRecibo: 'REC-10001',
       notas: 'Pago de dos cuotas juntas',
+      metodoPago: 'EFECTIVO',
       fechaPago: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
     },
     {
@@ -216,6 +217,7 @@ class InMemoryStore {
       montoAbonado: 6000,
       numeroRecibo: 'REC-10002',
       notas: 'Abono inicial',
+      metodoPago: 'SINPE',
       fechaPago: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
     }
   ];
