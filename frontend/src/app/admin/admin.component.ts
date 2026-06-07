@@ -101,8 +101,8 @@ import html2canvas from 'html2canvas';
                   {{ tenant.telefono }}
                 </button>
                 <span *ngIf="tenant.email" class="text-[10px] text-industrial-muted font-mono truncate">{{ tenant.email }}</span>
-                <span *ngIf="isExpiringSoon(tenant.fechaPruebaFin)" class="text-[9px] bg-semantic-red/20 text-semantic-red px-1.5 py-0.5 rounded border border-semantic-red/30 animate-pulse">
-                  ¡Vence en {{ getDaysLeft(tenant.fechaPruebaFin) }} días!
+                <span *ngIf="isExpiringSoon(tenant)" class="text-[9px] bg-semantic-red/20 text-semantic-red px-1.5 py-0.5 rounded border border-semantic-red/30 animate-pulse">
+                  ¡Vence en {{ getDaysLeft(tenant) }} días!
                 </span>
 
                 <!-- Phone dropdown -->
@@ -648,17 +648,15 @@ export class AdminComponent implements OnInit {
     );
   }
 
-  isExpiringSoon(fechaPruebaFin?: string): boolean {
-    if (!fechaPruebaFin) return false;
-    const expiry = new Date(fechaPruebaFin).getTime();
+  isExpiringSoon(tenant: Tenant): boolean {
+    const expiry = this.getEffectiveExpiryDate(tenant).getTime();
     const now = new Date().getTime();
     const daysLeft = (expiry - now) / (1000 * 60 * 60 * 24);
     return daysLeft > 0 && daysLeft <= 7;
   }
 
-  getDaysLeft(fechaPruebaFin?: string): number {
-    if (!fechaPruebaFin) return 0;
-    const expiry = new Date(fechaPruebaFin).getTime();
+  getDaysLeft(tenant: Tenant): number {
+    const expiry = this.getEffectiveExpiryDate(tenant).getTime();
     const now = new Date().getTime();
     return Math.max(0, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
   }
@@ -712,13 +710,8 @@ export class AdminComponent implements OnInit {
 
   getReminderPaymentDate(tenant: Tenant | null): string {
     if (!tenant) return 'N/A';
-    const dateStr = tenant.paymentDate || tenant.fechaPruebaFin;
-    if (dateStr) {
-      return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-    }
-    const fallback = new Date();
-    fallback.setMonth(fallback.getMonth() + 1);
-    return fallback.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    const expiry = this.getEffectiveExpiryDate(tenant);
+    return expiry.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   formatWhatsappNumber(phone: string): string {
@@ -767,12 +760,13 @@ export class AdminComponent implements OnInit {
             const uploadData = await uploadRes.json();
             const imageUrl = uploadData.secure_url;
 
-            const isExpiring = this.isExpiringSoon(tenant.fechaPruebaFin);
+            const isExpiring = this.isExpiringSoon(tenant);
             const cleanPhone = this.formatWhatsappNumber(tenant.telefono);
             let text = `Hola ${tenant.nombre}, te saludamos de CAT-LOAN. Adjuntamos tu estado de suscripción: ${imageUrl}`;
             
-            if (isExpiring && tenant.fechaPruebaFin) {
-              const date = new Date(tenant.fechaPruebaFin).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+            if (isExpiring) {
+              const expiry = this.getEffectiveExpiryDate(tenant);
+              const date = expiry.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
               text = `Hola ${tenant.nombre}, te recordamos que tu plan ${tenant.plan} en CAT-LOAN expira el próximo ${date}. Adjuntamos tu recordatorio de renovación: ${imageUrl}`;
             }
 
@@ -803,14 +797,15 @@ export class AdminComponent implements OnInit {
   }
 
   getWhatsappLink(tenant: Tenant, skipText = false): string {
-    const isExpiring = this.isExpiringSoon(tenant.fechaPruebaFin);
+    const isExpiring = this.isExpiringSoon(tenant);
     const cleanPhone = this.formatWhatsappNumber(tenant.telefono);
     if (skipText) return `https://wa.me/${cleanPhone}`;
     
     let text = `Hola ${tenant.nombre}, te saludamos de CAT-LOAN.`;
     
-    if (isExpiring && tenant.fechaPruebaFin) {
-      const date = new Date(tenant.fechaPruebaFin).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+    if (isExpiring) {
+      const expiry = this.getEffectiveExpiryDate(tenant);
+      const date = expiry.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
       text = `Hola ${tenant.nombre}, te recordamos que tu plan ${tenant.plan} en CAT-LOAN expira el próximo ${date}. Por favor, renueva tu suscripción pronto para evitar interrupciones.`;
     }
 
