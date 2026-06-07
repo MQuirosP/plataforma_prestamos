@@ -692,20 +692,7 @@ export class DashboardComponent implements OnInit {
   }
 
   async copyCobradorLink() {
-    this.toastService.success('Generando enlace seguro de un solo uso...');
-    const token = await this.loanService.generateInvite();
-    
-    if (!token) {
-      this.toastService.error('No se pudo generar el enlace. Intente de nuevo.');
-      return;
-    }
-    
-    const link = `${window.location.origin}/login?inviteToken=${token}`;
-    navigator.clipboard.writeText(link).then(() => {
-      this.toastService.success('Enlace copiado al portapapeles. ¡Solo se puede usar una vez!');
-    }).catch(() => {
-      this.toastService.error('Error al copiar el enlace');
-    });
+    this.toastService.error('La invitación ha sido deshabilitada. Contacte a soporte o use el panel.');
   }
 
   toggleSub() {

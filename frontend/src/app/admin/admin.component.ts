@@ -72,7 +72,7 @@ import { LoanService } from '../services/loan.service';
           <div *ngFor="let tenant of filteredTenants()" class="bg-industrial-dark border border-industrial-border rounded-xl p-4 transition hover:border-caterpillar/30">
             <div class="flex justify-between items-start mb-3">
               <div>
-                <h3 class="font-extrabold text-white text-sm">{{ tenant.nombre }} <span class="text-[10px] text-caterpillar ml-2">@{{ tenant.username }}</span></h3>
+                <h3 class="font-extrabold text-white text-sm">{{ tenant.nombre }} <span class="text-[10px] text-caterpillar ml-2">&#64;{{ tenant.username }}</span></h3>
                 <span class="text-[11px] text-industrial-muted font-mono block mt-1">{{ tenant.telefono }} {{ tenant.email ? '| ' + tenant.email : '' }}</span>
               </div>
               <div class="text-right">
