@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
-import { Role } from '@prisma/client';
+import { Role, SubscriptionType } from '@prisma/client';
 
 type MetodoPago = 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
 
@@ -28,14 +28,14 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
   let isExpired = false;
   if (isUsingMemoryStore()) {
     const sub = inMemoryStore.subscriptions.find(s => s.userId === prestamistaId);
-    isExpired = sub?.tipo === 'EXPIRED';
+    isExpired = sub?.tipo === SubscriptionType.EXPIRED;
   } else {
     try {
       const sub = await prisma.subscription.findFirst({
         where: { userId: prestamistaId },
         orderBy: { createdAt: 'desc' }
       });
-      isExpired = sub?.tipo === 'EXPIRED';
+      isExpired = sub?.tipo === SubscriptionType.EXPIRED;
     } catch {
       isExpired = false;
     }
@@ -146,14 +146,14 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
   let isExpired = false;
   if (isUsingMemoryStore()) {
     const sub = inMemoryStore.subscriptions.find(s => s.userId === prestamistaId);
-    isExpired = sub?.tipo === 'EXPIRED';
+    isExpired = sub?.tipo === SubscriptionType.EXPIRED;
   } else {
     try {
       const sub = await prisma.subscription.findFirst({
         where: { userId: prestamistaId },
         orderBy: { createdAt: 'desc' }
       });
-      isExpired = sub?.tipo === 'EXPIRED';
+      isExpired = sub?.tipo === SubscriptionType.EXPIRED;
     } catch {
       isExpired = false;
     }

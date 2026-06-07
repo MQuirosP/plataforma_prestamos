@@ -6,6 +6,7 @@ import { login, changePassword, refresh, logout } from '../controllers/authContr
 import { getCajaCobrador, procesarLiquidacion } from '../controllers/cobradorController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { isUsingMemoryStore, inMemoryStore, prisma } from '../services/db';
+import { SubscriptionType } from '@prisma/client';
 
 const router = Router();
 
@@ -57,7 +58,7 @@ router.post('/dev/toggle-subscription', async (req: AuthenticatedRequest, res: R
   if (isUsingMemoryStore()) {
     const sub = inMemoryStore.subscriptions.find(s => s.userId === userId);
     if (sub) {
-      sub.tipo = sub.tipo === 'ACTIVE' ? 'EXPIRED' : 'ACTIVE';
+      sub.tipo = sub.tipo === SubscriptionType.ACTIVE ? SubscriptionType.EXPIRED : SubscriptionType.ACTIVE;
       return res.json({ success: true, newStatus: sub.tipo });
     }
     return res.status(404).json({ error: 'Subscription not found' });
@@ -73,7 +74,7 @@ router.post('/dev/toggle-subscription', async (req: AuthenticatedRequest, res: R
       const updated = await prisma.subscription.update({
         where: { id: sub.id },
         data: {
-          tipo: sub.tipo === 'ACTIVE' ? 'EXPIRED' : 'ACTIVE'
+          tipo: sub.tipo === SubscriptionType.ACTIVE ? SubscriptionType.EXPIRED : SubscriptionType.ACTIVE
         }
       });
       return res.json({ success: true, newStatus: updated.tipo });
@@ -83,7 +84,7 @@ router.post('/dev/toggle-subscription', async (req: AuthenticatedRequest, res: R
     const newSub = await prisma.subscription.create({
       data: {
         userId,
-        tipo: 'EXPIRED',
+        tipo: SubscriptionType.EXPIRED,
         validUntil: new Date()
       }
     });
