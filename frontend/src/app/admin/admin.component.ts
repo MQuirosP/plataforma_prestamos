@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoanService, Subscriber } from '../services/loan.service';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-admin',
@@ -121,6 +122,7 @@ import { LoanService, Subscriber } from '../services/loan.service';
 })
 export class AdminComponent implements OnInit {
   loanService = inject(LoanService);
+  toastService = inject(ToastService);
 
   subscribers = signal<Subscriber[]>([]);
   searchTerm = '';
@@ -134,7 +136,7 @@ export class AdminComponent implements OnInit {
       const data = await this.loanService.getSubscribers();
       this.subscribers.set(data);
     } catch (err) {
-      alert('Error al cargar la lista de prestamistas');
+      this.toastService.error('Error al cargar la lista de prestamistas');
     }
   }
 
@@ -169,10 +171,10 @@ export class AdminComponent implements OnInit {
 
     try {
       await this.loanService.renewSubscription(userId, days);
-      alert('Suscripción actualizada correctamente');
+      this.toastService.success('Suscripción actualizada correctamente');
       this.loadData();
     } catch (err) {
-      alert('Error al actualizar la suscripción');
+      this.toastService.error('Error al actualizar la suscripción');
     }
   }
 

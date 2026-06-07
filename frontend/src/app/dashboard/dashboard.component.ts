@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoanService, Loan, Payment } from '../services/loan.service';
 import html2canvas from 'html2canvas';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -386,6 +387,7 @@ import html2canvas from 'html2canvas';
 })
 export class DashboardComponent implements OnInit {
   loanService = inject(LoanService);
+  toastService = inject(ToastService);
 
   @Output() openSettings = new EventEmitter<void>();
 
@@ -518,7 +520,7 @@ export class DashboardComponent implements OnInit {
   async onCreateLoan(event: Event) {
     event.preventDefault();
     if (!this.newLoanData.clienteNombre || !this.newLoanData.clienteTelefono || !this.newLoanData.montoOriginal || !this.newLoanData.cuotaSemanal) {
-      alert('Por favor llene todos los campos');
+      this.toastService.error('Por favor llene todos los campos');
       return;
     }
 
@@ -532,11 +534,12 @@ export class DashboardComponent implements OnInit {
       });
       this.showCreateModal.set(false);
       this.recalculateCounts();
+      this.toastService.success('Préstamo creado correctamente');
     } catch (err: any) {
       if (err.status === 403) {
-        alert('Suscripción Expirada. Habilite en panel.');
+        this.toastService.error('Suscripción Expirada. Habilite en panel.');
       } else {
-        alert('Error al registrar el préstamo');
+        this.toastService.error('Error al registrar el préstamo');
       }
     }
   }
@@ -551,7 +554,7 @@ export class DashboardComponent implements OnInit {
   async onSubmitAbono(event: Event) {
     event.preventDefault();
     if (!this.selectedLoanForAbono || !this.abonoMonto || this.abonoMonto <= 0) {
-      alert('Ingrese un abono válido');
+      this.toastService.error('Ingrese un abono válido');
       return;
     }
 
@@ -563,13 +566,14 @@ export class DashboardComponent implements OnInit {
       );
       this.showAbonoModal.set(false);
       this.recalculateCounts();
+      this.toastService.success('Abono registrado correctamente');
       
       const updated = this.loans().find(l => l.id === this.selectedLoanForAbono?.id);
       if (updated) {
         this.openStatement(updated);
       }
     } catch (err: any) {
-      alert(err.error?.error || 'No se pudo aplicar el abono');
+      this.toastService.error(err.error?.error || 'No se pudo aplicar el abono');
     }
   }
 
@@ -609,7 +613,7 @@ export class DashboardComponent implements OnInit {
       }, 'image/png');
 
     } catch (err) {
-      alert('Error al exportar el estado de cuenta');
+      this.toastService.error('Error al exportar el estado de cuenta');
     }
   }
 
@@ -618,7 +622,7 @@ export class DashboardComponent implements OnInit {
     link.download = `EstadoCuenta_${this.selectedStatementLoan?.clienteNombre}.png`;
     link.href = canvas.toDataURL();
     link.click();
-    alert('Recibo exportado como imagen. Ya puede enviarlo por WhatsApp manualmente.');
+    this.toastService.success('Recibo exportado como imagen.');
   }
 
   toggleSub() {

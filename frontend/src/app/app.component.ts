@@ -7,11 +7,12 @@ import { SettingsComponent } from './settings/settings.component';
 import { LoginComponent } from './login/login.component';
 import { OnboardingComponent } from './onboarding/onboarding.component';
 import { AdminComponent } from './admin/admin.component';
+import { ToastComponent } from './toast/toast.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent],
+  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent, ToastComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })

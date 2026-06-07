@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoanService } from '../services/loan.service';
 import { CountriesService, Country } from '../services/countries.service';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-onboarding',
@@ -66,6 +67,7 @@ import { CountriesService, Country } from '../services/countries.service';
 export class OnboardingComponent implements OnInit {
   loanService = inject(LoanService);
   countriesService = inject(CountriesService);
+  toastService = inject(ToastService);
 
   @Output() onboardingComplete = new EventEmitter<void>();
 
@@ -117,12 +119,12 @@ export class OnboardingComponent implements OnInit {
   async submitOnboarding(event: Event) {
     event.preventDefault();
     if (!this.nombreNegocio || !this.telefono) {
-      alert('Por favor complete todos los campos requeridos');
+      this.toastService.error('Por favor complete todos los campos requeridos');
       return;
     }
 
     if (!this.telefono.startsWith('+') || this.telefono.length < 8) {
-      alert('Por favor ingrese un teléfono válido con formato internacional (Ej: +50688888888)');
+      this.toastService.error('Por favor ingrese un teléfono válido con formato internacional (Ej: +50688888888)');
       return;
     }
 
@@ -140,7 +142,7 @@ export class OnboardingComponent implements OnInit {
 
       this.onboardingComplete.emit();
     } catch (err) {
-      alert('No se pudo guardar la configuración. Accediendo al entorno de pruebas offline.');
+      this.toastService.error('No se pudo guardar la configuración. Accediendo al entorno de pruebas offline.');
       this.onboardingComplete.emit();
     } finally {
       this.loading.set(false);

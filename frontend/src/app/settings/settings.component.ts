@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoanService, BusinessSettings } from '../services/loan.service';
 import { CountriesService, Country } from '../services/countries.service';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-settings',
@@ -131,6 +132,7 @@ import { CountriesService, Country } from '../services/countries.service';
 export class SettingsComponent implements OnInit {
   loanService = inject(LoanService);
   countriesService = inject(CountriesService);
+  toastService = inject(ToastService);
 
   @Output() goBack = new EventEmitter<void>();
 
@@ -202,10 +204,10 @@ export class SettingsComponent implements OnInit {
     event.preventDefault();
     try {
       await this.loanService.updateSettings(this.formData);
-      alert('Configuración guardada correctamente');
+      this.toastService.success('Configuración guardada correctamente');
       this.goBack.emit();
     } catch (err) {
-      alert('Error al guardar la configuración');
+      this.toastService.error('Error al guardar la configuración');
     }
   }
 }
