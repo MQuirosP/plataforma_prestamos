@@ -7,9 +7,11 @@ import { ToastService, Toast } from '../services/toast.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] w-full max-w-xs px-4 flex flex-col gap-2 pointer-events-none">
+    <div class="fixed top-20 right-5 z-[9999] w-full max-w-xs flex flex-col gap-2 pointer-events-none">
       <div *ngFor="let toast of toastService.toasts()"
-           [class]="'pointer-events-auto flex items-center justify-between p-3.5 rounded-xl border shadow-2xl animate-[slideIn_0.25s_ease-out] ' + getToastClass(toast)">
+           [class]="'pointer-events-auto flex items-center justify-between p-3.5 rounded-xl border shadow-2xl ' + 
+                   (toast.isLeaving ? 'animate-[slideOutRight_0.3s_ease-in_forwards] ' : 'animate-[slideInRight_0.3s_ease-out_forwards] ') + 
+                   getToastClass(toast)">
         
         <div class="flex items-center gap-3">
           <!-- Icon -->
@@ -42,14 +44,24 @@ import { ToastService, Toast } from '../services/toast.service';
     </div>
   `,
   styles: [`
-    @keyframes slideIn {
+    @keyframes slideInRight {
       from {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateX(120%);
       }
       to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(0);
+      }
+    }
+    @keyframes slideOutRight {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(120%);
       }
     }
   `]
@@ -78,6 +90,6 @@ export class ToastComponent {
   }
 
   remove(id: number) {
-    this.toastService.toasts.update(current => current.filter(t => t.id !== id));
+    this.toastService.remove(id);
   }
 }

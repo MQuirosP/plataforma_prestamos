@@ -4,6 +4,7 @@ export interface Toast {
   id: number;
   message: string;
   type: 'success' | 'error' | 'info';
+  isLeaving?: boolean;
 }
 
 @Injectable({
@@ -20,8 +21,17 @@ export class ToastService {
 
     // Auto-dismiss after 4 seconds
     setTimeout(() => {
-      this.toasts.update(current => current.filter(t => t.id !== id));
+      this.remove(id);
     }, 4000);
+  }
+
+  remove(id: number) {
+    this.toasts.update(current => 
+      current.map(t => t.id === id ? { ...t, isLeaving: true } : t)
+    );
+    setTimeout(() => {
+      this.toasts.update(current => current.filter(t => t.id !== id));
+    }, 300);
   }
 
   success(message: string) {
