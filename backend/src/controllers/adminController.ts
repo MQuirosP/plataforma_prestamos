@@ -170,6 +170,8 @@ export async function getStats(req: AuthenticatedRequest, res: Response) {
     const bronce = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'BRONCE' } });
     const plata = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'PLATA' } });
     const oro = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'ORO' } });
+    const platino = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'PLATINO' } });
+    const diamante = await prisma.user.count({ where: { rol: 'PRESTAMISTA', plan: 'DIAMANTE' } });
 
     // Volumen de transacciones (Pagos)
     const pagos = await prisma.payment.aggregate({
@@ -180,7 +182,7 @@ export async function getStats(req: AuthenticatedRequest, res: Response) {
       totalPrestamistas,
       totalCobradores,
       totalPrestamos,
-      planes: { bronce, plata, oro },
+      planes: { bronce, plata, oro, platino, diamante },
       volumenTransaccional: pagos._sum.montoAbonado || 0
     });
   } catch (err: any) {

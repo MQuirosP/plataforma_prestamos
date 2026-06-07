@@ -34,6 +34,7 @@ export interface BusinessSettings {
   userId?: string;
   monedaSimbolo: string;
   monedaCodigo: string;
+  timezone: string;
   nombreNegocio: string;
   plantillaWhatsapp: string;
   gananciaPorcentaje: number;
@@ -160,6 +161,7 @@ export class LoanService {
       this.settings.set({
         monedaSimbolo: '₡',
         monedaCodigo: 'CRC',
+        timezone: 'America/Costa_Rica',
         nombreNegocio: 'CAT-LOAN Credit',
         plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
         gananciaPorcentaje: 50

@@ -17,6 +17,8 @@ enum PlanSaaS {
   BRONCE
   PLATA
   ORO
+  PLATINO
+  DIAMANTE
 }
 
 enum SubscriptionType {
@@ -79,6 +81,7 @@ model BusinessSettings {
   user               User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   monedaSimbolo      String @default("₡")
   monedaCodigo       String @default("CRC")
+  timezone           String @default("America/Costa_Rica")
   nombreNegocio      String @default("CAT-LOAN Credit")
   plantillaWhatsapp  String @default("Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!")
   gananciaPorcentaje Int    @default(50)

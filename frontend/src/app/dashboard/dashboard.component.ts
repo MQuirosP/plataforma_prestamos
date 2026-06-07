@@ -507,11 +507,18 @@ export class DashboardComponent implements OnInit {
   abonoNotas: string = '';
   abonoMetodoPago: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA' = 'EFECTIVO';
 
-  // Get current weekday mapped to 1-7
+  // Get current weekday mapped to 1-7 based on tenant's timezone
   get currentWeekday(): number {
-    const day = new Date().getDay();
-    if (day === 0) return 7;
-    return day;
+    const tz = this.loanService.settings()?.timezone || 'America/Costa_Rica';
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' });
+      const dayName = formatter.format(new Date());
+      const mapping: Record<string, number> = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
+      return mapping[dayName] || 1;
+    } catch {
+      const day = new Date().getDay();
+      return day === 0 ? 7 : day;
+    }
   }
 
   // Count helper functions

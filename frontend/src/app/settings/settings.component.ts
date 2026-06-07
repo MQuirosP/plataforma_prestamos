@@ -57,6 +57,15 @@ import { ToastService } from '../services/toast.service';
               <span class="text-[10px] text-industrial-muted mt-1 block">Al seleccionar el país se configuran automáticamente la moneda y el símbolo.</span>
             </div>
 
+            <!-- Zona Horaria -->
+            <div>
+              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Zona Horaria (Timezone)</label>
+              <select [(ngModel)]="formData.timezone" name="timezone" required
+                      class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                <option *ngFor="let tz of timezones()" [value]="tz">{{ tz }}</option>
+              </select>
+            </div>
+
             <!-- Moneda y Código (Rellenados automáticamente) -->
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -139,10 +148,12 @@ export class SettingsComponent implements OnInit {
   // Signals
   countriesList = signal<Country[]>([]);
   selectedCountryCca2 = signal<string>('CR');
+  timezones = signal<string[]>([]);
 
   formData: BusinessSettings = {
     monedaSimbolo: '₡',
     monedaCodigo: 'CRC',
+    timezone: 'America/Costa_Rica',
     nombreNegocio: 'CAT-LOAN Credit',
     plantillaWhatsapp: '',
     gananciaPorcentaje: 50
@@ -154,6 +165,12 @@ export class SettingsComponent implements OnInit {
   }
 
   async ngOnInit() {
+    try {
+      this.timezones.set(Intl.supportedValuesOf('timeZone'));
+    } catch {
+      this.timezones.set(['America/Costa_Rica', 'America/Mexico_City', 'America/Bogota', 'America/Lima']);
+    }
+
     // 1. Load active settings
     const activeSettings = this.loanService.settings();
     if (activeSettings) {

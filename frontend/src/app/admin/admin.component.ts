@@ -50,7 +50,7 @@ import { LoanService } from '../services/loan.service';
             <div>
               <span class="text-[9px] text-industrial-muted uppercase font-mono">Planes</span>
               <div class="text-[10px] text-white mt-1">
-                BR: {{ stats()?.planes?.bronce }} | PL: {{ stats()?.planes?.plata }} | OR: {{ stats()?.planes?.oro }}
+                BR: {{ stats()?.planes?.bronce }} | PL: {{ stats()?.planes?.plata }} | OR: {{ stats()?.planes?.oro }} | PT: {{ stats()?.planes?.platino }} | DM: {{ stats()?.planes?.diamante }}
               </div>
             </div>
           </div>
@@ -86,9 +86,11 @@ import { LoanService } from '../services/loan.service';
               <div>
                 <label class="block text-[9px] text-industrial-muted uppercase mb-1">Plan Actual</label>
                 <select [ngModel]="tenant.plan" (ngModelChange)="changePlan(tenant.id, $event)" class="bg-industrial-surface border border-industrial-border text-white text-xs rounded p-2 w-full focus:outline-none">
-                  <option value="BRONCE">BRONCE (25 Clientes)</option>
-                  <option value="PLATA">PLATA (50 Clientes)</option>
-                  <option value="ORO">ORO (Ilimitado)</option>
+                  <option value="BRONCE">BRONCE (10 Clientes)</option>
+                  <option value="PLATA">PLATA (20 Clientes)</option>
+                  <option value="ORO">ORO (35 Clientes)</option>
+                  <option value="PLATINO">PLATINO (50 Clientes)</option>
+                  <option value="DIAMANTE">DIAMANTE (Ilimitado)</option>
                 </select>
               </div>
               
@@ -134,6 +136,8 @@ import { LoanService } from '../services/loan.service';
                   <option value="BRONCE">BRONCE</option>
                   <option value="PLATA">PLATA</option>
                   <option value="ORO">ORO</option>
+                  <option value="PLATINO">PLATINO</option>
+                  <option value="DIAMANTE">DIAMANTE</option>
                 </select>
               </div>
             </div>

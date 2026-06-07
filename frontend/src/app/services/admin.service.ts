@@ -10,7 +10,7 @@ export interface Tenant {
   username: string;
   email?: string;
   telefono: string;
-  plan: 'BRONCE' | 'PLATA' | 'ORO';
+  plan: 'BRONCE' | 'PLATA' | 'ORO' | 'PLATINO' | 'DIAMANTE';
   suspendido: boolean;
   fechaPruebaFin?: string;
   createdAt: string;
@@ -24,6 +24,8 @@ export interface SaaSStats {
     bronce: number;
     plata: number;
     oro: number;
+    platino: number;
+    diamante: number;
   };
   volumenTransaccional: number;
 }

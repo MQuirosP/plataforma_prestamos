@@ -20,7 +20,7 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response) {
       select: { plan: true }
     });
 
-    if (prestamistaInfo?.plan !== 'ORO') {
+    if (prestamistaInfo?.plan !== 'DIAMANTE') {
       const cobradorCount = await prisma.user.count({
         where: { prestamistaId, rol: 'COBRADOR' }
       });
@@ -29,6 +29,12 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response) {
       }
       if (prestamistaInfo?.plan === 'PLATA' && cobradorCount >= 3) {
         return res.status(400).json({ error: 'Límite de plan Plata alcanzado (máximo 3 cobradores). Por favor, contacte al administrador.' });
+      }
+      if (prestamistaInfo?.plan === 'ORO' && cobradorCount >= 5) {
+        return res.status(400).json({ error: 'Límite de plan Oro alcanzado (máximo 5 cobradores). Por favor, contacte al administrador.' });
+      }
+      if (prestamistaInfo?.plan === 'PLATINO' && cobradorCount >= 10) {
+        return res.status(400).json({ error: 'Límite de plan Platino alcanzado (máximo 10 cobradores). Por favor, contacte al administrador.' });
       }
     }
 

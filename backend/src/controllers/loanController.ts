@@ -166,13 +166,19 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
       select: { plan: true }
     });
 
-    if (prestamistaInfo?.plan !== 'ORO') {
+    if (prestamistaInfo?.plan !== 'DIAMANTE') {
       const loanCount = await prisma.loan.count({ where: { prestamistaId, estado: 'ACTIVE' } });
-      if (prestamistaInfo?.plan === 'BRONCE' && loanCount >= 25) {
-        return res.status(400).json({ error: 'Límite de plan Bronce alcanzado (máximo 25 clientes). Por favor, suba de categoría.' });
+      if (prestamistaInfo?.plan === 'BRONCE' && loanCount >= 10) {
+        return res.status(400).json({ error: 'Límite de plan Bronce alcanzado (máximo 10 clientes). Por favor, suba de categoría.' });
       }
-      if (prestamistaInfo?.plan === 'PLATA' && loanCount >= 50) {
-        return res.status(400).json({ error: 'Límite de plan Plata alcanzado (máximo 50 clientes). Por favor, suba de categoría.' });
+      if (prestamistaInfo?.plan === 'PLATA' && loanCount >= 20) {
+        return res.status(400).json({ error: 'Límite de plan Plata alcanzado (máximo 20 clientes). Por favor, suba de categoría.' });
+      }
+      if (prestamistaInfo?.plan === 'ORO' && loanCount >= 35) {
+        return res.status(400).json({ error: 'Límite de plan Oro alcanzado (máximo 35 clientes). Por favor, suba de categoría.' });
+      }
+      if (prestamistaInfo?.plan === 'PLATINO' && loanCount >= 50) {
+        return res.status(400).json({ error: 'Límite de plan Platino alcanzado (máximo 50 clientes). Por favor, suba de categoría.' });
       }
     }
   }
