@@ -15,9 +15,9 @@ const allowedOrigins = [
   'https://plataforma-prestamos.pages.dev'
 ];
 
+// 3. MIDDLEWARE DE CORS NATIVO CON PREFLIGHT INTEGRADO
 app.use(cors({
   origin: (origin, callback) => {
-    // Validar coincidencia exacta o subdominios dinámicos de Cloudflare
     if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.pages.dev') || origin.endsWith('.workers.dev')) {
       callback(null, true);
     } else {
@@ -26,19 +26,14 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With', 'Accept']
+  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With', 'Accept'],
+  optionsSuccessStatus: 200 // Fuerza a que la respuesta de preflight devuelva un 200 limpio para navegadores viejos/móviles
 }));
 
-// Responder inmediatamente a las peticiones OPTIONS globales sin pasar por otros middlewares
-app.options('*', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,X-Requested-With,Accept');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  return res.sendStatus(200);
-});
+// 4. PARSEO DE JSON (Debe ir ANTES de las rutas y del rate limit por si validas payloads)
+app.use(express.json());
 
-// Rate limiters
+// 5. RATE LIMITERS Y RUTAS (Van abajo del escudo de CORS)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per window
@@ -65,7 +60,6 @@ const strictAuthLimiter = rateLimit({
 app.use('/api/auth', strictAuthLimiter);
 app.use('/api', generalLimiter);
 
-app.use(express.json());
 
 // Main status route
 app.get('/health', (req, res) => {
