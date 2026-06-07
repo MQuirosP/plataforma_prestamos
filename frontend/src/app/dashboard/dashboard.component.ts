@@ -35,6 +35,15 @@ import { ToastService } from '../services/toast.service';
             <span class="font-black uppercase tracking-tight">Nuevo</span>
           </button>
 
+          <!-- Invite Cobrador button -->
+          <button (click)="copyCobradorLink()" 
+                  class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-emerald-500 transition duration-150"
+                  title="Invitar Cobrador">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+          </button>
+
           <!-- Settings button -->
           <button (click)="openSettings.emit()" 
                   class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-caterpillar transition duration-150"
@@ -678,6 +687,20 @@ export class DashboardComponent implements OnInit {
     link.href = canvas.toDataURL();
     link.click();
     this.toastService.success('Recibo exportado como imagen.');
+  }
+
+  copyCobradorLink() {
+    const prestamistaId = this.loanService.currentUser()?.id;
+    if (!prestamistaId) {
+      this.toastService.error('No se pudo generar el enlace');
+      return;
+    }
+    const link = `${window.location.origin}/login?prestamistaId=${prestamistaId}&rol=COBRADOR`;
+    navigator.clipboard.writeText(link).then(() => {
+      this.toastService.success('Enlace de invitación copiado al portapapeles');
+    }).catch(() => {
+      this.toastService.error('Error al copiar el enlace');
+    });
   }
 
   toggleSub() {

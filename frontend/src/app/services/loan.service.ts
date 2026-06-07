@@ -110,7 +110,7 @@ export class LoanService {
     }
   }
 
-  async login(email: string, name: string) {
+  async login(email: string, name: string, prestamistaId?: string) {
     this.loading.set(true);
     this.error.set(null);
     try {
@@ -121,7 +121,7 @@ export class LoanService {
       const res = await firstValueFrom(
         this.http.post<{ user: any; subscription: any; isNewUser: boolean }>(
           `${this.apiUrl}/auth/sync`,
-          {},
+          { prestamistaId },
           this.getHeaders()
         )
       );

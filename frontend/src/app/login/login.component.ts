@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { LoanService } from '../services/loan.service';
 
 @Component({
@@ -109,22 +110,21 @@ export class LoginComponent {
     if (!this.email || !this.password) return;
     
     this.triggerLoading(() => {
-      this.loanService.login(this.email, 'Usuario Demo');
+      const prestamistaId = this.route.snapshot.queryParamMap.get('prestamistaId') || undefined;
+      this.loanService.login(this.email, 'Usuario Demo', prestamistaId);
     });
   }
 
+  private route = inject(ActivatedRoute);
+
   loginWithGoogle() {
     this.triggerLoading(() => {
-      // If logging in as Admin or default mock. Let's toggle nuevo/admin based on input if any, 
-      // or default Google button to a new user simulation or Mario.
-      // Let's check: if email input is empty, default google to new user email 'nuevo@caterpillar.com' 
-      // to let the user see onboarding easily, or Mario! 
-      // Let's use 'nuevo@caterpillar.com' by default for Google OAuth to demonstrate the onboarding,
-      // and they can write 'mario@caterpillar.com' for Admin. This is perfect!
       const targetEmail = this.email || 'nuevo@caterpillar-saas.com';
       const targetName = targetEmail.includes('mario') ? 'Mario Quirós Pizarro' : 'Prestamista Nuevo';
       
-      this.loanService.login(targetEmail, targetName);
+      const prestamistaId = this.route.snapshot.queryParamMap.get('prestamistaId') || undefined;
+      
+      this.loanService.login(targetEmail, targetName, prestamistaId);
     });
   }
 

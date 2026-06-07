@@ -58,14 +58,18 @@ export async function syncUser(req: AuthenticatedRequest, res: Response) {
     let isNewUser = false;
     if (!user) {
       isNewUser = true;
+      const prestamistaId = req.body.prestamistaId;
+      const defaultRol = prestamistaId ? 'COBRADOR' : (normalizedEmail.includes('admin') ? 'ADMIN' : 'PRESTAMISTA');
+      
       user = await prisma.$transaction(async (tx) => {
         const newUser = await tx.user.create({
           data: {
             id: providerId || undefined,
-            nombre: nombre || 'Nuevo Prestamista',
+            nombre: nombre || 'Nuevo Usuario',
             email: normalizedEmail,
             telefono: '+50600000000',
-            rol: normalizedEmail.includes('admin') ? 'ADMIN' : 'PRESTAMISTA'
+            rol: defaultRol,
+            prestamistaId: prestamistaId || undefined
           }
         });
 
