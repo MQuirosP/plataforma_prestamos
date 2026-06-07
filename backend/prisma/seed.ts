@@ -32,14 +32,17 @@ async function main() {
   ];
 
   for (const acc of accounts) {
+    const username = acc.email.split('@')[0];
     const user = await prisma.user.upsert({
-      where: { email: acc.email },
+      where: { username },
       update: {
         nombre: acc.nombre,
         rol: acc.rol
       },
       create: {
         nombre: acc.nombre,
+        username: username,
+        password: '$2a$10$tZ2E2Ea5SjY3P0U.Z1Fw1e0yH2gR7kG3yO2N3mZ.tM7M1lM3mP9J.', // hash for "123456"
         email: acc.email,
         telefono: '+50688888888',
         rol: acc.rol
