@@ -115,7 +115,7 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
 
   const {
     clienteNombre, clienteTelefono, montoOriginal, cuotaSemanal, diaCobro,
-    tipoIdentificacion, numeroIdentificacion
+    tipoIdentificacion, numeroIdentificacion, porcentaje
   } = req.body;
 
   if (!clienteNombre || !clienteTelefono || !montoOriginal || !cuotaSemanal || !diaCobro) {
@@ -127,15 +127,19 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
   const parsedDia = Number(diaCobro);
 
   let gananciaPorcentaje = 50;
-  if (isUsingMemoryStore()) {
-    const sett = inMemoryStore.settings.find(s => s.userId === prestamistaId);
-    if (sett) gananciaPorcentaje = sett.gananciaPorcentaje;
+  if (porcentaje !== undefined && porcentaje !== null) {
+    gananciaPorcentaje = Number(porcentaje);
   } else {
-    try {
-      const sett = await prisma.businessSettings.findUnique({ where: { userId: prestamistaId } });
+    if (isUsingMemoryStore()) {
+      const sett = inMemoryStore.settings.find(s => s.userId === prestamistaId);
       if (sett) gananciaPorcentaje = sett.gananciaPorcentaje;
-    } catch {
-      gananciaPorcentaje = 50;
+    } else {
+      try {
+        const sett = await prisma.businessSettings.findUnique({ where: { userId: prestamistaId } });
+        if (sett) gananciaPorcentaje = sett.gananciaPorcentaje;
+      } catch {
+        gananciaPorcentaje = 50;
+      }
     }
   }
 

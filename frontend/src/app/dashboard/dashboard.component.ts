@@ -116,7 +116,7 @@ import { AdminService } from '../services/admin.service';
             [class]="'shrink-0 px-4 py-2 rounded-full text-[11px] font-bold uppercase transition border ' + 
               (activeTab() === 'dia' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
           >
-            Al Día <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ alDiaCount() }}</span>
+            Al Día <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-white text-[9px] font-mono">{{ alDiaCount() }}</span>
           </button>
         </div>
 
@@ -127,7 +127,7 @@ import { AdminService } from '../services/admin.service';
             [class]="'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition border ' + 
               (activeDayFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/30 text-industrial-muted border-industrial-border/40 hover:text-white')"
           >
-            Todos los Días <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[8px] font-mono">{{ getLoansCountForDay('TODO') }}</span>
+            Todos los Días <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-white text-[8px] font-mono">{{ getLoansCountForDay('TODO') }}</span>
           </button>
           <button 
             *ngFor="let day of [
@@ -250,23 +250,30 @@ import { AdminService } from '../services/admin.service';
                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
               </div>
             </div>
-            <div>
-              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Día de Cobro Pactado</label>
-              <select [(ngModel)]="newLoanData.diaCobro" name="diaCobro" required 
-                      class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-                <option [value]="1">Lunes</option>
-                <option [value]="2">Martes</option>
-                <option [value]="3">Miércoles</option>
-                <option [value]="4">Jueves</option>
-                <option [value]="5">Viernes</option>
-                <option [value]="6">Sábado</option>
-                <option [value]="7">Domingo</option>
-              </select>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Día de Cobro Pactado</label>
+                <select [(ngModel)]="newLoanData.diaCobro" name="diaCobro" required 
+                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                  <option [value]="1">Lunes</option>
+                  <option [value]="2">Martes</option>
+                  <option [value]="3">Miércoles</option>
+                  <option [value]="4">Jueves</option>
+                  <option [value]="5">Viernes</option>
+                  <option [value]="6">Sábado</option>
+                  <option [value]="7">Domingo</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Interés (%)</label>
+                <input type="number" [(ngModel)]="newLoanData.porcentaje" name="porcentaje" required 
+                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+              </div>
             </div>
             <div class="bg-industrial-surface p-3 rounded-lg border border-industrial-border text-xs text-industrial-muted font-mono flex justify-between items-center mt-2">
-              <span>Total Estimado a Cobrar (+{{ loanService.settings()?.gananciaPorcentaje || 50 }}%):</span>
+              <span>Total Estimado a Cobrar (+{{ newLoanData.porcentaje || 0 }}%):</span>
               <span class="text-white font-extrabold text-sm">
-                {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (newLoanData.montoOriginal || 0) * (1 + (loanService.settings()?.gananciaPorcentaje || 50) / 100) | number:'1.0-0' }}
+                {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (newLoanData.montoOriginal || 0) * (1 + (newLoanData.porcentaje || 0) / 100) | number:'1.0-0' }}
               </span>
             </div>
             
@@ -613,7 +620,8 @@ export class DashboardComponent implements OnInit {
     clienteTelefono: '',
     montoOriginal: null as number | null,
     cuotaSemanal: null as number | null,
-    diaCobro: 1
+    diaCobro: 1,
+    porcentaje: null as number | null
   };
   abonoMonto: number | null = null;
   abonoNotas: string = '';
@@ -773,7 +781,8 @@ export class DashboardComponent implements OnInit {
       clienteTelefono: prefix,
       montoOriginal: null,
       cuotaSemanal: null,
-      diaCobro: 1
+      diaCobro: 1,
+      porcentaje: settings?.gananciaPorcentaje || 50
     };
     this.showCreateModal.set(true);
   }
@@ -791,7 +800,8 @@ export class DashboardComponent implements OnInit {
         clienteTelefono: this.newLoanData.clienteTelefono,
         montoOriginal: Number(this.newLoanData.montoOriginal),
         cuotaSemanal: Number(this.newLoanData.cuotaSemanal),
-        diaCobro: Number(this.newLoanData.diaCobro)
+        diaCobro: Number(this.newLoanData.diaCobro),
+        porcentaje: this.newLoanData.porcentaje !== null ? Number(this.newLoanData.porcentaje) : undefined
       });
       this.showCreateModal.set(false);
       this.recalculateCounts();

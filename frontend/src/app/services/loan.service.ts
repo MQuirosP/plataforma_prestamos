@@ -291,6 +291,7 @@ export class LoanService {
     montoOriginal: number;
     cuotaSemanal: number;
     diaCobro: number;
+    porcentaje?: number;
   }) {
     this.loading.set(true);
     try {

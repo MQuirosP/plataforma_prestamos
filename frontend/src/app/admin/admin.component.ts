@@ -86,7 +86,7 @@ import html2canvas from 'html2canvas';
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
                 (activeSubFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
             >
-              Todos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('TODO') }}</span>
+              Todos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-white text-[9px] font-mono">{{ getTenantCount('TODO') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('ACTIVO')"
