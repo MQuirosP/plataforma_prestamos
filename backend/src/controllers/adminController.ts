@@ -122,7 +122,7 @@ export async function changeTenantPlan(req: AuthenticatedRequest, res: Response)
         const activeCobradores = inMemoryStore.users.filter(u => u.prestamistaId === req.params.id && u.rol === Role.COBRADOR && !(u as any).suspendido);
         if (activeCobradores.length > config.maxCobradores) {
           inMemoryStore.users.forEach(u => {
-            if (u.prestamistaId === req.params.id && u.rol === 'COBRADOR') {
+            if (u.prestamistaId === req.params.id && u.rol === Role.COBRADOR) {
               (u as any).suspendido = true;
             }
           });
@@ -236,13 +236,10 @@ export async function getLogs(req: AuthenticatedRequest, res: Response) {
     if (startDate || endDate) {
       where.fecha = {};
       if (startDate) {
-        where.fecha.gte = new Date(startDate);
+        where.fecha.gte = new Date(`${startDate}T00:00:00`);
       }
       if (endDate) {
-        // Para que incluya todo el día seleccionado, podemos establecer el final del día
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        where.fecha.lte = end;
+        where.fecha.lte = new Date(`${endDate}T23:59:59.999`);
       }
     }
 
