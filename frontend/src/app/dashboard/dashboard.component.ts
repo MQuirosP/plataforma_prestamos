@@ -5,12 +5,15 @@ import { LoanService, Loan, Payment } from '../services/loan.service';
 import html2canvas from 'html2canvas';
 import { ToastService } from '../services/toast.service';
 
+import { AdminService } from '../services/admin.service';
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
     <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
+
       
       <!-- Top Caterpillar Branded Bar -->
       <header class="border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95" style="background-color: #111111;">
@@ -25,6 +28,18 @@ import { ToastService } from '../services/toast.service';
         </div>
 
         <div class="flex items-center gap-1.5">
+          <ng-container *ngIf="loanService.currentUser()?.isImpersonating">
+            <!-- Return to Admin button -->
+            <button (click)="returnToAdmin()" 
+                    class="bg-semantic-red hover:bg-red-600 border border-red-700 p-2 rounded-lg text-white transition duration-150 flex items-center gap-1.5"
+                    title="Volver a Modo Admin">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span class="text-xs font-black uppercase tracking-tight hidden md:inline">Admin</span>
+            </button>
+          </ng-container>
+
           <ng-container *ngIf="loanService.currentUser()?.rol !== 'COBRADOR'">
             <!-- Add Loan button — principal action, hidden on mobile (uses FAB instead) -->
             <button (click)="openCreateModal()" 
@@ -474,6 +489,7 @@ import { ToastService } from '../services/toast.service';
 export class DashboardComponent implements OnInit {
   loanService = inject(LoanService);
   toastService = inject(ToastService);
+  adminService = inject(AdminService);
 
   @Output() openSettings = new EventEmitter<void>();
 
@@ -781,6 +797,10 @@ export class DashboardComponent implements OnInit {
     this.loanService.toggleSubscription().then(() => {
       this.recalculateCounts();
     });
+  }
+
+  returnToAdmin() {
+    this.adminService.returnToAdmin();
   }
 
   logout() {
