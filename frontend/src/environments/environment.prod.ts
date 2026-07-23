@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://loans-cat-server-production.up.railway.app/api'
+  apiUrl: 'https://plataforma-prestamos-g2nw.onrender.com/api'
 };
