@@ -39,5 +39,6 @@ graphify-out/
 # IDE custom rules and configs
 .agents/AGENTS.md
 
-# Temporary test scripts
+# Temporary test and utility scripts
 backend/test-*.ts
+backend/reset-password.ts
