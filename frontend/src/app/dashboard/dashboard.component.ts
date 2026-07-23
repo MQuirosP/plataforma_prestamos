@@ -258,6 +258,26 @@ import { AdminService } from '../services/admin.service';
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cálculo de Cobro</label>
+                <select [(ngModel)]="newLoanData.creationMode" name="creationMode"
+                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                  <option value="porcentaje">Porcentaje %</option>
+                  <option value="monto_fijo">Monto Fijo</option>
+                </select>
+              </div>
+              <div *ngIf="newLoanData.creationMode === 'porcentaje'">
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Interés (%)</label>
+                <input type="number" [(ngModel)]="newLoanData.porcentaje" name="porcentaje" 
+                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+              </div>
+              <div *ngIf="newLoanData.creationMode === 'monto_fijo'">
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Total a Pagar</label>
+                <input type="number" [(ngModel)]="newLoanData.totalAPagarDirect" name="totalAPagarDirect" 
+                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Día de Cobro Pactado</label>
                 <select [(ngModel)]="newLoanData.diaCobro" name="diaCobro" required 
                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
@@ -270,16 +290,47 @@ import { AdminService } from '../services/admin.service';
                   <option [value]="7">Domingo</option>
                 </select>
               </div>
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Interés (%)</label>
-                <input type="number" [(ngModel)]="newLoanData.porcentaje" name="porcentaje" required 
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+              <div class="flex items-center pt-5">
+                <label class="flex items-center gap-2 text-xs text-industrial-light cursor-pointer select-none">
+                  <input type="checkbox" [(ngModel)]="newLoanData.hasFine" name="hasFine"
+                         class="rounded border-industrial-border text-caterpillar focus:ring-0 bg-industrial-surface w-4 h-4">
+                  <span>Habilitar Multas</span>
+                </label>
               </div>
             </div>
+
+            <!-- Fine configuration fields -->
+            <div *ngIf="newLoanData.hasFine" class="bg-industrial-surface/50 p-3 rounded-lg border border-industrial-border/60 space-y-3">
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Monto Multa</label>
+                  <input type="number" [(ngModel)]="newLoanData.fineAmount" name="fineAmount" 
+                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                </div>
+                <div>
+                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Frecuencia</label>
+                  <select [(ngModel)]="newLoanData.fineFrequency" name="fineFrequency"
+                          class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                    <option value="DAILY">Diario</option>
+                    <option value="WEEKLY">Semanal</option>
+                    <option value="MONTHLY">Mensual</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Días Gracia</label>
+                  <input type="number" [(ngModel)]="newLoanData.graceDays" name="graceDays" 
+                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                </div>
+              </div>
+            </div>
+
             <div class="bg-industrial-surface p-3 rounded-lg border border-industrial-border text-xs text-industrial-muted font-mono flex justify-between items-center mt-2">
-              <span>Total Estimado a Cobrar (+{{ newLoanData.porcentaje || 0 }}%):</span>
+              <span>Total Estimado a Cobrar:</span>
               <span class="text-white font-extrabold text-sm">
-                {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (newLoanData.montoOriginal || 0) * (1 + (newLoanData.porcentaje || 0) / 100) | number:'1.0-0' }}
+                {{ loanService.settings()?.monedaSimbolo || '₡' }} 
+                {{ (newLoanData.creationMode === 'porcentaje' 
+                     ? (newLoanData.montoOriginal || 0) * (1 + (newLoanData.porcentaje || 0) / 100) 
+                     : (newLoanData.totalAPagarDirect || 0)) | number:'1.0-0' }}
               </span>
             </div>
             
@@ -460,10 +511,16 @@ import { AdminService } from '../services/admin.service';
                     {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.totalAPagar | number:'1.0-0' }}
                   </span>
                 </div>
+                <div *ngIf="selectedStatementLoan?.multasAcumuladas" class="flex justify-between text-xs">
+                  <span class="text-semantic-red font-bold">Multas por Mora:</span>
+                  <span class="text-semantic-red font-bold">
+                    +{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.multasAcumuladas | number:'1.0-0' }}
+                  </span>
+                </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-industrial-muted">Total Abonado:</span>
                   <span class="text-semantic-emerald font-bold">
-                    +{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (selectedStatementLoan?.totalAPagar || 0) - (selectedStatementLoan?.balancePendiente || 0) | number:'1.0-0' }}
+                    -{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (selectedStatementLoan?.totalAPagar || 0) + (selectedStatementLoan?.multasAcumuladas || 0) - (selectedStatementLoan?.balancePendiente || 0) | number:'1.0-0' }}
                   </span>
                 </div>
                 <div class="flex justify-between text-sm pt-2 border-t border-industrial-border/60 font-black">
@@ -502,10 +559,21 @@ import { AdminService } from '../services/admin.service';
                         {{ pay.metodoPago }}
                       </span>
                     </div>
-                    <div class="text-right">
-                      <span class="text-white font-black block">
-                        {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
-                      </span>
+                    <div class="flex flex-col items-end justify-between">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-white font-black">
+                          {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
+                        </span>
+                        <!-- Trash Icon for Deletion (Visible only if current user is not COBRADOR) -->
+                        <button *ngIf="loanService.currentUser()?.rol !== 'COBRADOR'" 
+                                (click)="onDeletePayment(pay.id)"
+                                class="text-semantic-red hover:text-red-400 p-0.5"
+                                title="Anular Abono">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                       <span class="text-[8px] text-industrial-muted block" *ngIf="pay.notas">{{ pay.notas }}</span>
                     </div>
                   </div>
@@ -627,7 +695,13 @@ export class DashboardComponent implements OnInit {
     montoOriginal: null as number | null,
     cuotaSemanal: null as number | null,
     diaCobro: 1,
-    porcentaje: null as number | null
+    porcentaje: null as number | null,
+    creationMode: 'porcentaje' as 'porcentaje' | 'monto_fijo',
+    totalAPagarDirect: null as number | null,
+    fineAmount: null as number | null,
+    fineFrequency: 'DAILY' as 'DAILY' | 'WEEKLY' | 'MONTHLY',
+    graceDays: 0,
+    hasFine: false
   };
   abonoMonto: number | null = null;
   abonoNotas: string = '';
@@ -825,7 +899,13 @@ export class DashboardComponent implements OnInit {
       montoOriginal: null,
       cuotaSemanal: null,
       diaCobro: 1,
-      porcentaje: settings?.gananciaPorcentaje || 50
+      porcentaje: settings?.gananciaPorcentaje || 50,
+      creationMode: 'porcentaje',
+      totalAPagarDirect: null,
+      fineAmount: null,
+      fineFrequency: 'DAILY',
+      graceDays: 0,
+      hasFine: false
     };
     this.showCreateModal.set(true);
   }
@@ -844,7 +924,11 @@ export class DashboardComponent implements OnInit {
         montoOriginal: Number(this.newLoanData.montoOriginal),
         cuotaSemanal: Number(this.newLoanData.cuotaSemanal),
         diaCobro: Number(this.newLoanData.diaCobro),
-        porcentaje: this.newLoanData.porcentaje !== null ? Number(this.newLoanData.porcentaje) : undefined
+        porcentaje: this.newLoanData.creationMode === 'porcentaje' && this.newLoanData.porcentaje !== null ? Number(this.newLoanData.porcentaje) : undefined,
+        totalAPagarDirect: this.newLoanData.creationMode === 'monto_fijo' ? Number(this.newLoanData.totalAPagarDirect) : null,
+        fineAmount: this.newLoanData.hasFine && this.newLoanData.fineAmount ? Number(this.newLoanData.fineAmount) : null,
+        fineFrequency: this.newLoanData.hasFine ? this.newLoanData.fineFrequency : null,
+        graceDays: this.newLoanData.hasFine ? Number(this.newLoanData.graceDays) : 0
       });
       this.showCreateModal.set(false);
       this.recalculateCounts();
@@ -901,6 +985,28 @@ export class DashboardComponent implements OnInit {
     this.lastPayment.set(null); // No payment context, so we don't show the Receipt toggle option
     this.showAsReceipt.set(false);
     this.showStatementModal.set(true);
+  }
+
+  async onDeletePayment(paymentId: string) {
+    if (!this.selectedStatementLoan) return;
+    if (confirm('¿Está seguro de que desea eliminar este abono? El saldo se recalculará automáticamente.')) {
+      try {
+        await this.loanService.deletePayment(this.selectedStatementLoan.id, paymentId);
+        this.toastService.success('Abono eliminado correctamente');
+        
+        // Refresh selection to show updated values
+        const updated = this.loans().find(l => l.id === this.selectedStatementLoan?.id);
+        if (updated) {
+          this.selectedStatementLoan = updated;
+          this.lastPayment.set(null);
+        } else {
+          this.showStatementModal.set(false);
+        }
+        this.recalculateCounts();
+      } catch (err: any) {
+        this.toastService.error(err.error?.error || 'No se pudo eliminar el abono');
+      }
+    }
   }
 
   async exportAndShare() {

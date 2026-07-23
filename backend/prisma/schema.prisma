@@ -31,6 +31,12 @@ enum LoanStatus {
   PAID
 }
 
+enum FineFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 enum MetodoPago {
   EFECTIVO
   SINPE
@@ -128,6 +134,10 @@ model Loan {
   diaCobro            Int        // 1 = Lunes, 7 = Domingo
   estado              LoanStatus @default(ACTIVE)
   fechaInicio         DateTime   @default(now())
+  fineAmount          Decimal?
+  fineFrequency       FineFrequency?
+  graceDays           Int        @default(0)
+  multasAcumuladas    Decimal    @default(0)
   payments            Payment[]
 
   @@index([prestamistaId])

@@ -35,3 +35,9 @@ pnpm-debug.log*
 
 # Graphify
 graphify-out/
+
+# IDE custom rules and configs
+.agents/AGENTS.md
+
+# Temporary test scripts
+backend/test-*.ts

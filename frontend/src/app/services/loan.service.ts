@@ -24,6 +24,10 @@ export interface Loan {
   diaCobro: number;
   estado: 'ACTIVE' | 'PAID';
   fechaInicio: string;
+  fineAmount?: number | null;
+  fineFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null;
+  graceDays?: number;
+  multasAcumuladas?: number;
   balancePendiente: number;
   cuotaActual: number;
   cuotasTotales: number;
@@ -292,6 +296,10 @@ export class LoanService {
     cuotaSemanal: number;
     diaCobro: number;
     porcentaje?: number;
+    fineAmount?: number | null;
+    fineFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null;
+    graceDays?: number;
+    totalAPagarDirect?: number | null;
   }) {
     this.loading.set(true);
     try {
@@ -326,7 +334,7 @@ export class LoanService {
           if (loan.id === loanId) {
             const updatedPayments = [...loan.payments, newPayment];
             const totalAbonado = updatedPayments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-            const balancePendiente = Math.max(0, Number(loan.totalAPagar) - totalAbonado);
+            const balancePendiente = Math.max(0, Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado);
             const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
             const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
 
@@ -343,6 +351,40 @@ export class LoanService {
       });
 
       return newPayment;
+    } catch (err: any) {
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async deletePayment(loanId: string, paymentId: string) {
+    this.loading.set(true);
+    try {
+      await firstValueFrom(
+        this.http.delete<any>(`${this.apiUrl}/loans/${loanId}/payments/${paymentId}`, this.getHeaders())
+      );
+
+      this.loans.update(currentLoans => {
+        return currentLoans.map(loan => {
+          if (loan.id === loanId) {
+            const updatedPayments = loan.payments.filter(p => p.id !== paymentId);
+            const totalAbonado = updatedPayments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+            const balancePendiente = Math.max(0, Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado);
+            const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
+            const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+
+            return {
+              ...loan,
+              balancePendiente,
+              cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
+              estado: 'ACTIVE' as const,
+              payments: updatedPayments
+            };
+          }
+          return loan;
+        });
+      });
     } catch (err: any) {
       throw err;
     } finally {

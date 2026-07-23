@@ -2,7 +2,9 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
-import { Role, SubscriptionType, MetodoPago, LoanStatus } from '@prisma/client';
+import { Role, SubscriptionType, MetodoPago, LoanStatus, FineFrequency } from '@prisma/client';
+import { updatePenaltiesForTenant } from '../services/fineService';
+
 
 // List all loans for the logged-in lender (or cobrador's prestamista)
 export async function getLoans(req: AuthenticatedRequest, res: Response) {
@@ -22,6 +24,9 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
       prestamistaId = cobrador?.prestamistaId || prestamistaId;
     }
   }
+
+  // Update penalties dynamically before fetching
+  await updatePenaltiesForTenant(prestamistaId);
 
   let isExpired = false;
   if (isUsingMemoryStore()) {
@@ -52,7 +57,7 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
     const loansWithBalance = loans.map(loan => {
       const payments = inMemoryStore.payments.filter(p => p.loanId === loan.id);
       const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0);
-      const balancePendiente = Number(loan.totalAPagar) - totalAbonado;
+      const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
       const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
       const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
 
@@ -61,6 +66,10 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
         montoOriginal: Number(loan.montoOriginal),
         totalAPagar: Number(loan.totalAPagar),
         cuotaSemanal: Number(loan.cuotaSemanal),
+        fineAmount: loan.fineAmount ? Number(loan.fineAmount) : null,
+        fineFrequency: loan.fineFrequency,
+        graceDays: Number(loan.graceDays),
+        multasAcumuladas: Number(loan.multasAcumuladas || 0),
         balancePendiente,
         cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
         cuotasTotales: totalCuotasEstimadas,
@@ -78,7 +87,7 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
 
     const loansWithBalance = loans.map(loan => {
       const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-      const balancePendiente = Number(loan.totalAPagar) - totalAbonado;
+      const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
       const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
       const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
 
@@ -87,6 +96,10 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
         montoOriginal: Number(loan.montoOriginal),
         totalAPagar: Number(loan.totalAPagar),
         cuotaSemanal: Number(loan.cuotaSemanal),
+        fineAmount: loan.fineAmount ? Number(loan.fineAmount) : null,
+        fineFrequency: loan.fineFrequency,
+        graceDays: Number(loan.graceDays),
+        multasAcumuladas: Number(loan.multasAcumuladas || 0),
         balancePendiente,
         cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
         cuotasTotales: totalCuotasEstimadas,
@@ -115,7 +128,8 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
 
   const {
     clienteNombre, clienteTelefono, montoOriginal, cuotaSemanal, diaCobro,
-    tipoIdentificacion, numeroIdentificacion, porcentaje
+    tipoIdentificacion, numeroIdentificacion, porcentaje,
+    fineAmount, fineFrequency, graceDays, totalAPagarDirect
   } = req.body;
 
   if (!clienteNombre || !clienteTelefono || !montoOriginal || !cuotaSemanal || !diaCobro) {
@@ -126,24 +140,28 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
   const parsedCuota = Number(cuotaSemanal);
   const parsedDia = Number(diaCobro);
 
-  let gananciaPorcentaje = 50;
-  if (porcentaje !== undefined && porcentaje !== null) {
-    gananciaPorcentaje = Number(porcentaje);
+  let totalAPagar: number;
+  if (totalAPagarDirect !== undefined && totalAPagarDirect !== null) {
+    totalAPagar = Number(totalAPagarDirect);
   } else {
-    if (isUsingMemoryStore()) {
-      const sett = inMemoryStore.settings.find(s => s.userId === prestamistaId);
-      if (sett) gananciaPorcentaje = sett.gananciaPorcentaje;
+    let gananciaPorcentaje = 50;
+    if (porcentaje !== undefined && porcentaje !== null) {
+      gananciaPorcentaje = Number(porcentaje);
     } else {
-      try {
-        const sett = await prisma.businessSettings.findUnique({ where: { userId: prestamistaId } });
+      if (isUsingMemoryStore()) {
+        const sett = inMemoryStore.settings.find(s => s.userId === prestamistaId);
         if (sett) gananciaPorcentaje = sett.gananciaPorcentaje;
-      } catch {
-        gananciaPorcentaje = 50;
+      } else {
+        try {
+          const sett = await prisma.businessSettings.findUnique({ where: { userId: prestamistaId } });
+          if (sett) gananciaPorcentaje = sett.gananciaPorcentaje;
+        } catch {
+          gananciaPorcentaje = 50;
+        }
       }
     }
+    totalAPagar = parsedMonto * (1 + (gananciaPorcentaje / 100));
   }
-
-  const totalAPagar = parsedMonto * (1 + (gananciaPorcentaje / 100));
 
   let isExpired = false;
   if (isUsingMemoryStore()) {
@@ -204,7 +222,11 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
       cuotaSemanal: parsedCuota,
       diaCobro: parsedDia,
       estado: LoanStatus.ACTIVE,
-      fechaInicio: new Date()
+      fechaInicio: new Date(),
+      fineAmount: fineAmount ? Number(fineAmount) : null,
+      fineFrequency: fineFrequency || null,
+      graceDays: graceDays ? Number(graceDays) : 0,
+      multasAcumuladas: 0
     };
     inMemoryStore.loans.push(newLoan);
     return res.status(201).json({ ...newLoan, balancePendiente: totalAPagar, payments: [] });
@@ -223,7 +245,11 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
           totalAPagar,
           cuotaSemanal: parsedCuota,
           diaCobro: parsedDia,
-          estado: LoanStatus.ACTIVE
+          estado: LoanStatus.ACTIVE,
+          fineAmount: fineAmount ? Number(fineAmount) : null,
+          fineFrequency: fineFrequency || null,
+          graceDays: graceDays ? Number(graceDays) : 0,
+          multasAcumuladas: 0
         }
       });
       return loan;
@@ -234,6 +260,10 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
       montoOriginal: Number(result.montoOriginal),
       totalAPagar: Number(result.totalAPagar),
       cuotaSemanal: Number(result.cuotaSemanal),
+      fineAmount: result.fineAmount ? Number(result.fineAmount) : null,
+      fineFrequency: result.fineFrequency,
+      graceDays: Number(result.graceDays),
+      multasAcumuladas: Number(result.multasAcumuladas || 0),
       balancePendiente: Number(result.totalAPagar),
       payments: []
     });
@@ -267,7 +297,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
 
     const payments = inMemoryStore.payments.filter(p => p.loanId === loanId);
     const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0);
-    const balancePendiente = Number(loan.totalAPagar) - totalAbonado;
+    const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
 
     if (parsedMonto > balancePendiente) {
       return res.status(400).json({ error: `El abono supera el balance pendiente de ${balancePendiente}` });
@@ -278,7 +308,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
       loanId,
       montoAbonado: parsedMonto,
       numeroRecibo,
-      notas: notas || '',
+      notes: notas || '',
       metodoPago: metodo,
       creadoPorId: creadoPorId || null,
       fechaPago: new Date()
@@ -298,7 +328,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
     }
 
     const newTotalAbonado = totalAbonado + parsedMonto;
-    if (newTotalAbonado >= Number(loan.totalAPagar)) {
+    if (newTotalAbonado >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
       loan.estado = LoanStatus.PAID;
     }
 
@@ -315,7 +345,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
       if (!loan) throw new Error('Préstamo no encontrado');
 
       const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-      const balancePendiente = Number(loan.totalAPagar) - totalAbonado;
+      const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
 
       if (parsedMonto > balancePendiente) {
         throw new Error(`El abono supera el balance pendiente de ${balancePendiente}`);
@@ -332,7 +362,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
         }
       });
 
-      if (totalAbonado + parsedMonto >= Number(loan.totalAPagar)) {
+      if (totalAbonado + parsedMonto >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
         await tx.loan.update({
           where: { id: loanId },
           data: { estado: LoanStatus.PAID }
@@ -377,5 +407,104 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Failed to apply payment' });
+  }
+}
+
+// Delete/void a payment (Restricted: COBRADOR cannot do this)
+export async function deletePayment(req: AuthenticatedRequest, res: Response) {
+  const { id: loanId, paymentId } = req.params;
+  const userRole = req.user?.rol;
+
+  if (userRole === Role.COBRADOR) {
+    return res.status(403).json({ error: 'Los cobradores no pueden eliminar pagos.' });
+  }
+
+  if (isUsingMemoryStore()) {
+    const loan = inMemoryStore.loans.find(l => l.id === loanId);
+    if (!loan) {
+      return res.status(404).json({ error: 'Préstamo no encontrado' });
+    }
+
+    const payIdx = inMemoryStore.payments.findIndex(p => p.id === paymentId && p.loanId === loanId);
+    if (payIdx === -1) {
+      return res.status(404).json({ error: 'Pago no encontrado' });
+    }
+
+    const payment = inMemoryStore.payments[payIdx];
+    inMemoryStore.payments.splice(payIdx, 1);
+
+    // Ajustar CajaCobrador si el creador es COBRADOR
+    if (payment.creadoPorId) {
+      const creator = inMemoryStore.users.find(u => u.id === payment.creadoPorId);
+      if (creator && creator.rol === Role.COBRADOR) {
+        const caja = inMemoryStore.cajas.find(c => c.cobradorId === payment.creadoPorId);
+        if (caja) {
+          if (payment.metodoPago === MetodoPago.EFECTIVO) caja.saldoEfectivo -= payment.montoAbonado;
+          else if (payment.metodoPago === MetodoPago.SINPE) caja.saldoSinpe -= payment.montoAbonado;
+          else if (payment.metodoPago === MetodoPago.TRANSFERENCIA) caja.saldoTransferencia -= payment.montoAbonado;
+        }
+      }
+    }
+
+    // Asegurar que el préstamo vuelve a estar activo al remover el abono
+    loan.estado = LoanStatus.ACTIVE;
+
+    return res.json({ success: true, message: 'Pago eliminado correctamente' });
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({
+        where: { id: paymentId }
+      });
+
+      if (!payment || payment.loanId !== loanId) {
+        throw new Error('Pago no encontrado');
+      }
+
+      await tx.payment.delete({
+        where: { id: paymentId }
+      });
+
+      // Poner el préstamo en ACTIVE
+      await tx.loan.update({
+        where: { id: loanId },
+        data: { estado: LoanStatus.ACTIVE }
+      });
+
+      // Si fue creado por un cobrador, restar de su CajaCobrador
+      if (payment.creadoPorId) {
+        const creator = await tx.user.findUnique({
+          where: { id: payment.creadoPorId },
+          select: { rol: true }
+        });
+
+        if (creator && creator.rol === Role.COBRADOR) {
+          const amount = Number(payment.montoAbonado);
+          const updateField = payment.metodoPago === MetodoPago.EFECTIVO
+            ? { saldoEfectivo: { decrement: amount } }
+            : payment.metodoPago === MetodoPago.SINPE
+              ? { saldoSinpe: { decrement: amount } }
+              : { saldoTransferencia: { decrement: amount } };
+
+          const caja = await tx.cajaCobrador.findUnique({
+            where: { cobradorId: payment.creadoPorId }
+          });
+
+          if (caja) {
+            await tx.cajaCobrador.update({
+              where: { cobradorId: payment.creadoPorId },
+              data: updateField
+            });
+          }
+        }
+      }
+
+      return payment;
+    });
+
+    return res.json({ success: true, message: 'Pago eliminado correctamente', payment: result });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Failed to delete payment' });
   }
 }

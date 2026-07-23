@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getLoans, createLoan, addPayment } from '../controllers/loanController';
+import { getLoans, createLoan, addPayment, deletePayment } from '../controllers/loanController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
 import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, updateTenantPaymentDate, impersonateTenant, getLogs, getStats, getPlanConfigs, updatePlanConfig } from '../controllers/adminController';
 import { login, changePassword, refresh, logout } from '../controllers/authController';
@@ -24,6 +24,7 @@ router.post('/auth/change-password', changePassword as any);
 router.get('/loans', getLoans as any);
 router.post('/loans', createLoan as any);
 router.post('/loans/:id/payments', addPayment as any);
+router.delete('/loans/:id/payments/:paymentId', deletePayment as any);
 
 // Settings management
 router.get('/settings', getSettings as any);

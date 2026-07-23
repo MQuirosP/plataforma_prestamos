@@ -48,6 +48,10 @@ export interface MemoryLoan {
   diaCobro: number;
   estado: 'ACTIVE' | 'PAID';
   fechaInicio: Date;
+  fineAmount?: number | null;
+  fineFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null;
+  graceDays?: number;
+  multasAcumuladas?: number;
 }
 
 export interface MemoryPayment {
