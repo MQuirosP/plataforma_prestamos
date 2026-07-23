@@ -318,25 +318,25 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             </div>
 
             <!-- Fine configuration fields -->
-            <div *ngIf="newLoanData.hasFine" class="bg-industrial-surface/50 p-3 rounded-lg border border-industrial-border/60 space-y-3">
-              <div class="grid grid-cols-3 gap-2">
+            <div *ngIf="newLoanData.hasFine" class="bg-industrial-surface/50 p-4 rounded-xl border border-industrial-border/60 space-y-4">
+              <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Monto Multa</label>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Multa</label>
                   <app-numeric-stepper [(ngModel)]="newLoanData.fineAmount" name="fineAmount" [min]="0" [step]="100"></app-numeric-stepper>
                 </div>
                 <div>
-                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Frecuencia</label>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia</label>
                   <select [(ngModel)]="newLoanData.fineFrequency" name="fineFrequency"
-                          class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                          class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
                     <option value="DAILY">Diario</option>
                     <option value="WEEKLY">Semanal</option>
                     <option value="MONTHLY">Mensual</option>
                   </select>
                 </div>
-                <div>
-                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Días Gracia</label>
-                  <app-numeric-stepper [(ngModel)]="newLoanData.graceDays" name="graceDays" [min]="0" [step]="1"></app-numeric-stepper>
-                </div>
+              </div>
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Días Gracia</label>
+                <app-numeric-stepper [(ngModel)]="newLoanData.graceDays" name="graceDays" [min]="0" [step]="1"></app-numeric-stepper>
               </div>
             </div>
 
@@ -445,25 +445,25 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             </div>
 
             <!-- Fine configuration fields -->
-            <div *ngIf="editLoanData.hasFine" class="bg-industrial-surface/50 p-3 rounded-lg border border-industrial-border/60 space-y-3">
-              <div class="grid grid-cols-3 gap-2">
+            <div *ngIf="editLoanData.hasFine" class="bg-industrial-surface/50 p-4 rounded-xl border border-industrial-border/60 space-y-4">
+              <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Monto Multa</label>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Multa</label>
                   <app-numeric-stepper [(ngModel)]="editLoanData.fineAmount" name="editFineAmount" [min]="0" [step]="100"></app-numeric-stepper>
                 </div>
                 <div>
-                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Frecuencia</label>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia</label>
                   <select [(ngModel)]="editLoanData.fineFrequency" name="editFineFrequency"
-                          class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                          class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
                     <option value="DAILY">Diario</option>
                     <option value="WEEKLY">Semanal</option>
                     <option value="MONTHLY">Mensual</option>
                   </select>
                 </div>
-                <div>
-                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Días Gracia</label>
-                  <app-numeric-stepper [(ngModel)]="editLoanData.graceDays" name="editGraceDays" [min]="0" [step]="1"></app-numeric-stepper>
-                </div>
+              </div>
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Días Gracia</label>
+                <app-numeric-stepper [(ngModel)]="editLoanData.graceDays" name="editGraceDays" [min]="0" [step]="1"></app-numeric-stepper>
               </div>
             </div>
 
