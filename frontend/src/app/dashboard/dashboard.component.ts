@@ -176,8 +176,8 @@ import { AdminService } from '../services/admin.service';
               </div>
               <div class="text-center">
                 <span class="text-industrial-muted block">Siguiente Abono:</span>
-                <span class="text-white font-bold block truncate" [title]="getNextPaymentDate(loan.diaCobro)">
-                  {{ getNextPaymentDate(loan.diaCobro) }}
+                <span class="text-white font-bold block truncate" [title]="getNextPaymentDate(loan)">
+                  {{ getNextPaymentDate(loan) }}
                 </span>
               </div>
               <div class="text-right">
@@ -188,21 +188,42 @@ import { AdminService } from '../services/admin.service';
               </div>
             </div>
 
-            <!-- Action buttons: WhatsApp message and Statement Details -->
+            <!-- Action buttons: WhatsApp message, Edit, Delete, Statement Details -->
             <div class="flex items-center gap-2 mt-4">
               <button (click)="openStatement(loan)" 
-                      class="flex-1 bg-industrial-surface hover:bg-industrial-border border border-industrial-border text-xs text-white py-2 rounded-lg font-bold transition duration-150">
-                Estado de Cuenta
+                      class="flex-1 bg-industrial-surface hover:bg-industrial-border border border-industrial-border text-[11px] text-white py-2 rounded-lg font-bold transition duration-150">
+                Estado Cuenta
               </button>
               
               <button (click)="openAbonoModal(loan)" 
-                      class="flex-1 bg-caterpillar hover:bg-caterpillar-dark text-industrial-black text-xs py-2 rounded-lg font-bold transition duration-150">
+                      class="flex-1 bg-caterpillar hover:bg-caterpillar-dark text-industrial-black text-[11px] py-2 rounded-lg font-bold transition duration-150">
                 Registrar Abono
+              </button>
+
+              <!-- Edit button (Lender-Only) -->
+              <button *ngIf="loanService.currentUser()?.rol !== 'COBRADOR'"
+                      (click)="openEditModal(loan)" 
+                      title="Editar Préstamo"
+                      class="w-9 h-9 bg-industrial-surface hover:bg-industrial-border border border-industrial-border text-industrial-light flex items-center justify-center rounded-lg transition duration-150">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+
+              <!-- Delete button (Lender-Only) -->
+              <button *ngIf="loanService.currentUser()?.rol !== 'COBRADOR'"
+                      (click)="performDeleteLoan(loan)" 
+                      title="Eliminar Préstamo"
+                      class="w-9 h-9 bg-red-950/20 hover:bg-red-900/40 border border-semantic-red/30 text-semantic-red flex items-center justify-center rounded-lg transition duration-150">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.892-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
               </button>
               
               <a [href]="getWhatsappLink(loan)" target="_blank"
-                 class="w-10 h-10 bg-emerald-600/20 hover:bg-emerald-600/40 text-semantic-emerald flex items-center justify-center rounded-lg border border-semantic-emerald/30 transition duration-150">
-                <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24">
+                 title="Enviar WhatsApp"
+                 class="w-9 h-9 bg-emerald-600/20 hover:bg-emerald-600/40 text-semantic-emerald flex items-center justify-center rounded-lg border border-semantic-emerald/30 transition duration-150">
+                <svg class="h-4.5 w-4.5 fill-current" viewBox="0 0 24 24">
                   <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.498 1.45 5.429 1.451 5.517 0 10.005-4.486 10.008-10.007.002-2.673-1.037-5.188-2.928-7.081-1.892-1.892-4.408-2.934-7.083-2.935-5.52 0-10.007 4.488-10.01 10.01-.001 1.916.498 3.793 1.448 5.378L1.745 22.25l6.559-1.722L6.647 19.15z"/>
                 </svg>
               </a>
@@ -258,11 +279,11 @@ import { AdminService } from '../services/admin.service';
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cálculo de Cobro</label>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Tipo de Interés</label>
                 <select [(ngModel)]="newLoanData.creationMode" name="creationMode"
                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-                  <option value="porcentaje">Porcentaje %</option>
-                  <option value="monto_fijo">Monto Fijo</option>
+                  <option value="porcentaje">% de Interés</option>
+                  <option value="monto_fijo">Monto Final de Pago</option>
                 </select>
               </div>
               <div *ngIf="newLoanData.creationMode === 'porcentaje'">
@@ -271,7 +292,7 @@ import { AdminService } from '../services/admin.service';
                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
               </div>
               <div *ngIf="newLoanData.creationMode === 'monto_fijo'">
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Total a Pagar</label>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Final de Pago</label>
                 <input type="number" [(ngModel)]="newLoanData.totalAPagarDirect" name="totalAPagarDirect" 
                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
               </div>
@@ -337,6 +358,139 @@ import { AdminService } from '../services/admin.service';
             <button type="submit" 
                     class="w-full bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3 rounded-lg font-black uppercase tracking-wider text-sm transition duration-150 mt-4 shadow-lg">
               Crear Préstamo Activo
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODAL 5: Edit Loan (Lender-Only) -->
+      <div *ngIf="showEditModal()" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-industrial-dark w-full max-w-md rounded-2xl border border-industrial-border p-6 shadow-2xl relative overflow-hidden">
+          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
+          
+          <div class="flex justify-between items-center mb-4 mt-2">
+            <div>
+              <h2 class="text-lg font-black text-white uppercase tracking-tight">Editar Préstamo</h2>
+              <p *ngIf="editLoanData.hasPayments" class="text-[10px] text-amber-500 font-mono mt-0.5">
+                ⚠ Préstamo con abonos: Campos financieros bloqueados.
+              </p>
+            </div>
+            <button (click)="showEditModal.set(false)" class="text-industrial-muted hover:text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <form (submit)="submitEditLoan()" class="space-y-4">
+            <div>
+              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nombre del Cliente</label>
+              <input type="text" [(ngModel)]="editLoanData.clienteNombre" name="editClienteNombre" required 
+                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+            </div>
+            <div>
+              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Teléfono (WhatsApp)</label>
+              <input type="text" [(ngModel)]="editLoanData.clienteTelefono" name="editClienteTelefono" required 
+                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+            </div>
+
+            <!-- Financial fields (disabled if has payments) -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Prestado</label>
+                <input type="number" [(ngModel)]="editLoanData.montoOriginal" name="editMontoOriginal" required [disabled]="editLoanData.hasPayments"
+                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
+              </div>
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cuota Pactada</label>
+                <input type="number" [(ngModel)]="editLoanData.cuotaSemanal" name="editCuotaSemanal" required [disabled]="editLoanData.hasPayments"
+                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
+              </div>
+            </div>
+
+            <!-- Calculations (disabled if has payments) -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cálculo de Cobro</label>
+                <select [(ngModel)]="editLoanData.creationMode" name="editCreationMode" [disabled]="editLoanData.hasPayments"
+                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
+                  <option value="porcentaje">% de Interés</option>
+                  <option value="monto_fijo">Monto Final de Pago</option>
+                </select>
+              </div>
+              <div *ngIf="editLoanData.creationMode === 'porcentaje'">
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Interés (%)</label>
+                <input type="number" [(ngModel)]="editLoanData.porcentaje" name="editPorcentaje" [disabled]="editLoanData.hasPayments"
+                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
+              </div>
+              <div *ngIf="editLoanData.creationMode === 'monto_fijo'">
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Final de Pago</label>
+                <input type="number" [(ngModel)]="editLoanData.totalAPagarDirect" name="editTotalAPagarDirect" [disabled]="editLoanData.hasPayments"
+                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Día de Cobro Pactado</label>
+                <select [(ngModel)]="editLoanData.diaCobro" name="editDiaCobro" required 
+                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                  <option [value]="1">Lunes</option>
+                  <option [value]="2">Martes</option>
+                  <option [value]="3">Miércoles</option>
+                  <option [value]="4">Jueves</option>
+                  <option [value]="5">Viernes</option>
+                  <option [value]="6">Sábado</option>
+                  <option [value]="7">Domingo</option>
+                </select>
+              </div>
+              <div class="flex items-center pt-5">
+                <label class="flex items-center gap-2 text-xs text-industrial-light cursor-pointer select-none">
+                  <input type="checkbox" [(ngModel)]="editLoanData.hasFine" name="editHasFine"
+                         class="rounded border-industrial-border text-caterpillar focus:ring-0 bg-industrial-surface w-4 h-4">
+                  <span>Habilitar Multas</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Fine configuration fields -->
+            <div *ngIf="editLoanData.hasFine" class="bg-industrial-surface/50 p-3 rounded-lg border border-industrial-border/60 space-y-3">
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Monto Multa</label>
+                  <input type="number" [(ngModel)]="editLoanData.fineAmount" name="editFineAmount" 
+                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                </div>
+                <div>
+                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Frecuencia</label>
+                  <select [(ngModel)]="editLoanData.fineFrequency" name="editFineFrequency"
+                          class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                    <option value="DAILY">Diario</option>
+                    <option value="WEEKLY">Semanal</option>
+                    <option value="MONTHLY">Mensual</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Días Gracia</label>
+                  <input type="number" [(ngModel)]="editLoanData.graceDays" name="editGraceDays" 
+                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-industrial-surface p-3 rounded-lg border border-industrial-border text-xs text-industrial-muted font-mono flex justify-between items-center mt-2">
+              <span>Total Estimado a Cobrar:</span>
+              <span class="text-white font-extrabold text-sm">
+                {{ loanService.settings()?.monedaSimbolo || '₡' }} 
+                {{ (editLoanData.creationMode === 'porcentaje' 
+                     ? (editLoanData.montoOriginal || 0) * (1 + (editLoanData.porcentaje || 0) / 100) 
+                     : (editLoanData.totalAPagarDirect || 0)) | number:'1.0-0' }}
+              </span>
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3 rounded-lg font-black uppercase tracking-wider text-sm transition duration-150 mt-4 shadow-lg">
+              Guardar Cambios
             </button>
           </form>
         </div>
@@ -620,12 +774,22 @@ import { AdminService } from '../services/admin.service';
             <div *ngIf="cobradores().length === 0" class="text-[10px] text-industrial-muted text-center py-2">
               Aún no tienes cobradores en tu equipo.
             </div>
-            <div *ngFor="let cobrador of cobradores()" class="flex justify-between items-center bg-industrial-surface p-2 rounded-lg border border-industrial-border">
+            <div *ngFor="let cobrador of cobradores()" class="flex justify-between items-center bg-industrial-surface p-2.5 rounded-lg border border-industrial-border">
               <div>
                 <span class="text-white font-bold text-sm block">{{ cobrador.nombre }}</span>
                 <span class="text-caterpillar text-[10px] font-mono block">&#64;{{ cobrador.username }}</span>
               </div>
-              <span class="text-[9px] text-industrial-muted font-mono">{{ cobrador.telefono }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-[9px] text-industrial-muted font-mono">{{ cobrador.telefono }}</span>
+                
+                <!-- Impersonate button (Only shown if we are an admin currently impersonating a lender) -->
+                <button *ngIf="isImpersonatingLender"
+                        (click)="impersonateCobrador(cobrador)"
+                        title="Impersonar Cobrador"
+                        class="bg-caterpillar hover:bg-caterpillar-dark text-industrial-black text-[10px] font-black uppercase px-2.5 py-1.5 rounded transition">
+                  🕵️ Impersonar
+                </button>
+              </div>
             </div>
           </div>
 
@@ -653,6 +817,29 @@ import { AdminService } from '../services/admin.service';
         </div>
       </div>
 
+      <!-- Confirmation Modal -->
+      <div *ngIf="confirmModalConfig()" class="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden">
+          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
+          
+          <h3 class="text-white font-black uppercase tracking-tight text-lg mt-2 mb-2">
+            {{ confirmModalConfig()?.title }}
+          </h3>
+          <p class="text-industrial-muted text-sm mb-6">
+            {{ confirmModalConfig()?.message }}
+          </p>
+          
+          <div class="flex gap-3">
+            <button (click)="closeConfirmModal()" class="flex-1 bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-white text-xs font-bold py-3 rounded-lg transition duration-150">
+              Cancelar
+            </button>
+            <button (click)="executeConfirmAction()" [ngClass]="confirmModalConfig()?.danger ? 'bg-semantic-red hover:bg-red-600 text-white' : 'bg-caterpillar hover:bg-caterpillar-dark text-industrial-black'" class="flex-1 font-black uppercase text-xs tracking-wider py-3 rounded-lg transition duration-150">
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   `,
   styles: [`
@@ -665,6 +852,7 @@ import { AdminService } from '../services/admin.service';
 export class DashboardComponent implements OnInit {
   loanService = inject(LoanService);
   toastService = inject(ToastService);
+  adminService = inject(AdminService);
 
   @Output() openSettings = new EventEmitter<void>();
 
@@ -672,9 +860,15 @@ export class DashboardComponent implements OnInit {
   activeTab = signal<'atrasados' | 'hoy' | 'dia'>('hoy');
   activeDayFilter = signal<string>('TODO');
   showCreateModal = signal<boolean>(false);
+  showEditModal = signal<boolean>(false);
   showAbonoModal = signal<boolean>(false);
   showStatementModal = signal<boolean>(false);
   showCobradoresModal = signal<boolean>(false);
+  confirmModalConfig = signal<{ title: string; message: string; danger?: boolean; action: () => void } | null>(null);
+
+  get isImpersonatingLender(): boolean {
+    return !!localStorage.getItem('admin_backup_token');
+  }
 
   // Receipt and Account Statement toggles
   showAsReceipt = signal<boolean>(false);
@@ -702,6 +896,22 @@ export class DashboardComponent implements OnInit {
     fineFrequency: 'DAILY' as 'DAILY' | 'WEEKLY' | 'MONTHLY',
     graceDays: 0,
     hasFine: false
+  };
+  editLoanData = {
+    id: '',
+    clienteNombre: '',
+    clienteTelefono: '',
+    montoOriginal: null as number | null,
+    cuotaSemanal: null as number | null,
+    diaCobro: 1,
+    porcentaje: null as number | null,
+    creationMode: 'porcentaje' as 'porcentaje' | 'monto_fijo',
+    totalAPagarDirect: null as number | null,
+    fineAmount: null as number | null,
+    fineFrequency: 'DAILY' as 'DAILY' | 'WEEKLY' | 'MONTHLY',
+    graceDays: 0,
+    hasFine: false,
+    hasPayments: false
   };
   abonoMonto: number | null = null;
   abonoNotas: string = '';
@@ -774,31 +984,53 @@ export class DashboardComponent implements OnInit {
     return list.filter(l => l.estado !== 'PAID' && l.diaCobro === dayNum).length;
   }
 
-  getNextPaymentDate(diaCobro: number): string {
+  getNextPaymentDate(loan: any): string {
+    const startDate = new Date(loan.fechaInicio);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
+    let dayOffset = jsDayCobro - startDate.getDay();
+    if (dayOffset < 0) {
+      dayOffset += 7;
+    }
+    
+    // Obtener días mínimos configurados (por defecto 3)
+    const diasMinimos = this.loanService.settings()?.diasMinimosPrimerCobro ?? 3;
+    if (dayOffset < diasMinimos) {
+      dayOffset += 7;
+    }
+    
+    const current = new Date(startDate);
+    current.setDate(current.getDate() + dayOffset);
+
+    const totalAbonado = (loan.payments || []).reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+    const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
+    const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+    
+    // Buscar la fecha de vencimiento de la próxima cuota no pagada
+    const targetIdx = Math.max(0, Math.min(numCuotasAbonadas, totalCuotasEstimadas - 1));
+    const targetDate = new Date(current);
+    targetDate.setDate(current.getDate() + targetIdx * 7);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayNum = this.currentWeekday;
-    let diff = diaCobro - todayNum;
-    if (diff < 0) {
-      diff += 7;
-    }
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + diff);
+    
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     const options: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' };
     let result = targetDate.toLocaleDateString('es-ES', options);
-    
-    // Clean up trailing dots
     result = result.replace(/\./g, '');
-    
-    // Capitalize first letter
     result = result.charAt(0).toUpperCase() + result.slice(1);
 
-    if (diff === 0) {
+    if (diffDays === 0) {
       return `Hoy (${result})`;
     }
-    if (diff === 1) {
+    if (diffDays === 1) {
       return `Mañana (${result})`;
+    }
+    if (diffDays < 0) {
+      return `Vencido (${result})`;
     }
     return result;
   }
@@ -942,6 +1174,88 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  openEditModal(loan: Loan) {
+    this.editLoanData = {
+      id: loan.id,
+      clienteNombre: loan.clienteNombre,
+      clienteTelefono: loan.clienteTelefono,
+      montoOriginal: Number(loan.montoOriginal),
+      cuotaSemanal: Number(loan.cuotaSemanal),
+      diaCobro: Number(loan.diaCobro),
+      porcentaje: 50,
+      creationMode: 'monto_fijo',
+      totalAPagarDirect: Number(loan.totalAPagar),
+      fineAmount: loan.fineAmount ? Number(loan.fineAmount) : null,
+      fineFrequency: (loan.fineFrequency || 'DAILY') as any,
+      graceDays: Number(loan.graceDays || 0),
+      hasFine: !!loan.fineAmount,
+      hasPayments: (loan.payments || []).length > 0
+    };
+    this.showEditModal.set(true);
+  }
+
+  async submitEditLoan() {
+    if (!this.editLoanData.clienteNombre || !this.editLoanData.clienteTelefono) {
+      this.toastService.error('Nombre y Teléfono son requeridos');
+      return;
+    }
+
+    try {
+      const payload: any = {
+        clienteNombre: this.editLoanData.clienteNombre,
+        clienteTelefono: this.editLoanData.clienteTelefono,
+        diaCobro: Number(this.editLoanData.diaCobro),
+        hasFine: this.editLoanData.hasFine,
+        fineAmount: this.editLoanData.hasFine && this.editLoanData.fineAmount ? Number(this.editLoanData.fineAmount) : null,
+        fineFrequency: this.editLoanData.hasFine ? this.editLoanData.fineFrequency : null,
+        graceDays: this.editLoanData.hasFine ? Number(this.editLoanData.graceDays) : 0
+      };
+
+      if (!this.editLoanData.hasPayments) {
+        payload.montoOriginal = Number(this.editLoanData.montoOriginal);
+        payload.cuotaSemanal = Number(this.editLoanData.cuotaSemanal);
+        payload.totalAPagarDirect = this.editLoanData.creationMode === 'monto_fijo' ? Number(this.editLoanData.totalAPagarDirect) : null;
+        payload.porcentaje = this.editLoanData.creationMode === 'porcentaje' ? Number(this.editLoanData.porcentaje) : null;
+      }
+
+      await this.loanService.updateLoan(this.editLoanData.id, payload);
+      this.showEditModal.set(false);
+      this.recalculateCounts();
+      this.toastService.success('Préstamo actualizado correctamente');
+    } catch (err) {
+      this.toastService.error('Error al actualizar el préstamo');
+    }
+  }
+
+  closeConfirmModal() {
+    this.confirmModalConfig.set(null);
+  }
+
+  executeConfirmAction() {
+    const action = this.confirmModalConfig()?.action;
+    if (action) {
+      action();
+      this.closeConfirmModal();
+    }
+  }
+
+  performDeleteLoan(loan: Loan) {
+    this.confirmModalConfig.set({
+      title: 'Eliminar Préstamo',
+      message: `¿Está seguro que desea eliminar permanentemente el préstamo de ${loan.clienteNombre} y todos sus abonos asociados? Esta acción no se puede deshacer.`,
+      danger: true,
+      action: async () => {
+        try {
+          await this.loanService.deleteLoan(loan.id);
+          this.recalculateCounts();
+          this.toastService.success('Préstamo eliminado correctamente');
+        } catch (err) {
+          this.toastService.error('Error al eliminar el préstamo');
+        }
+      }
+    });
+  }
+
   openAbonoModal(loan: Loan) {
     this.selectedLoanForAbono = loan;
     this.abonoMonto = null;
@@ -989,24 +1303,29 @@ export class DashboardComponent implements OnInit {
 
   async onDeletePayment(paymentId: string) {
     if (!this.selectedStatementLoan) return;
-    if (confirm('¿Está seguro de que desea eliminar este abono? El saldo se recalculará automáticamente.')) {
-      try {
-        await this.loanService.deletePayment(this.selectedStatementLoan.id, paymentId);
-        this.toastService.success('Abono eliminado correctamente');
-        
-        // Refresh selection to show updated values
-        const updated = this.loans().find(l => l.id === this.selectedStatementLoan?.id);
-        if (updated) {
-          this.selectedStatementLoan = updated;
-          this.lastPayment.set(null);
-        } else {
-          this.showStatementModal.set(false);
+    this.confirmModalConfig.set({
+      title: 'Eliminar Abono',
+      message: '¿Está seguro de que desea eliminar este abono? El saldo se recalculará automáticamente.',
+      danger: true,
+      action: async () => {
+        try {
+          await this.loanService.deletePayment(this.selectedStatementLoan!.id, paymentId);
+          this.toastService.success('Abono eliminado correctamente');
+          
+          // Refresh selection to show updated values
+          const updated = this.loans().find(l => l.id === this.selectedStatementLoan?.id);
+          if (updated) {
+            this.selectedStatementLoan = updated;
+            this.lastPayment.set(null);
+          } else {
+            this.showStatementModal.set(false);
+          }
+          this.recalculateCounts();
+        } catch (err: any) {
+          this.toastService.error(err.error?.error || 'No se pudo eliminar el abono');
         }
-        this.recalculateCounts();
-      } catch (err: any) {
-        this.toastService.error(err.error?.error || 'No se pudo eliminar el abono');
       }
-    }
+    });
   }
 
   async exportAndShare() {
@@ -1113,5 +1432,14 @@ export class DashboardComponent implements OnInit {
 
   logout() {
     this.loanService.logout();
+  }
+
+  async impersonateCobrador(cobrador: any) {
+    try {
+      this.toastService.success(`Iniciando suplantación de ${cobrador.nombre}...`);
+      await this.adminService.impersonateCobrador(cobrador.id);
+    } catch (err) {
+      this.toastService.error('Error al suplantar al cobrador');
+    }
   }
 }

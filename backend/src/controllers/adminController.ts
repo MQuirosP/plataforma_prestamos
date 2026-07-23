@@ -206,7 +206,9 @@ export async function impersonateTenant(req: AuthenticatedRequest, res: Response
         email: targetUser.email,
         nombre: targetUser.nombre,
         rol: targetUser.rol,
-        isImpersonating: true
+        isImpersonating: true,
+        originalRol: Role.ADMIN,
+        adminId: req.user.id
       },
       JWT_SECRET,
       { expiresIn: '12h' }
@@ -214,6 +216,83 @@ export async function impersonateTenant(req: AuthenticatedRequest, res: Response
 
     await logAudit('IMPERSONATE', `Admin accedió como ${targetUser.username}`, req, targetUser.id);
     return res.json({ success: true, token, user: targetUser });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+export async function impersonateCobrador(req: AuthenticatedRequest, res: Response) {
+  // Se permite si el rol actual es ADMIN, o si es una sesión impersonada (isImpersonating: true)
+  // La seguridad real está en validar que el cobrador pertenece al prestamista suplantado
+  const isAdmin = req.user?.rol === Role.ADMIN;
+  const isImpersonating = req.user?.isImpersonating === true;
+
+  if (!isAdmin && !isImpersonating) {
+    return res.status(403).json({ error: 'Denegado. Solo administradores o sesiones de suplantación pueden acceder.' });
+  }
+
+  const caller = req.user!;
+
+  try {
+    const { cobradorId } = req.params;
+
+    if (isUsingMemoryStore()) {
+      const cobrador = inMemoryStore.users.find(u => u.id === cobradorId && u.rol === Role.COBRADOR);
+      if (!cobrador) {
+        return res.status(404).json({ error: 'Cobrador no encontrado' });
+      }
+
+      // Validar que el cobrador pertenece al prestamista suplantado actual (caller.id)
+      const targetLenderId = caller.id;
+      if (cobrador.prestamistaId !== targetLenderId && caller.rol !== Role.ADMIN) {
+        return res.status(403).json({ error: 'El cobrador no pertenece al prestamista actual' });
+      }
+
+      const token = jwt.sign(
+        {
+          id: cobrador.id,
+          email: cobrador.email,
+          nombre: cobrador.nombre,
+          rol: Role.COBRADOR,
+          prestamistaId: cobrador.prestamistaId,
+          isImpersonating: true,
+          originalRol: Role.ADMIN,
+          adminId: caller.adminId || caller.id
+        },
+        JWT_SECRET,
+        { expiresIn: '12h' }
+      );
+
+      return res.json({ success: true, token, user: cobrador });
+    }
+
+    const cobrador = await prisma.user.findUnique({ where: { id: cobradorId } });
+    if (!cobrador || cobrador.rol !== Role.COBRADOR) {
+      return res.status(404).json({ error: 'Cobrador no encontrado' });
+    }
+
+    const targetLenderId = caller.id;
+    if (cobrador.prestamistaId !== targetLenderId && caller.rol !== Role.ADMIN) {
+      return res.status(403).json({ error: 'El cobrador no pertenece al prestamista suplantado' });
+    }
+
+    const token = jwt.sign(
+      {
+        id: cobrador.id,
+        email: cobrador.email,
+        nombre: cobrador.nombre,
+        rol: Role.COBRADOR,
+        prestamistaId: cobrador.prestamistaId,
+        isImpersonating: true,
+        originalRol: Role.ADMIN,
+        adminId: caller.adminId || caller.id
+      },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    await logAudit('IMPERSONATE_COBRADOR', `Admin accedió al cobrador ${cobrador.username}`, req, cobrador.id);
+    return res.json({ success: true, token, user: cobrador });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

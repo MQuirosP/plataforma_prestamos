@@ -97,6 +97,17 @@ import { ToastService } from '../services/toast.service';
               <span class="text-[10px] text-industrial-muted mt-1 block">El monto total a pagar al crear préstamos se calculará sumando este porcentaje (Ej: Principal * 1.50 para 50%).</span>
             </div>
 
+            <!-- Días mínimos antes del primer cobro -->
+            <div>
+              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Días mínimos para primer cobro</label>
+              <div class="relative">
+                <input type="number" [(ngModel)]="formData.diasMinimosPrimerCobro" name="diasMinimosPrimerCobro" required 
+                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 pr-10 text-white text-sm focus:outline-none focus:border-caterpillar">
+                <span class="absolute right-3 top-3.5 text-xs text-industrial-muted font-bold">días</span>
+              </div>
+              <span class="text-[10px] text-industrial-muted mt-1 block">Si el día de cobro pactado queda a menos días de este límite desde la fecha de entrega del préstamo, se pospondrá automáticamente una semana.</span>
+            </div>
+
             <!-- Plantilla de WhatsApp -->
             <div>
               <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Plantilla de WhatsApp</label>
@@ -187,7 +198,8 @@ export class SettingsComponent implements OnInit {
     timezone: 'America/Costa_Rica',
     nombreNegocio: 'CAT-LOAN Credit',
     plantillaWhatsapp: '',
-    gananciaPorcentaje: 50
+    gananciaPorcentaje: 50,
+    diasMinimosPrimerCobro: 3
   };
 
   oldPassword = '';

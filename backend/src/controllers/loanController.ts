@@ -508,3 +508,204 @@ export async function deletePayment(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ error: err.message || 'Failed to delete payment' });
   }
 }
+
+// Update/Edit a loan (Restricted: COBRADOR cannot do this)
+export async function updateLoan(req: AuthenticatedRequest, res: Response) {
+  const { id } = req.params;
+  const prestamistaId = req.user?.id || 'mock-lender-id-123';
+  const userRole = req.user?.rol;
+
+  if (userRole === Role.COBRADOR) {
+    return res.status(403).json({ error: 'Los cobradores no pueden editar préstamos.' });
+  }
+
+  const {
+    clienteNombre, clienteTelefono, tipoIdentificacion, numeroIdentificacion,
+    montoOriginal, cuotaSemanal, diaCobro, fineAmount, fineFrequency, graceDays,
+    totalAPagarDirect, porcentaje, hasFine
+  } = req.body;
+
+  if (isUsingMemoryStore()) {
+    const loan = inMemoryStore.loans.find(l => l.id === id && l.prestamistaId === prestamistaId);
+    if (!loan) {
+      return res.status(404).json({ error: 'Préstamo no encontrado' });
+    }
+
+    const payments = inMemoryStore.payments.filter(p => p.loanId === id);
+    const hasPayments = payments.length > 0;
+
+    // Actualizar datos del cliente
+    loan.clienteNombre = clienteNombre || loan.clienteNombre;
+    loan.clienteTelefono = clienteTelefono || loan.clienteTelefono;
+    loan.tipoIdentificacion = tipoIdentificacion !== undefined ? tipoIdentificacion : loan.tipoIdentificacion;
+    loan.numeroIdentificacion = numeroIdentificacion !== undefined ? numeroIdentificacion : loan.numeroIdentificacion;
+    loan.diaCobro = diaCobro !== undefined ? Number(diaCobro) : loan.diaCobro;
+
+    // Actualizar multas
+    if (hasFine !== undefined) {
+      if (hasFine) {
+        loan.fineAmount = fineAmount !== undefined ? Number(fineAmount) : loan.fineAmount;
+        loan.fineFrequency = fineFrequency || loan.fineFrequency;
+        loan.graceDays = graceDays !== undefined ? Number(graceDays) : loan.graceDays;
+      } else {
+        loan.fineAmount = null;
+        loan.fineFrequency = null;
+        loan.graceDays = 0;
+        loan.multasAcumuladas = 0;
+      }
+    }
+
+    // Si no tiene abonos, permitir editar montos
+    if (!hasPayments) {
+      if (montoOriginal !== undefined) {
+        loan.montoOriginal = Number(montoOriginal);
+      }
+      if (cuotaSemanal !== undefined) {
+        loan.cuotaSemanal = Number(cuotaSemanal);
+      }
+      if (totalAPagarDirect !== undefined && totalAPagarDirect !== null) {
+        loan.totalAPagar = Number(totalAPagarDirect);
+      } else if (porcentaje !== undefined && porcentaje !== null && montoOriginal !== undefined) {
+        loan.totalAPagar = Number(montoOriginal) * (1 + (Number(porcentaje) / 100));
+      }
+    }
+
+    return res.json({ success: true, loan });
+  }
+
+  try {
+    const loan = await prisma.loan.findFirst({
+      where: { id, prestamistaId },
+      include: { payments: true }
+    });
+
+    if (!loan) {
+      return res.status(404).json({ error: 'Préstamo no encontrado' });
+    }
+
+    const hasPayments = loan.payments.length > 0;
+
+    const dataToUpdate: any = {
+      clienteNombre: clienteNombre || loan.clienteNombre,
+      clienteTelefono: clienteTelefono || loan.clienteTelefono,
+      tipoIdentificacion: tipoIdentificacion !== undefined ? tipoIdentificacion : loan.tipoIdentificacion,
+      numeroIdentificacion: numeroIdentificacion !== undefined ? numeroIdentificacion : loan.numeroIdentificacion,
+      diaCobro: diaCobro !== undefined ? Number(diaCobro) : loan.diaCobro,
+    };
+
+    if (hasFine !== undefined) {
+      if (hasFine) {
+        dataToUpdate.fineAmount = fineAmount !== undefined ? Number(fineAmount) : loan.fineAmount;
+        dataToUpdate.fineFrequency = fineFrequency || loan.fineFrequency;
+        dataToUpdate.graceDays = graceDays !== undefined ? Number(graceDays) : loan.graceDays;
+      } else {
+        dataToUpdate.fineAmount = null;
+        dataToUpdate.fineFrequency = null;
+        dataToUpdate.graceDays = 0;
+        dataToUpdate.multasAcumuladas = 0;
+      }
+    }
+
+    if (!hasPayments) {
+      if (montoOriginal !== undefined) {
+        dataToUpdate.montoOriginal = Number(montoOriginal);
+      }
+      if (cuotaSemanal !== undefined) {
+        dataToUpdate.cuotaSemanal = Number(cuotaSemanal);
+      }
+      if (totalAPagarDirect !== undefined && totalAPagarDirect !== null) {
+        dataToUpdate.totalAPagar = Number(totalAPagarDirect);
+      } else if (porcentaje !== undefined && porcentaje !== null && montoOriginal !== undefined) {
+        dataToUpdate.totalAPagar = Number(montoOriginal) * (1 + (Number(porcentaje) / 100));
+      }
+    }
+
+    const updatedLoan = await prisma.loan.update({
+      where: { id },
+      data: dataToUpdate
+    });
+
+    return res.json({ success: true, loan: updatedLoan });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to update loan', details: err.message });
+  }
+}
+
+// Delete/Void an entire loan (Restricted: COBRADOR cannot do this)
+export async function deleteLoan(req: AuthenticatedRequest, res: Response) {
+  const { id } = req.params;
+  const prestamistaId = req.user?.id || 'mock-lender-id-123';
+  const userRole = req.user?.rol;
+
+  if (userRole === Role.COBRADOR) {
+    return res.status(403).json({ error: 'Los cobradores no pueden eliminar préstamos.' });
+  }
+
+  if (isUsingMemoryStore()) {
+    const loanIdx = inMemoryStore.loans.findIndex(l => l.id === id && l.prestamistaId === prestamistaId);
+    if (loanIdx === -1) {
+      return res.status(404).json({ error: 'Préstamo no encontrado' });
+    }
+
+    // Delete associated payments
+    inMemoryStore.payments = inMemoryStore.payments.filter(p => p.loanId !== id);
+    // Delete loan
+    inMemoryStore.loans.splice(loanIdx, 1);
+
+    return res.json({ success: true, message: 'Préstamo eliminado correctamente en memoria' });
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const loan = await tx.loan.findFirst({
+        where: { id, prestamistaId },
+        include: { payments: true }
+      });
+
+      if (!loan) {
+        throw new Error('Préstamo no encontrado');
+      }
+
+      // Restar los abonos de este préstamo de la caja de sus respectivos cobradores
+      for (const payment of loan.payments) {
+        if (payment.creadoPorId) {
+          const creator = await tx.user.findUnique({
+            where: { id: payment.creadoPorId },
+            select: { rol: true }
+          });
+
+          if (creator && creator.rol === Role.COBRADOR) {
+            const amount = Number(payment.montoAbonado);
+            const updateField = payment.metodoPago === MetodoPago.EFECTIVO
+              ? { saldoEfectivo: { decrement: amount } }
+              : payment.metodoPago === MetodoPago.SINPE
+                ? { saldoSinpe: { decrement: amount } }
+                : { saldoTransferencia: { decrement: amount } };
+
+            const caja = await tx.cajaCobrador.findUnique({
+              where: { cobradorId: payment.creadoPorId }
+            });
+
+            if (caja) {
+              await tx.cajaCobrador.update({
+                where: { cobradorId: payment.creadoPorId },
+                data: updateField
+              });
+            }
+          }
+        }
+      }
+
+      // Delete loan
+      await tx.loan.delete({
+        where: { id }
+      });
+
+      return loan;
+    });
+
+    return res.json({ success: true, message: 'Préstamo y abonos eliminados correctamente', loan: result });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Failed to delete loan' });
+  }
+}

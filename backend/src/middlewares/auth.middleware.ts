@@ -13,6 +13,8 @@ export interface AuthenticatedRequest extends Request {
     rol: 'ADMIN' | 'PRESTAMISTA' | 'COBRADOR';
     prestamistaId?: string;
     isImpersonating?: boolean;
+    originalRol?: 'ADMIN' | 'PRESTAMISTA' | 'COBRADOR';
+    adminId?: string;
   };
 }
 

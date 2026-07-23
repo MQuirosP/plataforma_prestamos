@@ -43,6 +43,7 @@ export interface BusinessSettings {
   nombreNegocio: string;
   plantillaWhatsapp: string;
   gananciaPorcentaje: number;
+  diasMinimosPrimerCobro?: number;
   telefono?: string;
 }
 
@@ -312,6 +313,35 @@ export class LoanService {
       if (err.status === 403 && err.error?.expired) {
         this.isExpired.set(true);
       }
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async updateLoan(id: string, loanData: any) {
+    this.loading.set(true);
+    try {
+      const updated = await firstValueFrom(
+        this.http.put<{ success: boolean, loan: Loan }>(`${this.apiUrl}/loans/${id}`, loanData, this.getHeaders())
+      );
+      this.loans.update(current => current.map(l => l.id === id ? updated.loan : l));
+      return updated.loan;
+    } catch (err: any) {
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async deleteLoan(id: string) {
+    this.loading.set(true);
+    try {
+      await firstValueFrom(
+        this.http.delete(`${this.apiUrl}/loans/${id}`, this.getHeaders())
+      );
+      this.loans.update(current => current.filter(l => l.id !== id));
+    } catch (err: any) {
       throw err;
     } finally {
       this.loading.set(false);

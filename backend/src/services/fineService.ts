@@ -4,13 +4,32 @@ import { Loan, LoanStatus, FineFrequency } from '@prisma/client';
 export async function updatePenaltiesForTenant(prestamistaId: string) {
   const today = new Date();
 
+  let diasMinimosPrimerCobro = 3;
+  if (isUsingMemoryStore()) {
+    const settings = inMemoryStore.settings.find(s => s.userId === prestamistaId);
+    if (settings) {
+      diasMinimosPrimerCobro = settings.diasMinimosPrimerCobro;
+    }
+  } else {
+    try {
+      const settings = await prisma.businessSettings.findUnique({
+        where: { userId: prestamistaId }
+      });
+      if (settings) {
+        diasMinimosPrimerCobro = settings.diasMinimosPrimerCobro;
+      }
+    } catch (err) {
+      // Keep default of 3
+    }
+  }
+
   if (isUsingMemoryStore()) {
     const activeLoans = inMemoryStore.loans.filter(
       l => l.prestamistaId === prestamistaId && l.estado === LoanStatus.ACTIVE
     );
 
     for (const loan of activeLoans) {
-      calculateAndSetPenalties(loan, today);
+      calculateAndSetPenalties(loan, today, diasMinimosPrimerCobro);
     }
     return;
   }
@@ -28,7 +47,7 @@ export async function updatePenaltiesForTenant(prestamistaId: string) {
 
     for (const loan of activeLoans) {
       const originalMultas = Number(loan.multasAcumuladas || 0);
-      const { multasAcumuladas } = calculateAndSetPenalties(loan, today);
+      const { multasAcumuladas } = calculateAndSetPenalties(loan, today, diasMinimosPrimerCobro);
       if (originalMultas !== multasAcumuladas) {
         await prisma.loan.update({
           where: { id: loan.id },
@@ -41,7 +60,7 @@ export async function updatePenaltiesForTenant(prestamistaId: string) {
   }
 }
 
-function calculateAndSetPenalties(loan: any, today: Date) {
+function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro: number = 3) {
   if (!loan.fineAmount || !loan.fineFrequency || Number(loan.fineAmount) <= 0) {
     loan.multasAcumuladas = 0;
     return { multasAcumuladas: 0 };
@@ -66,6 +85,12 @@ function calculateAndSetPenalties(loan: any, today: Date) {
   if (dayOffset < 0) {
     dayOffset += 7;
   }
+  
+  // Regla de propuesta 3: si el primer cobro cae a menos del umbral de días mínimos, sumar 7 días (pasar a la siguiente semana)
+  if (dayOffset < diasMinimosPrimerCobro) {
+    dayOffset += 7;
+  }
+  
   current.setDate(current.getDate() + dayOffset);
 
   // We generate up to the total number of expected installments

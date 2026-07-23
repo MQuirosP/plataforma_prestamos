@@ -52,6 +52,8 @@ export interface MemoryLoan {
   fineFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null;
   graceDays?: number;
   multasAcumuladas?: number;
+  tipoIdentificacion?: string | null;
+  numeroIdentificacion?: string | null;
 }
 
 export interface MemoryPayment {
@@ -94,6 +96,7 @@ export interface MemoryBusinessSettings {
   nombreNegocio: string;
   plantillaWhatsapp: string;
   gananciaPorcentaje: number;
+  diasMinimosPrimerCobro: number;
 }
 
 export interface MemoryRefreshToken {
@@ -139,7 +142,8 @@ class InMemoryStore {
       monedaCodigo: 'CRC',
       nombreNegocio: 'CAT-LOAN Admin',
       plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
-      gananciaPorcentaje: 50
+      gananciaPorcentaje: 50,
+      diasMinimosPrimerCobro: 3
     }
   ];
   refreshTokens: MemoryRefreshToken[] = [];

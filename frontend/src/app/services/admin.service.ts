@@ -150,13 +150,46 @@ export class AdminService {
     window.location.reload();
   }
 
+  async impersonateCobrador(cobradorId: string) {
+    const res = await firstValueFrom(this.http.post<{ success: boolean; token: string; user: any }>(`${this.apiUrl}/admin/impersonate-cobrador/${cobradorId}`, {}, this.getHeaders()));
+    
+    // Si no tenemos backup token guardado, guardamos el de la sesión actual
+    const backupToken = localStorage.getItem('admin_backup_token');
+    if (!backupToken) {
+      const currentToken = localStorage.getItem('auth_token');
+      if (currentToken) {
+        localStorage.setItem('admin_backup_token', currentToken);
+      }
+    }
+    
+    localStorage.setItem('auth_token', res.token);
+    // Append isImpersonating flag so UI knows to show the return button
+    localStorage.setItem('auth_user', JSON.stringify({ ...res.user, isImpersonating: true }));
+    
+    // Reload window to apply new auth state securely
+    window.location.reload();
+  }
+
   returnToAdmin() {
     const backupToken = localStorage.getItem('admin_backup_token');
     if (backupToken) {
+      // Decode the backup token payload to restore the real admin user identity
+      let adminUser: any = { id: 'admin', nombre: 'Admin', rol: 'ADMIN' };
+      try {
+        const payloadBase64 = backupToken.split('.')[1];
+        const decoded = JSON.parse(atob(payloadBase64));
+        adminUser = {
+          id: decoded.id,
+          nombre: decoded.nombre,
+          email: decoded.email,
+          rol: decoded.rol
+        };
+      } catch {
+        // Fallback: the decode failed, keep default admin object
+      }
+
       localStorage.setItem('auth_token', backupToken);
       localStorage.removeItem('admin_backup_token');
-      // Set a generic admin user object or force relogin check
-      const adminUser = { id: 'mock-admin-id-999', nombre: 'Admin Master', rol: 'ADMIN' };
       localStorage.setItem('auth_user', JSON.stringify(adminUser));
       window.location.reload();
     }

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { getLoans, createLoan, addPayment, deletePayment } from '../controllers/loanController';
+import { getLoans, createLoan, addPayment, deletePayment, updateLoan, deleteLoan } from '../controllers/loanController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
-import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, updateTenantPaymentDate, impersonateTenant, getLogs, getStats, getPlanConfigs, updatePlanConfig } from '../controllers/adminController';
+import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, updateTenantPaymentDate, impersonateTenant, impersonateCobrador, getLogs, getStats, getPlanConfigs, updatePlanConfig } from '../controllers/adminController';
 import { login, changePassword, refresh, logout } from '../controllers/authController';
 import { getCajaCobrador, procesarLiquidacion } from '../controllers/cobradorController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
@@ -18,11 +18,14 @@ router.post('/auth/logout', logout as any);
 // Apply auth middleware to all routes below
 router.use(authMiddleware as any);
 
+// @ts-ignore
 router.post('/auth/change-password', changePassword as any);
 
 // Loan management
 router.get('/loans', getLoans as any);
 router.post('/loans', createLoan as any);
+router.put('/loans/:id', updateLoan as any);
+router.delete('/loans/:id', deleteLoan as any);
 router.post('/loans/:id/payments', addPayment as any);
 router.delete('/loans/:id/payments/:paymentId', deletePayment as any);
 
@@ -37,6 +40,7 @@ router.put('/admin/tenants/:id/suspender', toggleSuspendTenant as any);
 router.put('/admin/tenants/:id/plan', changeTenantPlan as any);
 router.put('/admin/tenants/:id/payment-date', updateTenantPaymentDate as any);
 router.post('/admin/impersonate/:prestamistaId', impersonateTenant as any);
+router.post('/admin/impersonate-cobrador/:cobradorId', impersonateCobrador as any);
 router.get('/admin/logs', getLogs as any);
 router.get('/admin/stats', getStats as any);
 router.get('/admin/plan-configs', getPlanConfigs as any);

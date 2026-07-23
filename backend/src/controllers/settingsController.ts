@@ -15,7 +15,8 @@ export async function getSettings(req: AuthenticatedRequest, res: Response) {
         monedaCodigo: 'CRC',
         nombreNegocio: 'CAT-LOAN Credit',
         plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
-        gananciaPorcentaje: 50
+        gananciaPorcentaje: 50,
+        diasMinimosPrimerCobro: 3
       };
       inMemoryStore.settings.push(settings);
     }
@@ -57,9 +58,10 @@ export async function getSettings(req: AuthenticatedRequest, res: Response) {
 
 export async function updateSettings(req: AuthenticatedRequest, res: Response) {
   const userId = req.user?.id || 'mock-lender-id-123';
-  const { monedaSimbolo, monedaCodigo, nombreNegocio, plantillaWhatsapp, gananciaPorcentaje, telefono } = req.body;
+  const { monedaSimbolo, monedaCodigo, nombreNegocio, plantillaWhatsapp, gananciaPorcentaje, diasMinimosPrimerCobro, telefono } = req.body;
 
   const parsedGanancia = Number(gananciaPorcentaje) !== undefined ? Math.max(0, Number(gananciaPorcentaje)) : 50;
+  const parsedDiasMinimos = diasMinimosPrimerCobro !== undefined && diasMinimosPrimerCobro !== null ? Math.max(0, Number(diasMinimosPrimerCobro)) : 3;
 
   if (isUsingMemoryStore()) {
     let settings = inMemoryStore.settings.find(s => s.userId === userId);
@@ -71,7 +73,8 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response) {
         monedaCodigo: monedaCodigo || 'CRC',
         nombreNegocio: nombreNegocio || 'CAT-LOAN Credit',
         plantillaWhatsapp: plantillaWhatsapp || 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
-        gananciaPorcentaje: parsedGanancia
+        gananciaPorcentaje: parsedGanancia,
+        diasMinimosPrimerCobro: parsedDiasMinimos
       };
       inMemoryStore.settings.push(settings);
     } else {
@@ -80,6 +83,7 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response) {
       settings.nombreNegocio = nombreNegocio !== undefined ? nombreNegocio : settings.nombreNegocio;
       settings.plantillaWhatsapp = plantillaWhatsapp !== undefined ? plantillaWhatsapp : settings.plantillaWhatsapp;
       settings.gananciaPorcentaje = parsedGanancia;
+      settings.diasMinimosPrimerCobro = parsedDiasMinimos;
     }
 
     if (telefono) {
@@ -101,7 +105,8 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response) {
           monedaCodigo,
           nombreNegocio,
           plantillaWhatsapp,
-          gananciaPorcentaje: parsedGanancia
+          gananciaPorcentaje: parsedGanancia,
+          diasMinimosPrimerCobro: parsedDiasMinimos
         },
         create: {
           userId,
@@ -109,7 +114,8 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response) {
           monedaCodigo: monedaCodigo || 'CRC',
           nombreNegocio: nombreNegocio || 'CAT-LOAN Credit',
           plantillaWhatsapp,
-          gananciaPorcentaje: parsedGanancia
+          gananciaPorcentaje: parsedGanancia,
+          diasMinimosPrimerCobro: parsedDiasMinimos
         }
       });
 
