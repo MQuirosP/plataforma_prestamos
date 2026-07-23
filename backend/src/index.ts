@@ -77,10 +77,11 @@ app.use('/api', apiRouter);
 async function startServer() {
   await checkDatabaseConnection();
   
+  const host = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
   app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`===================================================`);
     console.log(`🚀 CAT-LOAN-SAAS Server running on port ${PORT}`);
-    console.log(`👉 API Health Check: http://localhost:${PORT}/health`);
+    console.log(`👉 API Health Check: ${host}/health`);
     console.log(`===================================================`);
   });
 }
