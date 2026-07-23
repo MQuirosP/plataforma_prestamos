@@ -21,11 +21,15 @@ The frontend uses Angular. To deploy to Cloudflare Pages for production:
    ```
    *Note: If your output directory is different, adjust `dist/frontend/browser` accordingly.*
 
-## Backend (Railway)
-
-The backend is connected to Railway and linked to the GitHub repository.
-- Deployments happen automatically whenever you push to the `main` branch.
-- No manual deployment commands are needed.
+## Backend (Render)
+ 
+The backend is hosted on Render (URL: `https://plataforma-prestamos-g2nw.onrender.com`).
+- To deploy, configure your Render Web Service with:
+  - **Root Directory:** `backend`
+  - **Build Command:** `npm install && npx prisma generate && npm run build`
+  - **Start Command:** `npm run start`
+- If you connect the repository using Render's **Git Provider** integration, deployments will happen automatically whenever you push to the `main` branch.
+- If connected via the public Git URL, deployments must be triggered manually from the Render dashboard.
 
 ### Adding Collectors (Cobradores)
 
