@@ -68,9 +68,9 @@ import html2canvas from 'html2canvas';
 
         <!-- Tabs -->
         <div class="flex border-b border-industrial-border mb-6">
-          <button (click)="activeTab.set('tenants')" [class.text-caterpillar]="activeTab() === 'tenants'" [class.border-caterpillar]="activeTab() === 'tenants'" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-white transition">Prestamistas</button>
-          <button (click)="activeTab.set('create')" [class.text-caterpillar]="activeTab() === 'create'" [class.border-caterpillar]="activeTab() === 'create'" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-white transition">Nuevo Cliente</button>
-          <button (click)="activeTab.set('logs')" [class.text-caterpillar]="activeTab() === 'logs'" [class.border-caterpillar]="activeTab() === 'logs'" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-white transition">Auditoría</button>
+          <button (click)="activeTab.set('tenants')" [class.text-caterpillar]="activeTab() === 'tenants'" [class.border-caterpillar]="activeTab() === 'tenants'" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-caterpillar transition">Prestamistas</button>
+          <button (click)="activeTab.set('create')" [class.text-caterpillar]="activeTab() === 'create'" [class.border-caterpillar]="activeTab() === 'create'" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-caterpillar transition">Nuevo Cliente</button>
+          <button (click)="activeTab.set('logs')" [class.text-caterpillar]="activeTab() === 'logs'" [class.border-caterpillar]="activeTab() === 'logs'" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-caterpillar transition">Auditoría</button>
         </div>
 
         <!-- Tenants Tab -->
@@ -84,42 +84,42 @@ import html2canvas from 'html2canvas';
             <button 
               (click)="activeSubFilter.set('TODO')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+                (activeSubFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
             >
               Todos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-white text-[9px] font-mono">{{ getTenantCount('TODO') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('ACTIVO')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'ACTIVO' ? 'bg-semantic-emerald/20 text-semantic-emerald border-semantic-emerald/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+                (activeSubFilter() === 'ACTIVO' ? 'bg-semantic-emerald/20 text-semantic-emerald border-semantic-emerald/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
             >
               Activos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('ACTIVO') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('POR_VENCER')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'POR_VENCER' ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+                (activeSubFilter() === 'POR_VENCER' ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
             >
               Por Vencer <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('POR_VENCER') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('VENCIDO')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'VENCIDO' ? 'bg-semantic-red/20 text-semantic-red border-semantic-red/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+                (activeSubFilter() === 'VENCIDO' ? 'bg-semantic-red/20 text-semantic-red border-semantic-red/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
             >
               Vencidos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('VENCIDO') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('SUSPENDIDO')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'SUSPENDIDO' ? 'bg-industrial-surface border-industrial-border text-industrial-muted' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+                (activeSubFilter() === 'SUSPENDIDO' ? 'bg-industrial-surface border-industrial-border text-industrial-muted' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
             >
               Suspendidos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('SUSPENDIDO') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('TRIAL')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'TRIAL' ? 'bg-blue-500/10 text-blue-400 border-blue-500/50' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+                (activeSubFilter() === 'TRIAL' ? 'bg-blue-500/10 text-blue-400 border-blue-500/50' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
             >
               Demos/Trials <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('TRIAL') }}</span>
             </button>
@@ -198,13 +198,21 @@ import html2canvas from 'html2canvas';
                 <div class="space-y-3">
                   <div>
                     <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Plan</label>
-                    <select [ngModel]="tenant.plan" (ngModelChange)="changePlan(tenant.id, $event)" class="bg-industrial-surface border border-industrial-border text-white text-xs rounded p-2.5 w-full focus:outline-none">
-                      <option value="BRONCE">BRONCE</option>
-                      <option value="PLATA">PLATA</option>
-                      <option value="ORO">ORO</option>
-                      <option value="PLATINO">PLATINO</option>
-                      <option value="DIAMANTE">DIAMANTE</option>
-                    </select>
+                    <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface w-full">
+                      <select [ngModel]="tenant.plan" (ngModelChange)="changePlan(tenant.id, $event)"
+                              class="w-full bg-transparent text-white text-xs px-2.5 py-2 pr-10 focus:outline-none appearance-none cursor-pointer">
+                        <option value="BRONCE">BRONCE</option>
+                        <option value="PLATA">PLATA</option>
+                        <option value="ORO">ORO</option>
+                        <option value="PLATINO">PLATINO</option>
+                        <option value="DIAMANTE">DIAMANTE</option>
+                      </select>
+                      <div class="absolute inset-y-0 right-0 flex items-center justify-center w-8 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                   <div class="flex gap-2 w-full">
                     <button (click)="toggleSuspend(tenant)" class="flex-1 bg-industrial-surface border border-industrial-border text-xs py-2 px-3 rounded text-white hover:border-caterpillar transition">
@@ -231,7 +239,7 @@ import html2canvas from 'html2canvas';
               </div>
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nombre de Usuario (Login)</label>
-                <input type="text" [(ngModel)]="newTenant.username" name="username" required class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:border-caterpillar">
+                <input type="text" [(ngModel)]="newTenant.username" (input)="newTenant.username = newTenant.username.toLowerCase()" name="username" required class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:border-caterpillar">
               </div>
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Contraseña Inicial</label>
@@ -247,9 +255,17 @@ import html2canvas from 'html2canvas';
               </div>
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Plan Inicial</label>
-                <select [(ngModel)]="newTenant.plan" name="plan" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:border-caterpillar">
-                  <option *ngFor="let conf of planConfigs()" [value]="conf.plan">{{ conf.plan }}</option>
-                </select>
+                <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                  <select [(ngModel)]="newTenant.plan" name="plan"
+                          class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                    <option *ngFor="let conf of planConfigs()" [value]="conf.plan">{{ conf.plan }}</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
             <button type="submit" [disabled]="loading()" class="w-full bg-caterpillar text-industrial-black font-black uppercase text-xs py-3.5 rounded-lg mt-4 hover:bg-caterpillar-dark transition">
@@ -264,10 +280,18 @@ import html2canvas from 'html2canvas';
           <div class="bg-industrial-dark border border-industrial-border rounded-xl p-4 flex flex-col md:flex-row gap-3 items-end">
             <div class="flex-1 w-full">
               <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Tipo de Actividad</label>
-              <select [ngModel]="filterTipoEvento()" (ngModelChange)="onFilterTipoEventoChange($event)" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2.5 text-white text-xs focus:border-caterpillar outline-none">
-                <option value="">Todos los eventos</option>
-                <option *ngFor="let ev of eventTypes" [value]="ev">{{ ev }}</option>
-              </select>
+              <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                <select [ngModel]="filterTipoEvento()" (ngModelChange)="onFilterTipoEventoChange($event)"
+                        class="w-full bg-transparent text-white text-xs px-3 py-2.5 pr-12 focus:outline-none appearance-none cursor-pointer">
+                  <option value="">Todos los eventos</option>
+                  <option *ngFor="let ev of eventTypes" [value]="ev">{{ ev }}</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
             </div>
             <div class="w-full md:w-36">
               <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Desde</label>
@@ -300,13 +324,13 @@ import html2canvas from 'html2canvas';
 
           <!-- Paginación de Auditoría -->
           <div *ngIf="logsTotalPages() > 1" class="flex items-center justify-between border-t border-industrial-border/60 pt-4 mt-2">
-            <button [disabled]="logsPage() <= 1" (click)="changeLogsPage(logsPage() - 1)" class="bg-industrial-surface border border-industrial-border px-3.5 py-2 rounded-lg text-xs font-bold text-industrial-light hover:text-white disabled:opacity-40 disabled:hover:text-industrial-light transition">
+            <button [disabled]="logsPage() <= 1" (click)="changeLogsPage(logsPage() - 1)" class="bg-industrial-surface border border-industrial-border px-3.5 py-2 rounded-lg text-xs font-bold text-industrial-light hover:text-caterpillar disabled:opacity-40 disabled:hover:text-industrial-light transition">
               Anterior
             </button>
             <span class="text-[10px] text-industrial-muted font-mono uppercase">
               Página {{ logsPage() }} de {{ logsTotalPages() }} (Total: {{ logsTotal() }})
             </span>
-            <button [disabled]="logsPage() >= logsTotalPages()" (click)="changeLogsPage(logsPage() + 1)" class="bg-industrial-surface border border-industrial-border px-3.5 py-2 rounded-lg text-xs font-bold text-industrial-light hover:text-white disabled:opacity-40 disabled:hover:text-industrial-light transition">
+            <button [disabled]="logsPage() >= logsTotalPages()" (click)="changeLogsPage(logsPage() + 1)" class="bg-industrial-surface border border-industrial-border px-3.5 py-2 rounded-lg text-xs font-bold text-industrial-light hover:text-caterpillar disabled:opacity-40 disabled:hover:text-industrial-light transition">
               Siguiente
             </button>
           </div>
@@ -353,7 +377,7 @@ import html2canvas from 'html2canvas';
               </svg>
               <h3 class="text-white font-black uppercase tracking-tight">Configuración General</h3>
             </div>
-            <button (click)="showSettingsPanel.set(false)" class="text-industrial-muted hover:text-white focus:outline-none transition">
+            <button (click)="showSettingsPanel.set(false)" class="text-industrial-muted hover:text-caterpillar focus:outline-none transition">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -524,7 +548,7 @@ export class AdminComponent implements OnInit {
 
   activeTab = signal<'tenants' | 'create' | 'logs'>('tenants');
   activeSubFilter = signal<string>('TODO');
-  
+
   tenants = signal<Tenant[]>([]);
   stats = signal<SaaSStats | null>(null);
   logs = signal<SaaSLog[]>([]);
@@ -547,7 +571,7 @@ export class AdminComponent implements OnInit {
     'ACTUALIZAR_PLAN',
     'CREAR_COBRADOR'
   ];
-  
+
   searchTerm = '';
   loading = signal(false);
 
@@ -577,7 +601,7 @@ export class AdminComponent implements OnInit {
     catch (err) { this.toastService.error('Error cargando prestamistas'); }
 
     try { this.stats.set(await this.adminService.getStats()); }
-    catch (_) {}
+    catch (_) { }
 
     await this.loadLogs();
 
@@ -715,8 +739,8 @@ export class AdminComponent implements OnInit {
     }
 
     if (!term) return list;
-    return list.filter(t => 
-      t.nombre.toLowerCase().includes(term) || 
+    return list.filter(t =>
+      t.nombre.toLowerCase().includes(term) ||
       t.username.toLowerCase().includes(term) ||
       (t.email && t.email.toLowerCase().includes(term)) ||
       t.telefono.includes(term)
@@ -781,7 +805,7 @@ export class AdminComponent implements OnInit {
     }
     const newDate = new Date(currentBase);
     newDate.setMonth(newDate.getMonth() + 1);
-    
+
     try {
       const updatedDate = await this.adminService.updatePaymentDate(tenant.id, newDate.toISOString());
       this.tenants.update(curr => curr.map(t => t.id === tenant.id ? { ...t, paymentDate: updatedDate || undefined } : t));
@@ -846,7 +870,7 @@ export class AdminComponent implements OnInit {
             const isExpiring = this.isExpiringSoon(tenant);
             const cleanPhone = this.formatWhatsappNumber(tenant.telefono);
             let text = `Hola ${tenant.nombre}, te saludamos de CAT-LOAN. Adjuntamos tu estado de suscripción: ${imageUrl}`;
-            
+
             if (isExpiring) {
               const expiry = this.getEffectiveExpiryDate(tenant);
               const date = expiry.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
@@ -883,9 +907,9 @@ export class AdminComponent implements OnInit {
     const isExpiring = this.isExpiringSoon(tenant);
     const cleanPhone = this.formatWhatsappNumber(tenant.telefono);
     if (skipText) return `https://wa.me/${cleanPhone}`;
-    
+
     let text = `Hola ${tenant.nombre}, te saludamos de CAT-LOAN.`;
-    
+
     if (isExpiring) {
       const expiry = this.getEffectiveExpiryDate(tenant);
       const date = expiry.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
@@ -898,7 +922,8 @@ export class AdminComponent implements OnInit {
   async createTenant(e: Event) {
     e.preventDefault();
     if (!this.newTenant.nombre || !this.newTenant.username || !this.newTenant.password) return;
-    
+    this.newTenant.username = this.newTenant.username.trim().toLowerCase();
+
     this.loading.set(true);
     try {
       await this.adminService.createTenant(this.newTenant);

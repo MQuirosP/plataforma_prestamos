@@ -101,21 +101,21 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
           <button 
             (click)="activeTab.set('atrasados')"
             [class]="'shrink-0 px-4 py-2 rounded-full text-[11px] font-bold uppercase transition border ' + 
-              (activeTab() === 'atrasados' ? 'bg-semantic-red/20 text-semantic-red border-semantic-red/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+              (activeTab() === 'atrasados' ? 'bg-semantic-red/20 text-semantic-red border-semantic-red/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar hover:border-caterpillar/30')"
           >
             Atrasados <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ atrasadosCount() }}</span>
           </button>
           <button 
             (click)="activeTab.set('hoy')"
             [class]="'shrink-0 px-4 py-2 rounded-full text-[11px] font-bold uppercase transition border ' + 
-              (activeTab() === 'hoy' ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+              (activeTab() === 'hoy' ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar hover:border-caterpillar/30')"
           >
             Vencen Hoy <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ hoyCount() }}</span>
           </button>
           <button 
             (click)="activeTab.set('dia')"
             [class]="'shrink-0 px-4 py-2 rounded-full text-[11px] font-bold uppercase transition border ' + 
-              (activeTab() === 'dia' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-white')"
+              (activeTab() === 'dia' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar hover:border-caterpillar/30')"
           >
             Al Día <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-white text-[9px] font-mono">{{ alDiaCount() }}</span>
           </button>
@@ -126,7 +126,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
           <button 
             (click)="activeDayFilter.set('TODO')"
             [class]="'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition border ' + 
-              (activeDayFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/30 text-industrial-muted border-industrial-border/40 hover:text-white')"
+              (activeDayFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/30 text-industrial-muted border-industrial-border/40 hover:text-caterpillar hover:border-caterpillar/30')"
           >
             Todos los Días <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-white text-[8px] font-mono">{{ getLoansCountForDay('TODO') }}</span>
           </button>
@@ -142,7 +142,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             ]"
             (click)="activeDayFilter.set(day.key)"
             [class]="'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition border ' + 
-              (activeDayFilter() === day.key ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/30 text-industrial-muted border-industrial-border/40 hover:text-white')"
+              (activeDayFilter() === day.key ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/30 text-industrial-muted border-industrial-border/40 hover:text-caterpillar hover:border-caterpillar/30')"
           >
             {{ day.label }} <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[8px] font-mono">{{ getLoansCountForDay(day.key) }}</span>
           </button>
@@ -243,120 +243,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
         </svg>
       </button>
 
-      <!-- MODAL 1: Create Loan Form -->
-      <div *ngIf="showCreateModal()" class="fixed inset-0 z-50 bg-black/80 flex items-end justify-center backdrop-blur-sm">
-        <div class="bg-industrial-dark w-full max-w-md rounded-t-2xl border-t border-industrial-border p-6 pb-8">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-black text-white uppercase tracking-tight">Nuevo Préstamo</h2>
-            <button (click)="showCreateModal.set(false)" class="text-industrial-muted hover:text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
 
-          <form (submit)="onCreateLoan($event)" class="space-y-4">
-            <div>
-              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nombre Completo del Cliente</label>
-              <input type="text" [(ngModel)]="newLoanData.clienteNombre" name="clienteNombre" required 
-                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-            </div>
-            <div>
-              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Teléfono (WhatsApp)</label>
-              <input type="text" [(ngModel)]="newLoanData.clienteTelefono" name="clienteTelefono" required 
-                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Original</label>
-                <app-numeric-stepper [(ngModel)]="newLoanData.montoOriginal" name="montoOriginal" [required]="true" [min]="0" [step]="1000"></app-numeric-stepper>
-              </div>
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cuota Semanal</label>
-                <app-numeric-stepper [(ngModel)]="newLoanData.cuotaSemanal" name="cuotaSemanal" [required]="true" [min]="0" [step]="500"></app-numeric-stepper>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Tipo de Interés</label>
-                <select [(ngModel)]="newLoanData.creationMode" name="creationMode"
-                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-                  <option value="porcentaje">% de Interés</option>
-                  <option value="monto_fijo">Monto Final de Pago</option>
-                </select>
-              </div>
-              <div *ngIf="newLoanData.creationMode === 'porcentaje'">
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Interés (%)</label>
-                <app-numeric-stepper [(ngModel)]="newLoanData.porcentaje" name="porcentaje" [min]="0" [max]="100" [step]="5"></app-numeric-stepper>
-              </div>
-              <div *ngIf="newLoanData.creationMode === 'monto_fijo'">
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Final de Pago</label>
-                <app-numeric-stepper [(ngModel)]="newLoanData.totalAPagarDirect" name="totalAPagarDirect" [min]="0" [step]="1000"></app-numeric-stepper>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Día de Cobro Pactado</label>
-                <select [(ngModel)]="newLoanData.diaCobro" name="diaCobro" required 
-                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-                  <option [value]="1">Lunes</option>
-                  <option [value]="2">Martes</option>
-                  <option [value]="3">Miércoles</option>
-                  <option [value]="4">Jueves</option>
-                  <option [value]="5">Viernes</option>
-                  <option [value]="6">Sábado</option>
-                  <option [value]="7">Domingo</option>
-                </select>
-              </div>
-              <div class="flex items-center pt-5">
-                <label class="flex items-center gap-2 text-xs text-industrial-light cursor-pointer select-none">
-                  <input type="checkbox" [(ngModel)]="newLoanData.hasFine" name="hasFine"
-                         class="rounded border-industrial-border text-caterpillar focus:ring-0 bg-industrial-surface w-4 h-4">
-                  <span>Habilitar Multas</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Fine configuration fields -->
-            <div *ngIf="newLoanData.hasFine" class="bg-industrial-surface/50 p-4 rounded-xl border border-industrial-border/60 space-y-4">
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Multa</label>
-                  <app-numeric-stepper [(ngModel)]="newLoanData.fineAmount" name="fineAmount" [min]="0" [step]="100"></app-numeric-stepper>
-                </div>
-                <div>
-                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia</label>
-                  <select [(ngModel)]="newLoanData.fineFrequency" name="fineFrequency"
-                          class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-                    <option value="DAILY">Diario</option>
-                    <option value="WEEKLY">Semanal</option>
-                    <option value="MONTHLY">Mensual</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Días Gracia</label>
-                <app-numeric-stepper [(ngModel)]="newLoanData.graceDays" name="graceDays" [min]="0" [step]="1"></app-numeric-stepper>
-              </div>
-            </div>
-
-            <div class="bg-industrial-surface p-3 rounded-lg border border-industrial-border text-xs text-industrial-muted font-mono flex justify-between items-center mt-2">
-              <span>Total Estimado a Cobrar:</span>
-              <span class="text-white font-extrabold text-sm">
-                {{ loanService.settings()?.monedaSimbolo || '₡' }} 
-                {{ (newLoanData.creationMode === 'porcentaje' 
-                     ? (newLoanData.montoOriginal || 0) * (1 + (newLoanData.porcentaje || 0) / 100) 
-                     : (newLoanData.totalAPagarDirect || 0)) | number:'1.0-0' }}
-              </span>
-            </div>
-            
-            <button type="submit" 
-                    class="w-full bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3 rounded-lg font-black uppercase tracking-wider text-sm transition duration-150 mt-4 shadow-lg">
-              Crear Préstamo Activo
-            </button>
-          </form>
-        </div>
-      </div>
 
       <!-- MODAL 5: Edit Loan (Lender-Only) -->
       <div *ngIf="showEditModal()" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
@@ -370,7 +257,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                 ⚠ Préstamo con abonos: Campos financieros bloqueados.
               </p>
             </div>
-            <button (click)="showEditModal.set(false)" class="text-industrial-muted hover:text-white">
+            <button (click)="showEditModal.set(false)" class="text-industrial-muted hover:text-caterpillar">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -405,11 +292,20 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cálculo de Cobro</label>
-                <select [(ngModel)]="editLoanData.creationMode" name="editCreationMode" [disabled]="editLoanData.hasPayments"
-                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
-                  <option value="porcentaje">% de Interés</option>
-                  <option value="monto_fijo">Monto Final de Pago</option>
-                </select>
+                <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface"
+                     [class.opacity-50]="editLoanData.hasPayments" [class.cursor-not-allowed]="editLoanData.hasPayments">
+                  <select [(ngModel)]="editLoanData.creationMode" name="editCreationMode" [disabled]="editLoanData.hasPayments"
+                          class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer disabled:cursor-not-allowed">
+                    <option value="porcentaje">% de Interés</option>
+                    <option value="monto_fijo">Monto Final de Pago</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150"
+                       [class.opacity-50]="editLoanData.hasPayments">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </div>
+                </div>
               </div>
               <div *ngIf="editLoanData.creationMode === 'porcentaje'">
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Interés (%)</label>
@@ -424,16 +320,23 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Día de Cobro Pactado</label>
-                <select [(ngModel)]="editLoanData.diaCobro" name="editDiaCobro" required 
-                        class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-                  <option [value]="1">Lunes</option>
-                  <option [value]="2">Martes</option>
-                  <option [value]="3">Miércoles</option>
-                  <option [value]="4">Jueves</option>
-                  <option [value]="5">Viernes</option>
-                  <option [value]="6">Sábado</option>
-                  <option [value]="7">Domingo</option>
-                </select>
+                <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                  <select [(ngModel)]="editLoanData.diaCobro" name="editDiaCobro" required 
+                          class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                    <option [value]="1">Lunes</option>
+                    <option [value]="2">Martes</option>
+                    <option [value]="3">Miércoles</option>
+                    <option [value]="4">Jueves</option>
+                    <option [value]="5">Viernes</option>
+                    <option [value]="6">Sábado</option>
+                    <option [value]="7">Domingo</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </div>
+                </div>
               </div>
               <div class="flex items-center pt-5">
                 <label class="flex items-center gap-2 text-xs text-industrial-light cursor-pointer select-none">
@@ -446,24 +349,31 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
 
             <!-- Fine configuration fields -->
             <div *ngIf="editLoanData.hasFine" class="bg-industrial-surface/50 p-4 rounded-xl border border-industrial-border/60 space-y-4">
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Multa</label>
+                <app-numeric-stepper [(ngModel)]="editLoanData.fineAmount" name="editFineAmount" [min]="0" [step]="100"></app-numeric-stepper>
+              </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Multa</label>
-                  <app-numeric-stepper [(ngModel)]="editLoanData.fineAmount" name="editFineAmount" [min]="0" [step]="100"></app-numeric-stepper>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia</label>
+                  <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                    <select [(ngModel)]="editLoanData.fineFrequency" name="editFineFrequency"
+                            class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                      <option value="DAILY">Diario</option>
+                      <option value="WEEKLY">Semanal</option>
+                      <option value="MONTHLY">Mensual</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                      </svg>
+                    </div>
+                  </div>
                 </div>
                 <div>
-                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia</label>
-                  <select [(ngModel)]="editLoanData.fineFrequency" name="editFineFrequency"
-                          class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-                    <option value="DAILY">Diario</option>
-                    <option value="WEEKLY">Semanal</option>
-                    <option value="MONTHLY">Mensual</option>
-                  </select>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Días Gracia</label>
+                  <app-numeric-stepper [(ngModel)]="editLoanData.graceDays" name="editGraceDays" [min]="0" [step]="1"></app-numeric-stepper>
                 </div>
-              </div>
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Días Gracia</label>
-                <app-numeric-stepper [(ngModel)]="editLoanData.graceDays" name="editGraceDays" [min]="0" [step]="1"></app-numeric-stepper>
               </div>
             </div>
 
@@ -490,7 +400,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
         <div class="bg-industrial-dark w-full max-w-md rounded-t-2xl border-t border-industrial-border p-6 pb-8">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-black text-white uppercase tracking-tight">Registrar Abono</h2>
-            <button (click)="showAbonoModal.set(false)" class="text-industrial-muted hover:text-white">
+            <button (click)="showAbonoModal.set(false)" class="text-industrial-muted hover:text-caterpillar">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -749,7 +659,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
           
           <div class="flex justify-between items-center mb-4 mt-2">
             <h2 class="text-lg font-black text-white uppercase tracking-tight">Gestión de Equipo</h2>
-            <button (click)="showCobradoresModal.set(false)" class="text-industrial-muted hover:text-white">
+            <button (click)="showCobradoresModal.set(false)" class="text-industrial-muted hover:text-caterpillar">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -788,7 +698,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             <input type="text" [(ngModel)]="newCobradorData.nombre" name="nombre" placeholder="Nombre completo" required 
                    class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2.5 text-white text-xs focus:border-caterpillar outline-none">
             
-            <input type="text" [(ngModel)]="newCobradorData.username" name="username" placeholder="Nombre de usuario (login)" required 
+            <input type="text" [(ngModel)]="newCobradorData.username" (input)="newCobradorData.username = newCobradorData.username.toLowerCase()" name="username" placeholder="Nombre de usuario (login)" required 
                    class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2.5 text-white text-xs focus:border-caterpillar outline-none">
             
             <input type="text" [(ngModel)]="newCobradorData.password" name="password" placeholder="Contraseña de acceso" required 
@@ -843,11 +753,11 @@ export class DashboardComponent implements OnInit {
   adminService = inject(AdminService);
 
   @Output() openSettings = new EventEmitter<void>();
+  @Output() openCreateLoan = new EventEmitter<void>();
 
   // States
   activeTab = signal<'atrasados' | 'hoy' | 'dia'>('hoy');
   activeDayFilter = signal<string>('TODO');
-  showCreateModal = signal<boolean>(false);
   showEditModal = signal<boolean>(false);
   showAbonoModal = signal<boolean>(false);
   showStatementModal = signal<boolean>(false);
@@ -869,22 +779,6 @@ export class DashboardComponent implements OnInit {
   // Selected entities
   selectedLoanForAbono: Loan | null = null;
   selectedStatementLoan: Loan | null = null;
-
-  // Form bindings
-  newLoanData = {
-    clienteNombre: '',
-    clienteTelefono: '',
-    montoOriginal: null as number | null,
-    cuotaSemanal: null as number | null,
-    diaCobro: 1,
-    porcentaje: null as number | null,
-    creationMode: 'porcentaje' as 'porcentaje' | 'monto_fijo',
-    totalAPagarDirect: null as number | null,
-    fineAmount: null as number | null,
-    fineFrequency: 'DAILY' as 'DAILY' | 'WEEKLY' | 'MONTHLY',
-    graceDays: 0,
-    hasFine: false
-  };
   editLoanData = {
     id: '',
     clienteNombre: '',
@@ -975,26 +869,26 @@ export class DashboardComponent implements OnInit {
   getNextPaymentDate(loan: any): string {
     const startDate = new Date(loan.fechaInicio);
     startDate.setHours(0, 0, 0, 0);
-    
+
     const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
     let dayOffset = jsDayCobro - startDate.getDay();
     if (dayOffset < 0) {
       dayOffset += 7;
     }
-    
+
     // Obtener días mínimos configurados (por defecto 3)
     const diasMinimos = this.loanService.settings()?.diasMinimosPrimerCobro ?? 3;
     if (dayOffset < diasMinimos) {
       dayOffset += 7;
     }
-    
+
     const current = new Date(startDate);
     current.setDate(current.getDate() + dayOffset);
 
     const totalAbonado = (loan.payments || []).reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
     const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
     const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
-    
+
     // Buscar la fecha de vencimiento de la próxima cuota no pagada
     const targetIdx = Math.max(0, Math.min(numCuotasAbonadas, totalCuotasEstimadas - 1));
     const targetDate = new Date(current);
@@ -1002,7 +896,7 @@ export class DashboardComponent implements OnInit {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const diffTime = targetDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -1100,7 +994,7 @@ export class DashboardComponent implements OnInit {
       .replace('{saldo}', String(loan.balancePendiente))
       .replace('{cuota}', String(loan.cuotaSemanal))
       .replace(/\{moneda\}/g, settings?.monedaSimbolo || '₡');
-    
+
     let cleanPhone = loan.clienteTelefono.replace(/\D/g, '');
     if (cleanPhone.length === 8) {
       cleanPhone = '506' + cleanPhone;
@@ -1109,57 +1003,7 @@ export class DashboardComponent implements OnInit {
   }
 
   openCreateModal() {
-    const settings = this.loanService.settings();
-    const currency = settings?.monedaCodigo || 'CRC';
-    const prefix = this.getPrefixByCurrency(currency);
-
-    this.newLoanData = {
-      clienteNombre: '',
-      clienteTelefono: prefix,
-      montoOriginal: null,
-      cuotaSemanal: null,
-      diaCobro: 1,
-      porcentaje: settings?.gananciaPorcentaje || 50,
-      creationMode: 'porcentaje',
-      totalAPagarDirect: null,
-      fineAmount: null,
-      fineFrequency: 'DAILY',
-      graceDays: 0,
-      hasFine: false
-    };
-    this.showCreateModal.set(true);
-  }
-
-  async onCreateLoan(event: Event) {
-    event.preventDefault();
-    if (!this.newLoanData.clienteNombre || !this.newLoanData.clienteTelefono || !this.newLoanData.montoOriginal || !this.newLoanData.cuotaSemanal) {
-      this.toastService.error('Por favor llene todos los campos');
-      return;
-    }
-
-    try {
-      await this.loanService.createLoan({
-        clienteNombre: this.newLoanData.clienteNombre,
-        clienteTelefono: this.newLoanData.clienteTelefono,
-        montoOriginal: Number(this.newLoanData.montoOriginal),
-        cuotaSemanal: Number(this.newLoanData.cuotaSemanal),
-        diaCobro: Number(this.newLoanData.diaCobro),
-        porcentaje: this.newLoanData.creationMode === 'porcentaje' && this.newLoanData.porcentaje !== null ? Number(this.newLoanData.porcentaje) : undefined,
-        totalAPagarDirect: this.newLoanData.creationMode === 'monto_fijo' ? Number(this.newLoanData.totalAPagarDirect) : null,
-        fineAmount: this.newLoanData.hasFine && this.newLoanData.fineAmount ? Number(this.newLoanData.fineAmount) : null,
-        fineFrequency: this.newLoanData.hasFine ? this.newLoanData.fineFrequency : null,
-        graceDays: this.newLoanData.hasFine ? Number(this.newLoanData.graceDays) : 0
-      });
-      this.showCreateModal.set(false);
-      this.recalculateCounts();
-      this.toastService.success('Préstamo creado correctamente');
-    } catch (err: any) {
-      if (err.status === 403) {
-        this.toastService.error('Suscripción Expirada. Habilite en panel.');
-      } else {
-        this.toastService.error('Error al registrar el préstamo');
-      }
-    }
+    this.openCreateLoan.emit();
   }
 
   openEditModal(loan: Loan) {
@@ -1269,7 +1113,7 @@ export class DashboardComponent implements OnInit {
       this.showAbonoModal.set(false);
       this.recalculateCounts();
       this.toastService.success('Abono registrado correctamente');
-      
+
       const updated = this.loans().find(l => l.id === this.selectedLoanForAbono?.id);
       if (updated) {
         this.selectedStatementLoan = updated;
@@ -1299,7 +1143,7 @@ export class DashboardComponent implements OnInit {
         try {
           await this.loanService.deletePayment(this.selectedStatementLoan!.id, paymentId);
           this.toastService.success('Abono eliminado correctamente');
-          
+
           // Refresh selection to show updated values
           const updated = this.loans().find(l => l.id === this.selectedStatementLoan?.id);
           if (updated) {
@@ -1325,7 +1169,7 @@ export class DashboardComponent implements OnInit {
         backgroundColor: '#121212',
         scale: 2
       });
-      
+
       canvas.toBlob(async (blob) => {
         if (!blob) return;
 
@@ -1360,7 +1204,7 @@ export class DashboardComponent implements OnInit {
             : `Hola ${loan.clienteNombre}, adjunto envío tu estado de cuenta digital: ${imageUrl}`;
 
           const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
-          
+
           window.open(whatsappUrl, '_blank');
           this.toastService.success(isReceipt ? 'Recibo enviado a WhatsApp.' : 'Estado de cuenta enviado.');
         } catch (uploadErr) {
@@ -1396,13 +1240,14 @@ export class DashboardComponent implements OnInit {
   async onCreateCobrador(event: Event) {
     event.preventDefault();
     if (!this.newCobradorData.nombre || !this.newCobradorData.username || !this.newCobradorData.password) return;
-    
+
+    this.newCobradorData.username = this.newCobradorData.username.trim().toLowerCase();
     this.loadingCobrador.set(true);
     try {
       await this.loanService.createCobrador(this.newCobradorData);
       this.toastService.success('Cobrador agregado al equipo');
       this.newCobradorData = { nombre: '', username: '', password: '', telefono: '+506 ' };
-      
+
       const list = await this.loanService.getCobradores();
       this.cobradores.set(list);
     } catch (err: any) {

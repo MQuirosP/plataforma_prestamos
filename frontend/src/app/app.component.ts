@@ -9,18 +9,19 @@ import { LoginComponent } from './login/login.component';
 import { OnboardingComponent } from './onboarding/onboarding.component';
 import { AdminComponent } from './admin/admin.component';
 import { ToastComponent } from './toast/toast.component';
+import { CreateLoanComponent } from './create-loan/create-loan.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent, ToastComponent],
+  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent, ToastComponent, CreateLoanComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent {
   loanService = inject(LoanService);
   adminService = inject(AdminService);
-  currentScreen = signal<'dashboard' | 'settings'>('dashboard');
+  currentScreen = signal<'dashboard' | 'settings' | 'create-loan'>('dashboard');
 
   onOnboardingFinished() {
     this.loanService.isNewUser.set(false);

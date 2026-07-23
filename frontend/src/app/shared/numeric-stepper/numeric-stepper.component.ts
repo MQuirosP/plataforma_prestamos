@@ -28,9 +28,9 @@ import { CommonModule } from '@angular/common';
         type="button"
         (click)="decrement()"
         [disabled]="disabled || (min !== null && value <= min)"
-        class="flex items-center justify-center w-9 bg-industrial-dark text-industrial-muted
+        class="flex items-center justify-center w-9 bg-industrial-dark text-caterpillar
                hover:bg-caterpillar hover:text-industrial-black
-               disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-industrial-dark disabled:hover:text-industrial-muted
+               disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-industrial-dark disabled:hover:text-caterpillar
                border-r border-industrial-border transition-colors duration-150 select-none text-base font-bold shrink-0"
         aria-label="Decrementar">
         −
@@ -57,9 +57,9 @@ import { CommonModule } from '@angular/common';
         type="button"
         (click)="increment()"
         [disabled]="disabled || (max !== null && value >= max)"
-        class="flex items-center justify-center w-9 bg-industrial-dark text-industrial-muted
+        class="flex items-center justify-center w-9 bg-industrial-dark text-caterpillar
                hover:bg-caterpillar hover:text-industrial-black
-               disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-industrial-dark disabled:hover:text-industrial-muted
+               disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-industrial-dark disabled:hover:text-caterpillar
                border-l border-industrial-border transition-colors duration-150 select-none text-base font-bold shrink-0"
         aria-label="Incrementar">
         +

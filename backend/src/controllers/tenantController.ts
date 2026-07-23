@@ -5,6 +5,7 @@ import { PlanManager } from '../services/planManager.js';
 import * as bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
 import { logger } from '../services/logger';
+import { sanitizeString, sanitizeUsername, sanitizePhone } from '../services/validation';
 
 // Crear un nuevo cobrador bajo la cuenta del prestamista actual
 export async function createCobrador(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -12,8 +13,18 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response, n
   const prestamistaId = req.user.id;
   const { nombre, username, password, telefono } = req.body;
 
-  if (!username || !password || !nombre) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios' });
+  const cleanNombre = sanitizeString(nombre, 100);
+  const cleanUsername = sanitizeUsername(username);
+  const cleanTelefono = sanitizePhone(telefono);
+
+  if (!cleanUsername || cleanUsername.length < 3) {
+    return res.status(400).json({ error: 'El nombre de usuario no es válido (mínimo 3 caracteres, sin espacios ni caracteres especiales).' });
+  }
+  if (!cleanNombre || cleanNombre.length < 2) {
+    return res.status(400).json({ error: 'El nombre completo es obligatorio (mínimo 2 caracteres).' });
+  }
+  if (!password || password.trim().length < 6) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
   }
 
   try {
@@ -39,10 +50,10 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response, n
     const hash = await bcrypt.hash(password, 10);
     const newCobrador = await prisma.user.create({
       data: {
-        nombre,
-        username,
+        nombre: cleanNombre,
+        username: cleanUsername,
         password: hash,
-        telefono: telefono || '+50600000000',
+        telefono: cleanTelefono || '+50600000000',
         rol: Role.COBRADOR,
         prestamistaId
       }

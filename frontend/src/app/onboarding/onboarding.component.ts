@@ -46,12 +46,19 @@ import { ToastService } from '../services/toast.service';
           <!-- Selector de País (Consumido desde REST Countries API) -->
           <div>
             <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">País / Moneda local</label>
-            <select [ngModel]="selectedCountryCca2()" (ngModelChange)="onCountryChange($event)" name="selectedCountryCca2"
-                    class="w-full bg-industrial-surface border-2 border-caterpillar rounded-lg p-3 text-white text-sm focus:outline-none font-bold">
-              <option *ngFor="let country of countriesList()" [value]="country.cca2">
-                {{ country.flag }} {{ country.name.common }} ({{ getCurrencyCode(country) }})
-              </option>
-            </select>
+            <div class="group relative flex items-stretch rounded-lg overflow-hidden border-2 border-caterpillar bg-industrial-surface">
+              <select [ngModel]="selectedCountryCca2()" (ngModelChange)="onCountryChange($event)" name="selectedCountryCca2"
+                      class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none font-bold appearance-none cursor-pointer">
+                <option *ngFor="let country of countriesList()" [value]="country.cca2">
+                  {{ country.flag }} {{ country.name.common }} ({{ getCurrencyCode(country) }})
+                </option>
+              </select>
+              <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l-2 border-caterpillar pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </div>
+            </div>
           </div>
 
           <button type="submit" [disabled]="loading()"

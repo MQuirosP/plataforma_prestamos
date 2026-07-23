@@ -37,7 +37,7 @@ import { LoanService } from '../services/loan.service';
         <!-- Actions -->
         <div class="mt-8 flex flex-col gap-2">
           <!-- Dev Bypass Tool -->
-          <button (click)="bypass()" class="text-xs text-industrial-muted hover:text-white underline font-mono">
+          <button (click)="bypass()" class="text-xs text-industrial-muted hover:text-caterpillar underline font-mono">
             [Simular Reactivación de Cuenta (Dev)]
           </button>
           

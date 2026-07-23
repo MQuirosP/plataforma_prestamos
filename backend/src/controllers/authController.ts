@@ -6,6 +6,7 @@ import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import * as crypto from 'crypto';
 import { Role } from '@prisma/client';
 import { logger } from '../services/logger';
+import { sanitizeUsername } from '../services/validation';
 
 function parseCookies(req: Request): Record<string, string> {
   const list: Record<string, string> = {};
@@ -33,12 +34,16 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     return res.status(400).json({ error: 'Username y contraseña son obligatorios' });
   }
 
-  username = username.trim().toLowerCase();
+  const cleanUsername = sanitizeUsername(username);
+  if (!cleanUsername) {
+    return res.status(400).json({ error: 'Username inválido' });
+  }
+
   password = password.trim();
 
   try {
     const user = await prisma.user.findUnique({
-      where: { username },
+      where: { username: cleanUsername },
       include: { subscriptions: true }
     });
 
@@ -120,6 +125,10 @@ export async function changePassword(req: AuthenticatedRequest, res: Response, n
   const { oldPassword, newPassword } = req.body;
   if (!oldPassword || !newPassword) {
     return res.status(400).json({ error: 'La contraseña actual y la nueva son requeridas' });
+  }
+
+  if (newPassword.trim().length < 6) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
   }
 
   try {

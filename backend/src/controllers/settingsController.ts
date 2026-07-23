@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
+import { sanitizeString, sanitizePhone, validatePositiveNumber, validateIntegerRange } from '../services/validation';
 
 export async function getSettings(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const userId = req.user?.id || 'mock-lender-id-123';
@@ -58,8 +59,17 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
   const userId = req.user?.id || 'mock-lender-id-123';
   const { monedaSimbolo, monedaCodigo, nombreNegocio, plantillaWhatsapp, gananciaPorcentaje, diasMinimosPrimerCobro, telefono } = req.body;
 
-  const parsedGanancia = Number(gananciaPorcentaje) !== undefined ? Math.max(0, Number(gananciaPorcentaje)) : 50;
-  const parsedDiasMinimos = diasMinimosPrimerCobro !== undefined && diasMinimosPrimerCobro !== null ? Math.max(0, Number(diasMinimosPrimerCobro)) : 3;
+  const cleanSimbolo = sanitizeString(monedaSimbolo, 10) || '₡';
+  const cleanCodigo = sanitizeString(monedaCodigo, 10) || 'CRC';
+  const cleanNombre = sanitizeString(nombreNegocio, 100) || 'CAT-LOAN Credit';
+  const cleanPlantilla = sanitizeString(plantillaWhatsapp, 500) || 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!';
+  const cleanTelefono = telefono ? sanitizePhone(telefono) : undefined;
+
+  const validGanancia = validatePositiveNumber(gananciaPorcentaje, true);
+  const parsedGanancia = validGanancia !== null ? Math.min(500, validGanancia) : 50;
+
+  const validDiasMinimos = validateIntegerRange(diasMinimosPrimerCobro, 0, 365);
+  const parsedDiasMinimos = validDiasMinimos !== null ? validDiasMinimos : 3;
 
   if (isUsingMemoryStore()) {
     let settings = inMemoryStore.settings.find(s => s.userId === userId);
@@ -67,31 +77,31 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
       settings = {
         id: `sett-${Date.now()}`,
         userId,
-        monedaSimbolo: monedaSimbolo || '₡',
-        monedaCodigo: monedaCodigo || 'CRC',
-        nombreNegocio: nombreNegocio || 'CAT-LOAN Credit',
-        plantillaWhatsapp: plantillaWhatsapp || 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
+        monedaSimbolo: cleanSimbolo,
+        monedaCodigo: cleanCodigo,
+        nombreNegocio: cleanNombre,
+        plantillaWhatsapp: cleanPlantilla,
         gananciaPorcentaje: parsedGanancia,
         diasMinimosPrimerCobro: parsedDiasMinimos
       };
       inMemoryStore.settings.push(settings);
     } else {
-      settings.monedaSimbolo = monedaSimbolo !== undefined ? monedaSimbolo : settings.monedaSimbolo;
-      settings.monedaCodigo = monedaCodigo !== undefined ? monedaCodigo : settings.monedaCodigo;
-      settings.nombreNegocio = nombreNegocio !== undefined ? nombreNegocio : settings.nombreNegocio;
-      settings.plantillaWhatsapp = plantillaWhatsapp !== undefined ? plantillaWhatsapp : settings.plantillaWhatsapp;
+      settings.monedaSimbolo = cleanSimbolo;
+      settings.monedaCodigo = cleanCodigo;
+      settings.nombreNegocio = cleanNombre;
+      settings.plantillaWhatsapp = cleanPlantilla;
       settings.gananciaPorcentaje = parsedGanancia;
       settings.diasMinimosPrimerCobro = parsedDiasMinimos;
     }
 
-    if (telefono) {
+    if (cleanTelefono) {
       const user = inMemoryStore.users.find(u => u.id === userId);
       if (user) {
-        user.telefono = telefono;
+        user.telefono = cleanTelefono;
       }
     }
 
-    return res.json({ ...settings, telefono });
+    return res.json({ ...settings, telefono: cleanTelefono || '' });
   }
 
   try {
@@ -99,28 +109,28 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
       const sett = await tx.businessSettings.upsert({
         where: { userId },
         update: {
-          monedaSimbolo,
-          monedaCodigo,
-          nombreNegocio,
-          plantillaWhatsapp,
+          monedaSimbolo: cleanSimbolo,
+          monedaCodigo: cleanCodigo,
+          nombreNegocio: cleanNombre,
+          plantillaWhatsapp: cleanPlantilla,
           gananciaPorcentaje: parsedGanancia,
           diasMinimosPrimerCobro: parsedDiasMinimos
         },
         create: {
           userId,
-          monedaSimbolo: monedaSimbolo || '₡',
-          monedaCodigo: monedaCodigo || 'CRC',
-          nombreNegocio: nombreNegocio || 'CAT-LOAN Credit',
-          plantillaWhatsapp,
+          monedaSimbolo: cleanSimbolo,
+          monedaCodigo: cleanCodigo,
+          nombreNegocio: cleanNombre,
+          plantillaWhatsapp: cleanPlantilla,
           gananciaPorcentaje: parsedGanancia,
           diasMinimosPrimerCobro: parsedDiasMinimos
         }
       });
 
-      if (telefono) {
+      if (cleanTelefono) {
         await tx.user.update({
           where: { id: userId },
-          data: { telefono }
+          data: { telefono: cleanTelefono }
         });
       }
 
@@ -129,7 +139,7 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
 
     return res.json({
       ...settings,
-      telefono
+      telefono: cleanTelefono || ''
     });
   } catch (err: any) { next(err); }
 }

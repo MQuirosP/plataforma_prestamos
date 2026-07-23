@@ -15,7 +15,7 @@ import { ToastService } from '../services/toast.service';
       <!-- Top Caterpillar Branded Bar -->
       <header class="border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95" style="background-color: #111111;">
         <div class="flex items-center gap-2">
-          <button (click)="goBack.emit()" class="text-caterpillar hover:text-white mr-1">
+          <button (click)="goBack.emit()" class="text-caterpillar hover:text-caterpillar mr-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
             </svg>
@@ -54,22 +54,36 @@ import { ToastService } from '../services/toast.service';
             <!-- Selector de País (Consumido desde REST Countries API) -->
             <div>
               <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">País de Operación</label>
-              <select [ngModel]="selectedCountryCca2()" (ngModelChange)="onCountryChange($event)" name="selectedCountryCca2"
-                      class="w-full bg-industrial-surface border-2 border-caterpillar rounded-lg p-3 text-white text-sm focus:outline-none font-bold">
-                <option *ngFor="let country of countriesList()" [value]="country.cca2">
-                  {{ country.flag }} {{ country.name.common }} ({{ getCurrencyCode(country) }})
-                </option>
-              </select>
+              <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                <select [ngModel]="selectedCountryCca2()" (ngModelChange)="onCountryChange($event)" name="selectedCountryCca2"
+                        class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                  <option *ngFor="let country of countriesList()" [value]="country.cca2">
+                    {{ country.flag }} {{ country.name.common }} ({{ getCurrencyCode(country) }})
+                  </option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
               <span class="text-[10px] text-industrial-muted mt-1 block">Al seleccionar el país se configuran automáticamente la moneda y el símbolo.</span>
             </div>
 
             <!-- Zona Horaria -->
             <div>
               <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Zona Horaria (Timezone)</label>
-              <select [(ngModel)]="formData.timezone" name="timezone" required
-                      class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-                <option *ngFor="let tz of timezones()" [value]="tz">{{ tz }}</option>
-              </select>
+              <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                <select [(ngModel)]="formData.timezone" name="timezone" required
+                        class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                  <option *ngFor="let tz of gmtTimezones" [value]="tz.value">{{ tz.label }}</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
             </div>
 
             <!-- Moneda y Código (Rellenados automáticamente) -->
@@ -190,7 +204,34 @@ export class SettingsComponent implements OnInit {
   // Signals
   countriesList = signal<Country[]>([]);
   selectedCountryCca2 = signal<string>('CR');
-  timezones = signal<string[]>([]);
+
+  gmtTimezones = [
+    { label: 'GMT -12:00', value: 'Etc/GMT+12' },
+    { label: 'GMT -11:00', value: 'Etc/GMT+11' },
+    { label: 'GMT -10:00', value: 'Etc/GMT+10' },
+    { label: 'GMT -09:00', value: 'Etc/GMT+9' },
+    { label: 'GMT -08:00', value: 'Etc/GMT+8' },
+    { label: 'GMT -07:00', value: 'Etc/GMT+7' },
+    { label: 'GMT -06:00', value: 'Etc/GMT+6' },
+    { label: 'GMT -05:00', value: 'Etc/GMT+5' },
+    { label: 'GMT -04:00', value: 'Etc/GMT+4' },
+    { label: 'GMT -03:00', value: 'Etc/GMT+3' },
+    { label: 'GMT -02:00', value: 'Etc/GMT+2' },
+    { label: 'GMT -01:00', value: 'Etc/GMT+1' },
+    { label: 'GMT ±00:00 (UTC)', value: 'Etc/UTC' },
+    { label: 'GMT +01:00', value: 'Etc/GMT-1' },
+    { label: 'GMT +02:00', value: 'Etc/GMT-2' },
+    { label: 'GMT +03:00', value: 'Etc/GMT-3' },
+    { label: 'GMT +04:00', value: 'Etc/GMT-4' },
+    { label: 'GMT +05:00', value: 'Etc/GMT-5' },
+    { label: 'GMT +06:00', value: 'Etc/GMT-6' },
+    { label: 'GMT +07:00', value: 'Etc/GMT-7' },
+    { label: 'GMT +08:00', value: 'Etc/GMT-8' },
+    { label: 'GMT +09:00', value: 'Etc/GMT-9' },
+    { label: 'GMT +10:00', value: 'Etc/GMT-10' },
+    { label: 'GMT +11:00', value: 'Etc/GMT-11' },
+    { label: 'GMT +12:00', value: 'Etc/GMT-12' }
+  ];
 
   formData: BusinessSettings = {
     monedaSimbolo: '₡',
@@ -235,18 +276,47 @@ export class SettingsComponent implements OnInit {
     this.goBack.emit();
   }
 
-  async ngOnInit() {
-    try {
-      this.timezones.set(Intl.supportedValuesOf('timeZone'));
-    } catch {
-      this.timezones.set(['America/Costa_Rica', 'America/Mexico_City', 'America/Bogota', 'America/Lima']);
+  getMatchedGmtTimezone(tzString: string): string {
+    if (!tzString) return 'Etc/GMT+6';
+    // If it's already an Etc/GMT or Etc/UTC string, return it directly if in list
+    const foundDirect = this.gmtTimezones.find(t => t.value.toLowerCase() === tzString.toLowerCase());
+    if (foundDirect) return foundDirect.value;
+
+    if (tzString.toLowerCase() === 'utc' || tzString.toLowerCase() === 'gmt') {
+      return 'Etc/UTC';
     }
 
+    try {
+      const date = new Date();
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: tzString, timeZoneName: 'longOffset' }).formatToParts(date);
+      const offsetPart = parts.find(p => p.type === 'timeZoneName')?.value || ''; // e.g. "GMT-6" or "GMT+1" or "GMT"
+
+      if (offsetPart === 'GMT' || offsetPart === 'UTC') {
+        return 'Etc/UTC';
+      }
+
+      const match = offsetPart.match(/GMT([+-])(\d+)/);
+      if (match) {
+        const sign = match[1] === '+' ? '-' : '+'; // Invert sign for Etc/GMT format
+        const hours = parseInt(match[2], 10);
+        const targetValue = `Etc/GMT${sign}${hours}`;
+        const found = this.gmtTimezones.find(t => t.value.toLowerCase() === targetValue.toLowerCase());
+        if (found) return found.value;
+      }
+    } catch (e) {
+      console.warn('Error matching timezone offset', e);
+    }
+    return 'Etc/GMT+6'; // Fallback to GMT-6 (America/Costa_Rica equivalent)
+  }
+
+  async ngOnInit() {
     // 1. Load active settings
     const activeSettings = this.loanService.settings();
     if (activeSettings) {
       this.formData = { ...activeSettings };
     }
+    // Match the stored timezone to one of our simplified GMT options
+    this.formData.timezone = this.getMatchedGmtTimezone(this.formData.timezone);
 
     // 2. Fetch country list
     try {
@@ -282,7 +352,7 @@ export class SettingsComponent implements OnInit {
     if (country && country.currencies) {
       const currencyCode = Object.keys(country.currencies)[0];
       const currencySymbol = country.currencies[currencyCode].symbol;
-      
+
       this.formData.monedaCodigo = currencyCode;
       this.formData.monedaSimbolo = currencySymbol || '$';
     }

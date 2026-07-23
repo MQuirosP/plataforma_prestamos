@@ -2,9 +2,10 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
-import { Role, SubscriptionType, MetodoPago, LoanStatus, FineFrequency } from '@prisma/client';
+import { Role, SubscriptionType, MetodoPago, LoanStatus, FineFrequency, TipoIdentificacion } from '@prisma/client';
 import { updatePenaltiesForTenant } from '../services/fineService';
 import { logger } from '../services/logger';
+import { sanitizeString, sanitizePhone, validatePositiveNumber, validateIntegerRange } from '../services/validation';
 
 
 // List all loans for the logged-in lender (or cobrador's prestamista)
@@ -131,21 +132,57 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
     fineAmount, fineFrequency, graceDays, totalAPagarDirect
   } = req.body;
 
-  if (!clienteNombre || !clienteTelefono || !montoOriginal || !cuotaSemanal || !diaCobro) {
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
+  const cleanNombre = sanitizeString(clienteNombre, 100);
+  const cleanTelefono = sanitizePhone(clienteTelefono);
+  const cleanTipoId = (tipoIdentificacion ? sanitizeString(tipoIdentificacion, 50) : 'CEDULA_NACIONAL') as TipoIdentificacion;
+  const cleanNumeroId = numeroIdentificacion ? sanitizeString(numeroIdentificacion, 50) : null;
+
+  if (!cleanNombre) {
+    return res.status(400).json({ error: 'El nombre del cliente es obligatorio y no puede estar vacío.' });
+  }
+  if (!cleanTelefono) {
+    return res.status(400).json({ error: 'El teléfono del cliente es requerido y debe tener un formato válido.' });
   }
 
-  const parsedMonto = Number(montoOriginal);
-  const parsedCuota = Number(cuotaSemanal);
-  const parsedDia = Number(diaCobro);
+  const parsedMonto = validatePositiveNumber(montoOriginal);
+  const parsedCuota = validatePositiveNumber(cuotaSemanal);
+  const parsedDia = validateIntegerRange(diaCobro, 1, 7);
+
+  if (parsedMonto === null) {
+    return res.status(400).json({ error: 'El monto original debe ser un número mayor a 0.' });
+  }
+  if (parsedCuota === null) {
+    return res.status(400).json({ error: 'La cuota semanal debe ser un número mayor a 0.' });
+  }
+  if (parsedDia === null) {
+    return res.status(400).json({ error: 'El día de cobro debe ser un número entre 1 y 7.' });
+  }
+
+  const parsedPorcentaje = porcentaje !== undefined && porcentaje !== null ? validatePositiveNumber(porcentaje, true) : null;
+  const parsedFineAmount = fineAmount !== undefined && fineAmount !== null ? validatePositiveNumber(fineAmount, true) : null;
+  const parsedGraceDays = (graceDays !== undefined && graceDays !== null) ? (validateIntegerRange(graceDays, 0, 365) ?? 0) : 0;
+  const parsedTotalAPagarDirect = totalAPagarDirect !== undefined && totalAPagarDirect !== null ? validatePositiveNumber(totalAPagarDirect) : null;
+
+  if (porcentaje !== undefined && porcentaje !== null && parsedPorcentaje === null) {
+    return res.status(400).json({ error: 'El porcentaje de interés debe ser un número positivo.' });
+  }
+  if (fineAmount !== undefined && fineAmount !== null && parsedFineAmount === null) {
+    return res.status(400).json({ error: 'El monto de la multa debe ser un número positivo.' });
+  }
+  if (graceDays !== undefined && graceDays !== null && parsedGraceDays === null) {
+    return res.status(400).json({ error: 'Los días de gracia deben ser un número entero positivo.' });
+  }
+  if (totalAPagarDirect !== undefined && totalAPagarDirect !== null && parsedTotalAPagarDirect === null) {
+    return res.status(400).json({ error: 'El monto total a pagar debe ser un número positivo.' });
+  }
 
   let totalAPagar: number;
-  if (totalAPagarDirect !== undefined && totalAPagarDirect !== null) {
-    totalAPagar = Number(totalAPagarDirect);
+  if (parsedTotalAPagarDirect !== null) {
+    totalAPagar = parsedTotalAPagarDirect;
   } else {
     let gananciaPorcentaje = 50;
-    if (porcentaje !== undefined && porcentaje !== null) {
-      gananciaPorcentaje = Number(porcentaje);
+    if (parsedPorcentaje !== null) {
+      gananciaPorcentaje = parsedPorcentaje;
     } else {
       if (isUsingMemoryStore()) {
         const sett = inMemoryStore.settings.find(s => s.userId === prestamistaId);
@@ -212,19 +249,19 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
     const newLoan: any = {
       id: `loan-${Date.now()}`,
       prestamistaId,
-      clienteNombre,
-      clienteTelefono,
-      tipoIdentificacion: tipoIdentificacion || 'CEDULA_NACIONAL',
-      numeroIdentificacion: numeroIdentificacion || null,
+      clienteNombre: cleanNombre,
+      clienteTelefono: cleanTelefono,
+      tipoIdentificacion: cleanTipoId,
+      numeroIdentificacion: cleanNumeroId,
       montoOriginal: parsedMonto,
       totalAPagar,
       cuotaSemanal: parsedCuota,
       diaCobro: parsedDia,
       estado: LoanStatus.ACTIVE,
       fechaInicio: new Date(),
-      fineAmount: fineAmount ? Number(fineAmount) : null,
+      fineAmount: parsedFineAmount,
       fineFrequency: fineFrequency || null,
-      graceDays: graceDays ? Number(graceDays) : 0,
+      graceDays: parsedGraceDays,
       multasAcumuladas: 0
     };
     inMemoryStore.loans.push(newLoan);
@@ -236,18 +273,18 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
       const loan = await tx.loan.create({
         data: {
           prestamistaId,
-          clienteNombre,
-          clienteTelefono,
-          tipoIdentificacion: tipoIdentificacion || 'CEDULA_NACIONAL',
-          numeroIdentificacion: numeroIdentificacion || null,
+          clienteNombre: cleanNombre,
+          clienteTelefono: cleanTelefono,
+          tipoIdentificacion: cleanTipoId,
+          numeroIdentificacion: cleanNumeroId,
           montoOriginal: parsedMonto,
           totalAPagar,
           cuotaSemanal: parsedCuota,
           diaCobro: parsedDia,
           estado: LoanStatus.ACTIVE,
-          fineAmount: fineAmount ? Number(fineAmount) : null,
+          fineAmount: parsedFineAmount,
           fineFrequency: fineFrequency || null,
-          graceDays: graceDays ? Number(graceDays) : 0,
+          graceDays: parsedGraceDays,
           multasAcumuladas: 0
         }
       });
@@ -269,18 +306,19 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
   } catch (err: any) { next(err); }
 }
 
-// Make a payment/abono (with método de pago and CajaCobrador update)
 export async function addPayment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const { id: loanId } = req.params;
   const { montoAbonado, notas, metodoPago } = req.body;
   const creadoPorId = req.user?.id;
   const userRole = req.user?.rol;
 
-  if (!montoAbonado || Number(montoAbonado) <= 0) {
-    return res.status(400).json({ error: 'Monto abonado debe ser mayor a 0' });
+  const parsedMonto = validatePositiveNumber(montoAbonado);
+  if (parsedMonto === null || parsedMonto <= 0) {
+    return res.status(400).json({ error: 'Monto abonado debe ser un número válido mayor a 0' });
   }
 
-  const parsedMonto = Number(montoAbonado);
+  const cleanNotas = sanitizeString(notas, 250);
+
   const metodo: MetodoPago = ([MetodoPago.EFECTIVO, MetodoPago.SINPE, MetodoPago.TRANSFERENCIA].includes(metodoPago as MetodoPago))
     ? metodoPago as MetodoPago
     : MetodoPago.EFECTIVO;
@@ -305,7 +343,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       loanId,
       montoAbonado: parsedMonto,
       numeroRecibo,
-      notes: notas || '',
+      notes: cleanNotas,
       metodoPago: metodo,
       creadoPorId: creadoPorId || null,
       fechaPago: new Date()
@@ -353,7 +391,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
           loanId,
           montoAbonado: parsedMonto,
           numeroRecibo,
-          notas,
+          notas: cleanNotas,
           metodoPago: metodo,
           creadoPorId: creadoPorId || null
         }
@@ -518,6 +556,43 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
     totalAPagarDirect, porcentaje, hasFine
   } = req.body;
 
+  const cleanNombre = clienteNombre !== undefined ? sanitizeString(clienteNombre, 100) : undefined;
+  const cleanTelefono = clienteTelefono !== undefined ? sanitizePhone(clienteTelefono) : undefined;
+  const cleanTipoId = tipoIdentificacion !== undefined ? sanitizeString(tipoIdentificacion, 50) : undefined;
+  const cleanNumeroId = numeroIdentificacion !== undefined ? sanitizeString(numeroIdentificacion, 50) : undefined;
+
+  const parsedMonto = montoOriginal !== undefined ? validatePositiveNumber(montoOriginal) : undefined;
+  const parsedCuota = cuotaSemanal !== undefined ? validatePositiveNumber(cuotaSemanal) : undefined;
+  const parsedDia = diaCobro !== undefined ? validateIntegerRange(diaCobro, 1, 7) : undefined;
+
+  if (montoOriginal !== undefined && parsedMonto === null) {
+    return res.status(400).json({ error: 'El monto original debe ser un número mayor a 0.' });
+  }
+  if (cuotaSemanal !== undefined && parsedCuota === null) {
+    return res.status(400).json({ error: 'La cuota pactada debe ser un número mayor a 0.' });
+  }
+  if (diaCobro !== undefined && parsedDia === null) {
+    return res.status(400).json({ error: 'El día de cobro debe ser un número entre 1 y 7.' });
+  }
+
+  const parsedFineAmount = fineAmount !== undefined && fineAmount !== null ? validatePositiveNumber(fineAmount, true) : undefined;
+  const parsedGraceDays = graceDays !== undefined && graceDays !== null ? validateIntegerRange(graceDays, 0, 365) : undefined;
+  const parsedTotalAPagarDirect = totalAPagarDirect !== undefined && totalAPagarDirect !== null ? validatePositiveNumber(totalAPagarDirect) : undefined;
+  const parsedPorcentaje = porcentaje !== undefined && porcentaje !== null ? validatePositiveNumber(porcentaje, true) : undefined;
+
+  if (fineAmount !== undefined && fineAmount !== null && parsedFineAmount === null) {
+    return res.status(400).json({ error: 'El monto de la multa debe ser un número positivo.' });
+  }
+  if (graceDays !== undefined && graceDays !== null && parsedGraceDays === null) {
+    return res.status(400).json({ error: 'Los días de gracia deben ser un número entero positivo.' });
+  }
+  if (totalAPagarDirect !== undefined && totalAPagarDirect !== null && parsedTotalAPagarDirect === null) {
+    return res.status(400).json({ error: 'El monto total a pagar debe ser un número positivo.' });
+  }
+  if (porcentaje !== undefined && porcentaje !== null && parsedPorcentaje === null) {
+    return res.status(400).json({ error: 'El porcentaje de interés debe ser un número positivo.' });
+  }
+
   if (isUsingMemoryStore()) {
     const loan = inMemoryStore.loans.find(l => l.id === id && l.prestamistaId === prestamistaId);
     if (!loan) {
@@ -528,18 +603,18 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
     const hasPayments = payments.length > 0;
 
     // Actualizar datos del cliente
-    loan.clienteNombre = clienteNombre || loan.clienteNombre;
-    loan.clienteTelefono = clienteTelefono || loan.clienteTelefono;
-    loan.tipoIdentificacion = tipoIdentificacion !== undefined ? tipoIdentificacion : loan.tipoIdentificacion;
-    loan.numeroIdentificacion = numeroIdentificacion !== undefined ? numeroIdentificacion : loan.numeroIdentificacion;
-    loan.diaCobro = diaCobro !== undefined ? Number(diaCobro) : loan.diaCobro;
+    loan.clienteNombre = cleanNombre !== undefined && cleanNombre !== '' ? cleanNombre : loan.clienteNombre;
+    loan.clienteTelefono = cleanTelefono !== undefined && cleanTelefono !== '' ? cleanTelefono : loan.clienteTelefono;
+    loan.tipoIdentificacion = cleanTipoId !== undefined ? cleanTipoId : loan.tipoIdentificacion;
+    loan.numeroIdentificacion = cleanNumeroId !== undefined ? cleanNumeroId : loan.numeroIdentificacion;
+    loan.diaCobro = parsedDia !== undefined ? parsedDia! : loan.diaCobro;
 
     // Actualizar multas
     if (hasFine !== undefined) {
       if (hasFine) {
-        loan.fineAmount = fineAmount !== undefined ? Number(fineAmount) : loan.fineAmount;
+        loan.fineAmount = parsedFineAmount !== undefined ? parsedFineAmount : loan.fineAmount;
         loan.fineFrequency = fineFrequency || loan.fineFrequency;
-        loan.graceDays = graceDays !== undefined ? Number(graceDays) : loan.graceDays;
+        loan.graceDays = (parsedGraceDays !== undefined && parsedGraceDays !== null) ? parsedGraceDays : loan.graceDays;
       } else {
         loan.fineAmount = null;
         loan.fineFrequency = null;
@@ -550,16 +625,21 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
 
     // Si no tiene abonos, permitir editar montos
     if (!hasPayments) {
-      if (montoOriginal !== undefined) {
-        loan.montoOriginal = Number(montoOriginal);
+      if (parsedMonto !== undefined) {
+        loan.montoOriginal = parsedMonto!;
       }
-      if (cuotaSemanal !== undefined) {
-        loan.cuotaSemanal = Number(cuotaSemanal);
+      if (parsedCuota !== undefined) {
+        loan.cuotaSemanal = parsedCuota!;
       }
-      if (totalAPagarDirect !== undefined && totalAPagarDirect !== null) {
-        loan.totalAPagar = Number(totalAPagarDirect);
-      } else if (porcentaje !== undefined && porcentaje !== null && montoOriginal !== undefined) {
-        loan.totalAPagar = Number(montoOriginal) * (1 + (Number(porcentaje) / 100));
+      if (parsedTotalAPagarDirect !== undefined && parsedTotalAPagarDirect !== null) {
+        loan.totalAPagar = parsedTotalAPagarDirect!;
+      } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null && parsedMonto !== undefined) {
+        loan.totalAPagar = parsedMonto! * (1 + (parsedPorcentaje! / 100));
+      } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null) {
+        loan.totalAPagar = Number(loan.montoOriginal) * (1 + (parsedPorcentaje! / 100));
+      } else if (parsedMonto !== undefined) {
+        const currentPercentage = ((Number(loan.totalAPagar) / Number(loan.montoOriginal)) - 1) * 100;
+        loan.totalAPagar = parsedMonto! * (1 + (currentPercentage / 100));
       }
     }
 
@@ -579,18 +659,18 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
     const hasPayments = loan.payments.length > 0;
 
     const dataToUpdate: any = {
-      clienteNombre: clienteNombre || loan.clienteNombre,
-      clienteTelefono: clienteTelefono || loan.clienteTelefono,
-      tipoIdentificacion: tipoIdentificacion !== undefined ? tipoIdentificacion : loan.tipoIdentificacion,
-      numeroIdentificacion: numeroIdentificacion !== undefined ? numeroIdentificacion : loan.numeroIdentificacion,
-      diaCobro: diaCobro !== undefined ? Number(diaCobro) : loan.diaCobro,
+      clienteNombre: cleanNombre !== undefined && cleanNombre !== '' ? cleanNombre : loan.clienteNombre,
+      clienteTelefono: cleanTelefono !== undefined && cleanTelefono !== '' ? cleanTelefono : loan.clienteTelefono,
+      tipoIdentificacion: cleanTipoId !== undefined ? cleanTipoId : loan.tipoIdentificacion,
+      numeroIdentificacion: cleanNumeroId !== undefined ? cleanNumeroId : loan.numeroIdentificacion,
+      diaCobro: parsedDia !== undefined ? parsedDia! : loan.diaCobro,
     };
 
     if (hasFine !== undefined) {
       if (hasFine) {
-        dataToUpdate.fineAmount = fineAmount !== undefined ? Number(fineAmount) : loan.fineAmount;
+        dataToUpdate.fineAmount = parsedFineAmount !== undefined ? parsedFineAmount : loan.fineAmount;
         dataToUpdate.fineFrequency = fineFrequency || loan.fineFrequency;
-        dataToUpdate.graceDays = graceDays !== undefined ? Number(graceDays) : loan.graceDays;
+        dataToUpdate.graceDays = (parsedGraceDays !== undefined && parsedGraceDays !== null) ? parsedGraceDays : loan.graceDays;
       } else {
         dataToUpdate.fineAmount = null;
         dataToUpdate.fineFrequency = null;
@@ -600,16 +680,21 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
     }
 
     if (!hasPayments) {
-      if (montoOriginal !== undefined) {
-        dataToUpdate.montoOriginal = Number(montoOriginal);
+      if (parsedMonto !== undefined) {
+        dataToUpdate.montoOriginal = parsedMonto!;
       }
-      if (cuotaSemanal !== undefined) {
-        dataToUpdate.cuotaSemanal = Number(cuotaSemanal);
+      if (parsedCuota !== undefined) {
+        dataToUpdate.cuotaSemanal = parsedCuota!;
       }
-      if (totalAPagarDirect !== undefined && totalAPagarDirect !== null) {
-        dataToUpdate.totalAPagar = Number(totalAPagarDirect);
-      } else if (porcentaje !== undefined && porcentaje !== null && montoOriginal !== undefined) {
-        dataToUpdate.totalAPagar = Number(montoOriginal) * (1 + (Number(porcentaje) / 100));
+      if (parsedTotalAPagarDirect !== undefined && parsedTotalAPagarDirect !== null) {
+        dataToUpdate.totalAPagar = parsedTotalAPagarDirect!;
+      } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null && parsedMonto !== undefined) {
+        dataToUpdate.totalAPagar = parsedMonto! * (1 + (parsedPorcentaje! / 100));
+      } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null) {
+        dataToUpdate.totalAPagar = Number(loan.montoOriginal) * (1 + (parsedPorcentaje! / 100));
+      } else if (parsedMonto !== undefined) {
+        const currentPercentage = ((Number(loan.totalAPagar) / Number(loan.montoOriginal)) - 1) * 100;
+        dataToUpdate.totalAPagar = parsedMonto! * (1 + (currentPercentage / 100));
       }
     }
 

@@ -42,7 +42,7 @@ import { LoanService } from '../services/loan.service';
         <form (submit)="onLogin($event)" class="space-y-4">
           <div>
             <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nombre de Usuario</label>
-            <input type="text" [(ngModel)]="username" name="username" required placeholder="ingresa tu usuario"
+            <input type="text" [(ngModel)]="username" (input)="username = username.toLowerCase()" name="username" required placeholder="ingresa tu usuario"
                    class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar transition duration-150">
           </div>
           
@@ -98,7 +98,7 @@ export class LoginComponent {
     if (!this.username || !this.password) return;
     
     this.triggerLoading(() => {
-      this.loanService.login(this.username, this.password);
+      this.loanService.login(this.username.trim().toLowerCase(), this.password);
     });
   }
 

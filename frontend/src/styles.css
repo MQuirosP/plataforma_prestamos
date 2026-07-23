@@ -50,3 +50,9 @@ input[type='number']::-webkit-inner-spin-button {
 input[type='number'] {
   -moz-appearance: textfield;
 }
+
+/* Custom Option styling for dark theme select elements across browsers */
+select option {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}

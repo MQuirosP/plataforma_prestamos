@@ -5,42 +5,43 @@ import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { Role, PlanSaaS } from '@prisma/client';
 import { logger } from '../services/logger';
+import { sanitizeString, sanitizeUsername, sanitizePhone, isValidEmail } from '../services/validation';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
 // Función auxiliar para registrar logs de auditoría
-async function logAudit(tipoEvento: string, descripcion: string, req: AuthenticatedRequest, prestamistaId?: string) {
+async function logAudit(tipoEvento: string, descripcion: string, req: AuthenticatedRequest, targetUserId?: string) {
+  if (isUsingMemoryStore()) return;
+  const adminId = req.user?.id || 'sys';
   try {
     await prisma.logActividadSaaS.create({
       data: {
         tipoEvento,
         descripcion,
         ip: req.ip || '0.0.0.0',
-        prestamistaId
+        prestamistaId: adminId
       }
     });
   } catch (err) {
-    console.error('Error al registrar auditoría:', err);
+    logger.warn({ err }, 'Failed to log audit activity');
   }
 }
 
-// 1. Obtener todos los prestamistas (tenants)
+// 1. Obtener todos los Tenants (Prestamistas) con balance
 export async function getTenants(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
+
+  if (isUsingMemoryStore()) {
+    return res.json(inMemoryStore.users.filter(u => u.rol === Role.PRESTAMISTA));
+  }
+
   try {
     const tenants = await prisma.user.findMany({
       where: { rol: Role.PRESTAMISTA },
-      select: {
-        id: true, nombre: true, username: true, email: true, telefono: true,
-        plan: true, suspendido: true, fechaPruebaFin: true, paymentDate: true, createdAt: true,
-        _count: {
-          select: {
-            cobradores: true,
-            loans: { where: { estado: 'ACTIVE' } }
-          }
-        },
-        cobradores: {
-          select: { id: true, nombre: true, username: true, telefono: true }
+      include: {
+        subscriptions: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -53,7 +54,20 @@ export async function getTenants(req: AuthenticatedRequest, res: Response, next:
 export async function createTenant(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   const { nombre, username, password, email, telefono, plan } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Username y password requeridos' });
+
+  const cleanNombre = sanitizeString(nombre, 100);
+  const cleanUsername = sanitizeUsername(username);
+  const cleanTelefono = sanitizePhone(telefono);
+
+  if (!cleanUsername || cleanUsername.length < 3) {
+    return res.status(400).json({ error: 'Username no es válido (mínimo 3 caracteres, sin espacios ni caracteres especiales).' });
+  }
+  if (!password || password.trim().length < 6) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
+  }
+  if (email && !isValidEmail(email)) {
+    return res.status(400).json({ error: 'El formato de correo electrónico no es válido.' });
+  }
 
   try {
     const hash = await bcrypt.hash(password, 10);
@@ -62,11 +76,11 @@ export async function createTenant(req: AuthenticatedRequest, res: Response, nex
 
     const newTenant = await prisma.user.create({
       data: {
-        nombre: nombre || username,
-        username,
+        nombre: cleanNombre || cleanUsername,
+        username: cleanUsername,
         password: hash,
-        email,
-        telefono: telefono || '+50600000000',
+        email: email || null,
+        telefono: cleanTelefono || '+50600000000',
         rol: Role.PRESTAMISTA,
         plan: plan || PlanSaaS.BRONCE,
         fechaPruebaFin
@@ -79,12 +93,12 @@ export async function createTenant(req: AuthenticatedRequest, res: Response, nex
         userId: newTenant.id,
         monedaSimbolo: '₡',
         monedaCodigo: 'CRC',
-        nombreNegocio: nombre || 'Mi Negocio Crediticio',
+        nombreNegocio: cleanNombre || 'Mi Negocio Crediticio',
         gananciaPorcentaje: 50
       }
     });
 
-    await logAudit('CREAR_TENANT', `Se creó el prestamista ${username}`, req, newTenant.id);
+    await logAudit('CREAR_TENANT', `Se creó el prestamista ${cleanUsername}`, req, newTenant.id);
     return res.json({ success: true, tenant: newTenant });
   } catch (err: any) { next(err); }
 }
