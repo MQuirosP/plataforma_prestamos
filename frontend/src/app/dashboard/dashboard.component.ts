@@ -6,11 +6,12 @@ import html2canvas from 'html2canvas';
 import { ToastService } from '../services/toast.service';
 
 import { AdminService } from '../services/admin.service';
+import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepper.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NumericStepperComponent],
   template: `
     <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
 
@@ -268,13 +269,11 @@ import { AdminService } from '../services/admin.service';
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Original</label>
-                <input type="number" [(ngModel)]="newLoanData.montoOriginal" name="montoOriginal" required 
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                <app-numeric-stepper [(ngModel)]="newLoanData.montoOriginal" name="montoOriginal" [required]="true" [min]="0" [step]="1000"></app-numeric-stepper>
               </div>
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cuota Semanal</label>
-                <input type="number" [(ngModel)]="newLoanData.cuotaSemanal" name="cuotaSemanal" required 
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                <app-numeric-stepper [(ngModel)]="newLoanData.cuotaSemanal" name="cuotaSemanal" [required]="true" [min]="0" [step]="500"></app-numeric-stepper>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
@@ -288,13 +287,11 @@ import { AdminService } from '../services/admin.service';
               </div>
               <div *ngIf="newLoanData.creationMode === 'porcentaje'">
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Interés (%)</label>
-                <input type="number" [(ngModel)]="newLoanData.porcentaje" name="porcentaje" 
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                <app-numeric-stepper [(ngModel)]="newLoanData.porcentaje" name="porcentaje" [min]="0" [max]="100" [step]="5"></app-numeric-stepper>
               </div>
               <div *ngIf="newLoanData.creationMode === 'monto_fijo'">
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Final de Pago</label>
-                <input type="number" [(ngModel)]="newLoanData.totalAPagarDirect" name="totalAPagarDirect" 
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                <app-numeric-stepper [(ngModel)]="newLoanData.totalAPagarDirect" name="totalAPagarDirect" [min]="0" [step]="1000"></app-numeric-stepper>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
@@ -325,8 +322,7 @@ import { AdminService } from '../services/admin.service';
               <div class="grid grid-cols-3 gap-2">
                 <div>
                   <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Monto Multa</label>
-                  <input type="number" [(ngModel)]="newLoanData.fineAmount" name="fineAmount" 
-                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                  <app-numeric-stepper [(ngModel)]="newLoanData.fineAmount" name="fineAmount" [min]="0" [step]="100"></app-numeric-stepper>
                 </div>
                 <div>
                   <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Frecuencia</label>
@@ -339,8 +335,7 @@ import { AdminService } from '../services/admin.service';
                 </div>
                 <div>
                   <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Días Gracia</label>
-                  <input type="number" [(ngModel)]="newLoanData.graceDays" name="graceDays" 
-                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                  <app-numeric-stepper [(ngModel)]="newLoanData.graceDays" name="graceDays" [min]="0" [step]="1"></app-numeric-stepper>
                 </div>
               </div>
             </div>
@@ -398,13 +393,11 @@ import { AdminService } from '../services/admin.service';
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Prestado</label>
-                <input type="number" [(ngModel)]="editLoanData.montoOriginal" name="editMontoOriginal" required [disabled]="editLoanData.hasPayments"
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
+                <app-numeric-stepper [(ngModel)]="editLoanData.montoOriginal" name="editMontoOriginal" [required]="true" [min]="0" [step]="1000" [disabled]="editLoanData.hasPayments"></app-numeric-stepper>
               </div>
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cuota Pactada</label>
-                <input type="number" [(ngModel)]="editLoanData.cuotaSemanal" name="editCuotaSemanal" required [disabled]="editLoanData.hasPayments"
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
+                <app-numeric-stepper [(ngModel)]="editLoanData.cuotaSemanal" name="editCuotaSemanal" [required]="true" [min]="0" [step]="500" [disabled]="editLoanData.hasPayments"></app-numeric-stepper>
               </div>
             </div>
 
@@ -420,13 +413,11 @@ import { AdminService } from '../services/admin.service';
               </div>
               <div *ngIf="editLoanData.creationMode === 'porcentaje'">
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Interés (%)</label>
-                <input type="number" [(ngModel)]="editLoanData.porcentaje" name="editPorcentaje" [disabled]="editLoanData.hasPayments"
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
+                <app-numeric-stepper [(ngModel)]="editLoanData.porcentaje" name="editPorcentaje" [min]="0" [max]="100" [step]="5" [disabled]="editLoanData.hasPayments"></app-numeric-stepper>
               </div>
               <div *ngIf="editLoanData.creationMode === 'monto_fijo'">
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Final de Pago</label>
-                <input type="number" [(ngModel)]="editLoanData.totalAPagarDirect" name="editTotalAPagarDirect" [disabled]="editLoanData.hasPayments"
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar disabled:opacity-50 disabled:cursor-not-allowed">
+                <app-numeric-stepper [(ngModel)]="editLoanData.totalAPagarDirect" name="editTotalAPagarDirect" [min]="0" [step]="1000" [disabled]="editLoanData.hasPayments"></app-numeric-stepper>
               </div>
             </div>
 
@@ -458,8 +449,7 @@ import { AdminService } from '../services/admin.service';
               <div class="grid grid-cols-3 gap-2">
                 <div>
                   <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Monto Multa</label>
-                  <input type="number" [(ngModel)]="editLoanData.fineAmount" name="editFineAmount" 
-                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                  <app-numeric-stepper [(ngModel)]="editLoanData.fineAmount" name="editFineAmount" [min]="0" [step]="100"></app-numeric-stepper>
                 </div>
                 <div>
                   <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Frecuencia</label>
@@ -472,8 +462,7 @@ import { AdminService } from '../services/admin.service';
                 </div>
                 <div>
                   <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-0.5">Días Gracia</label>
-                  <input type="number" [(ngModel)]="editLoanData.graceDays" name="editGraceDays" 
-                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs outline-none focus:border-caterpillar">
+                  <app-numeric-stepper [(ngModel)]="editLoanData.graceDays" name="editGraceDays" [min]="0" [step]="1"></app-numeric-stepper>
                 </div>
               </div>
             </div>
@@ -525,8 +514,7 @@ import { AdminService } from '../services/admin.service';
             <form (submit)="onSubmitAbono($event)" class="space-y-4">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto a Abonar</label>
-                <input type="number" [(ngModel)]="abonoMonto" name="abonoMonto" required 
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                <app-numeric-stepper [(ngModel)]="abonoMonto" name="abonoMonto" [required]="true" [min]="0" [step]="1000"></app-numeric-stepper>
               </div>
               <!-- Método de Pago -->
               <div>

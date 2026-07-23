@@ -40,3 +40,13 @@ body {
   scrollbar-width: none;  /* Firefox */
   scroll-behavior: smooth;
 }
+
+/* Remove native number input spinners — they clash with the industrial dark theme */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
