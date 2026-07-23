@@ -564,7 +564,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
           </div>
 
           <!-- Shared Account Statement / Receipt Card Wrapper -->
-          <div id="statement-card" class="w-full bg-industrial-dark border border-industrial-border rounded-2xl p-6 shadow-2xl relative overflow-hidden text-industrial-light">
+          <div *ngIf="selectedStatementLoan; let loan" id="statement-card" class="w-full bg-industrial-dark border border-industrial-border rounded-2xl p-6 shadow-2xl relative overflow-hidden text-industrial-light">
             <!-- Caterpillar Caution Stripe Accent -->
             <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
 
@@ -587,7 +587,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               <div class="space-y-2 text-xs border-b border-industrial-border/60 pb-4 mb-4">
                 <div class="flex justify-between">
                   <span class="text-industrial-muted">Cliente:</span>
-                  <span class="text-white font-extrabold">{{ selectedStatementLoan?.clienteNombre }}</span>
+                  <span class="text-white font-extrabold">{{ loan.clienteNombre }}</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-industrial-muted">Método de Pago:</span>
@@ -611,7 +611,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               <div class="flex justify-between items-center text-xs font-mono uppercase tracking-wider mb-2">
                 <span class="text-industrial-muted">Balance Restante:</span>
                 <span class="text-white font-extrabold text-sm">
-                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.balancePendiente | number:'1.0-0' }}
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.balancePendiente | number:'1.0-0' }}
                 </span>
               </div>
 
@@ -633,15 +633,15 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               <div class="space-y-1 text-sm mb-4">
                 <div class="flex justify-between">
                   <span class="text-industrial-muted">Cliente:</span>
-                  <span class="text-white font-extrabold">{{ selectedStatementLoan?.clienteNombre }}</span>
+                  <span class="text-white font-extrabold">{{ loan.clienteNombre }}</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-industrial-muted">Teléfono:</span>
-                  <span class="text-white font-mono">{{ selectedStatementLoan?.clienteTelefono }}</span>
+                  <span class="text-white font-mono">{{ loan.clienteTelefono }}</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-industrial-muted">F. Inicio:</span>
-                  <span class="text-white font-mono">{{ selectedStatementLoan?.fechaInicio | date:'dd/MM/yyyy' }}</span>
+                  <span class="text-white font-mono">{{ loan.fechaInicio | date:'dd/MM/yyyy' }}</span>
                 </div>
               </div>
 
@@ -650,25 +650,25 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                 <div class="flex justify-between text-xs">
                   <span class="text-industrial-muted">Monto Original:</span>
                   <span class="text-white font-bold">
-                    {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.totalAPagar | number:'1.0-0' }}
+                    {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.totalAPagar | number:'1.0-0' }}
                   </span>
                 </div>
-                <div *ngIf="selectedStatementLoan?.multasAcumuladas" class="flex justify-between text-xs">
+                <div *ngIf="loan.multasAcumuladas" class="flex justify-between text-xs">
                   <span class="text-semantic-red font-bold">Multas por Mora:</span>
                   <span class="text-semantic-red font-bold">
-                    +{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.multasAcumuladas | number:'1.0-0' }}
+                    +{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.multasAcumuladas | number:'1.0-0' }}
                   </span>
                 </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-industrial-muted">Total Abonado:</span>
                   <span class="text-semantic-emerald font-bold">
-                    -{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (selectedStatementLoan?.totalAPagar || 0) + (selectedStatementLoan?.multasAcumuladas || 0) - (selectedStatementLoan?.balancePendiente || 0) | number:'1.0-0' }}
+                    -{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (loan.totalAPagar || 0) + (loan.multasAcumuladas || 0) - (loan.balancePendiente || 0) | number:'1.0-0' }}
                   </span>
                 </div>
                 <div class="flex justify-between text-sm pt-2 border-t border-industrial-border/60 font-black">
                   <span class="text-white">BALANCE RESTANTE:</span>
                   <span class="text-caterpillar">
-                    {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ selectedStatementLoan?.balancePendiente | number:'1.0-0' }}
+                    {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.balancePendiente | number:'1.0-0' }}
                   </span>
                 </div>
               </div>
@@ -677,7 +677,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               <div class="space-y-1.5 text-xs mb-4">
                 <div class="flex justify-between">
                   <span class="text-industrial-muted">Progreso Cuotas:</span>
-                  <span class="text-white font-bold">Cuota {{ selectedStatementLoan?.cuotaActual }} de {{ selectedStatementLoan?.cuotasTotales }}</span>
+                  <span class="text-white font-bold">Cuota {{ loan.cuotaActual }} de {{ loan.cuotasTotales }}</span>
                 </div>
                 <div class="w-full bg-industrial-surface h-2.5 rounded-full overflow-hidden border border-industrial-border">
                   <div class="bg-caterpillar h-full rounded-full transition-all duration-300"
@@ -689,10 +689,10 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               <div>
                 <span class="text-xs text-industrial-muted uppercase font-mono block mb-2">Historial de Abonos</span>
                 <div class="max-h-36 overflow-y-auto space-y-2 pr-1 border border-industrial-border/40 p-2 rounded-lg bg-industrial-surface/50">
-                  <div *ngIf="selectedStatementLoan?.payments?.length === 0" class="text-[10px] text-industrial-muted text-center py-4">
+                  <div *ngIf="loan.payments.length === 0" class="text-[10px] text-industrial-muted text-center py-4">
                     No se han registrado abonos aún
                   </div>
-                  <div *ngFor="let pay of selectedStatementLoan?.payments" class="text-xs flex justify-between bg-industrial-dark p-2 border border-industrial-border rounded-lg">
+                  <div *ngFor="let pay of loan.payments" class="text-xs flex justify-between bg-industrial-dark p-2 border border-industrial-border rounded-lg">
                     <div>
                       <span class="text-[9px] text-industrial-muted font-mono block">{{ pay.numeroRecibo }}</span>
                       <span class="text-[9px] text-white block">{{ pay.fechaPago | date:'dd/MM HH:mm' }}</span>
