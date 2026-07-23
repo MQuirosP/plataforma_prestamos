@@ -9,7 +9,7 @@ import { ToastService, Toast } from '../services/toast.service';
   template: `
     <div class="fixed top-20 right-5 z-[9999] w-full max-w-xs flex flex-col gap-2 pointer-events-none">
       <div *ngFor="let toast of toastService.toasts()"
-           [class]="'pointer-events-auto flex items-center justify-between p-3.5 rounded-xl border shadow-2xl ' + 
+           [class]="'pointer-events-auto relative overflow-hidden flex items-center justify-between p-3.5 pb-4 rounded-xl border shadow-2xl ' + 
                    (toast.isLeaving ? 'toast-leave ' : 'toast-enter ') + 
                    getToastClass(toast)">
         
@@ -40,6 +40,11 @@ import { ToastService, Toast } from '../services/toast.service';
           </svg>
         </button>
 
+        <!-- Progress Bar (fills up linear for 4s) -->
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-industrial-border/30">
+          <div class="h-full toast-progress-bar" [class]="getProgressColor(toast)"></div>
+        </div>
+
       </div>
     </div>
   `,
@@ -49,6 +54,18 @@ import { ToastService, Toast } from '../services/toast.service';
     }
     .toast-leave {
       animation: slideOutRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    }
+    .toast-progress-bar {
+      width: 0;
+      animation: fillProgress 4s linear forwards;
+    }
+    @keyframes fillProgress {
+      from {
+        width: 0%;
+      }
+      to {
+        width: 100%;
+      }
     }
     @keyframes slideInRight {
       from {
@@ -93,6 +110,16 @@ export class ToastComponent {
       return 'bg-semantic-red/10 text-semantic-red border border-semantic-red/30';
     }
     return 'bg-caterpillar/10 text-caterpillar border border-caterpillar/30';
+  }
+
+  getProgressColor(toast: Toast): string {
+    if (toast.type === 'success') {
+      return 'bg-semantic-emerald';
+    }
+    if (toast.type === 'error') {
+      return 'bg-semantic-red';
+    }
+    return 'bg-caterpillar';
   }
 
   remove(id: number) {
