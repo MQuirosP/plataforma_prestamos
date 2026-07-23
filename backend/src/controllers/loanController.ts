@@ -1,13 +1,14 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
 import { Role, SubscriptionType, MetodoPago, LoanStatus, FineFrequency } from '@prisma/client';
 import { updatePenaltiesForTenant } from '../services/fineService';
+import { logger } from '../services/logger';
 
 
 // List all loans for the logged-in lender (or cobrador's prestamista)
-export async function getLoans(req: AuthenticatedRequest, res: Response) {
+export async function getLoans(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const userRole = req.user?.rol;
   let prestamistaId = req.user?.id || 'mock-lender-id-123';
 
@@ -111,13 +112,11 @@ export async function getLoans(req: AuthenticatedRequest, res: Response) {
     });
 
     return res.json(loansWithBalance);
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch loans', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // Create a new loan
-export async function createLoan(req: AuthenticatedRequest, res: Response) {
+export async function createLoan(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const prestamistaId = req.user?.id || 'mock-lender-id-123';
   const userRole = req.user?.rol;
 
@@ -267,13 +266,11 @@ export async function createLoan(req: AuthenticatedRequest, res: Response) {
       balancePendiente: Number(result.totalAPagar),
       payments: []
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to create loan', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // Make a payment/abono (with método de pago and CajaCobrador update)
-export async function addPayment(req: AuthenticatedRequest, res: Response) {
+export async function addPayment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const { id: loanId } = req.params;
   const { montoAbonado, notas, metodoPago } = req.body;
   const creadoPorId = req.user?.id;
@@ -405,13 +402,11 @@ export async function addPayment(req: AuthenticatedRequest, res: Response) {
       ...result,
       montoAbonado: Number(result.montoAbonado)
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'Failed to apply payment' });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // Delete/void a payment (Restricted: COBRADOR cannot do this)
-export async function deletePayment(req: AuthenticatedRequest, res: Response) {
+export async function deletePayment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const { id: loanId, paymentId } = req.params;
   const userRole = req.user?.rol;
 
@@ -504,13 +499,11 @@ export async function deletePayment(req: AuthenticatedRequest, res: Response) {
     });
 
     return res.json({ success: true, message: 'Pago eliminado correctamente', payment: result });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'Failed to delete payment' });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // Update/Edit a loan (Restricted: COBRADOR cannot do this)
-export async function updateLoan(req: AuthenticatedRequest, res: Response) {
+export async function updateLoan(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const { id } = req.params;
   const prestamistaId = req.user?.id || 'mock-lender-id-123';
   const userRole = req.user?.rol;
@@ -626,13 +619,11 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response) {
     });
 
     return res.json({ success: true, loan: updatedLoan });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to update loan', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // Delete/Void an entire loan (Restricted: COBRADOR cannot do this)
-export async function deleteLoan(req: AuthenticatedRequest, res: Response) {
+export async function deleteLoan(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const { id } = req.params;
   const prestamistaId = req.user?.id || 'mock-lender-id-123';
   const userRole = req.user?.rol;
@@ -705,7 +696,5 @@ export async function deleteLoan(req: AuthenticatedRequest, res: Response) {
     });
 
     return res.json({ success: true, message: 'Préstamo y abonos eliminados correctamente', loan: result });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'Failed to delete loan' });
-  }
+  } catch (err: any) { next(err); }
 }

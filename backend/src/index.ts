@@ -1,9 +1,11 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import pinoHttp from 'pino-http';
 import apiRouter from './routes/api';
 import { checkDatabaseConnection } from './services/db';
+import { logger } from './services/logger';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -16,77 +18,103 @@ const allowedOrigins = [
   'https://plataforma-prestamos.pages.dev'
 ];
 
-// 3. MIDDLEWARE DE CORS NATIVO CON PREFLIGHT INTEGRADO
+// HTTP request logger — logs every request with method, route, status, response time
+app.use(pinoHttp({
+  logger,
+  // Don't log health checks to avoid noise
+  autoLogging: {
+    ignore: (req) => req.url === '/health'
+  },
+  customLogLevel: (_req, res, err) => {
+    if (err || res.statusCode >= 500) return 'error';
+    if (res.statusCode >= 400) return 'warn';
+    return 'info';
+  },
+  serializers: {
+    req: (req) => ({ method: req.method, url: req.url, ip: req.remoteAddress }),
+    res: (res) => ({ statusCode: res.statusCode })
+  }
+}));
+
+// CORS
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.pages.dev') || origin.endsWith('.workers.dev')) {
       callback(null, true);
     } else {
+      logger.warn({ origin }, 'CORS blocked request from disallowed origin');
       callback(new Error('Bloqueado por seguridad industrial CORS - Cat-Loan'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With', 'Accept'],
-  optionsSuccessStatus: 200 // Fuerza a que la respuesta de preflight devuelva un 200 limpio para navegadores viejos/móviles
+  optionsSuccessStatus: 200
 }));
 
-// 4. PARSEO DE JSON (Debe ir ANTES de las rutas y del rate limit por si validas payloads)
+// JSON parsing
 app.use(express.json());
 
-// 5. RATE LIMITERS Y RUTAS (Van abajo del escudo de CORS)
+// Rate limiters
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde."
-  },
+  message: { error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde." },
   statusCode: 429
 });
 
 const strictAuthLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 5, // Limit each IP to 5 requests per minute
+  windowMs: 1 * 60 * 1000,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde."
-  },
+  message: { error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde." },
   statusCode: 429
 });
 
-// Apply rate limiting
 app.use('/api/auth', strictAuthLimiter);
 app.use('/api', generalLimiter);
 
-
-// Main status route
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'online',
-    timestamp: new Date(),
-    service: 'loan-saas-backend'
-  });
+// Health check
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ status: 'online', timestamp: new Date(), service: 'loan-saas-backend' });
 });
 
-// Register API routes
+// API routes
 app.use('/api', apiRouter);
 
-// Start Server after checking DB
+// ─── Centralized Error Handler ────────────────────────────────────────────────
+// All controllers call next(err) in catch blocks — this catches them all,
+// logs the error with full context, and returns a consistent 500 response.
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  logger.error(
+    {
+      err: { message: err.message, stack: err.stack, code: err.code },
+      method: req.method,
+      url: req.url,
+      userId: (req as any).user?.id ?? null
+    },
+    'Unhandled server error'
+  );
+  res.status(500).json({ error: 'Error interno del servidor' });
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
 async function startServer() {
   await checkDatabaseConnection();
-  
+
   const host = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
   app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`===================================================`);
-    console.log(`🚀 CAT-LOAN-SAAS Server running on port ${PORT}`);
-    console.log(`👉 API Health Check: ${host}/health`);
-    console.log(`===================================================`);
+    logger.info(`===================================================`);
+    logger.info(`🚀 CAT-LOAN-SAAS Server running on port ${PORT}`);
+    logger.info(`👉 API Health Check: ${host}/health`);
+    logger.info(`===================================================`);
   });
 }
 
 startServer().catch(err => {
-  console.error('Server boot failed:', err);
+  logger.fatal({ err }, 'Server boot failed — shutting down');
+  process.exit(1);
 });

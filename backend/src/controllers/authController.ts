@@ -1,10 +1,11 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import * as crypto from 'crypto';
 import { Role } from '@prisma/client';
+import { logger } from '../services/logger';
 
 function parseCookies(req: Request): Record<string, string> {
   const list: Record<string, string> = {};
@@ -25,7 +26,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY || '15m';
 const REFRESH_TOKEN_EXPIRY_DAYS = Number(process.env.REFRESH_TOKEN_EXPIRY_DAYS || '7');
 
-export async function login(req: Request, res: Response) {
+export async function login(req: Request, res: Response, next: NextFunction) {
   let { username, password } = req.body;
 
   if (!username || !password) {
@@ -109,12 +110,10 @@ export async function login(req: Request, res: Response) {
       user,
       subscription: activeSub
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Login falló', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
-export async function changePassword(req: AuthenticatedRequest, res: Response) {
+export async function changePassword(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const userId = req.user?.id;
   if (!userId) return res.status(401).json({ error: 'No autorizado' });
 
@@ -153,12 +152,10 @@ export async function changePassword(req: AuthenticatedRequest, res: Response) {
     });
 
     return res.json({ success: true, message: 'Contraseña cambiada exitosamente' });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Error al cambiar contraseña', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
-export async function refresh(req: Request, res: Response) {
+export async function refresh(req: Request, res: Response, next: NextFunction) {
   const cookies = parseCookies(req);
   const refreshToken = cookies['refresh_token'];
 
@@ -270,12 +267,10 @@ export async function refresh(req: Request, res: Response) {
       user,
       subscription: activeSub
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Error al refrescar token', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
-export async function logout(req: Request, res: Response) {
+export async function logout(req: Request, res: Response, next: NextFunction) {
   const cookies = parseCookies(req);
   const refreshToken = cookies['refresh_token'];
 
@@ -288,7 +283,7 @@ export async function logout(req: Request, res: Response) {
           where: { token: refreshToken }
         });
       } catch (err) {
-        console.error('Failed to revoke refresh token from DB:', err);
+        logger.warn({ err }, 'Failed to revoke refresh token from DB');
       }
     }
   }

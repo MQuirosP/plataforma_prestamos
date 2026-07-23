@@ -1,9 +1,10 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { Role, PlanSaaS } from '@prisma/client';
+import { logger } from '../services/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
@@ -24,7 +25,7 @@ async function logAudit(tipoEvento: string, descripcion: string, req: Authentica
 }
 
 // 1. Obtener todos los prestamistas (tenants)
-export async function getTenants(req: AuthenticatedRequest, res: Response) {
+export async function getTenants(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const tenants = await prisma.user.findMany({
@@ -45,13 +46,11 @@ export async function getTenants(req: AuthenticatedRequest, res: Response) {
       orderBy: { createdAt: 'desc' }
     });
     return res.json(tenants);
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // 2. Crear un nuevo Prestamista (Tenant)
-export async function createTenant(req: AuthenticatedRequest, res: Response) {
+export async function createTenant(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   const { nombre, username, password, email, telefono, plan } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username y password requeridos' });
@@ -87,13 +86,11 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
 
     await logAudit('CREAR_TENANT', `Se creó el prestamista ${username}`, req, newTenant.id);
     return res.json({ success: true, tenant: newTenant });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // 3. Suspender o Activar Tenant
-export async function toggleSuspendTenant(req: AuthenticatedRequest, res: Response) {
+export async function toggleSuspendTenant(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const user = await prisma.user.findUnique({ where: { id: req.params.id } });
@@ -107,13 +104,11 @@ export async function toggleSuspendTenant(req: AuthenticatedRequest, res: Respon
 
     await logAudit(newStatus ? 'SUSPENDER_TENANT' : 'ACTIVAR_TENANT', `El prestamista ${user.username} fue ${newStatus ? 'suspendido' : 'activado'}`, req, user.id);
     return res.json({ success: true, suspendido: newStatus });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // 4. Cambiar Plan
-export async function changeTenantPlan(req: AuthenticatedRequest, res: Response) {
+export async function changeTenantPlan(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const { plan } = req.body;
@@ -161,13 +156,11 @@ export async function changeTenantPlan(req: AuthenticatedRequest, res: Response)
 
     await logAudit('CAMBIO_PLAN', `El plan de ${user.username} cambió a ${plan}`, req, user.id);
     return res.json({ success: true, plan });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // 4b. Actualizar fecha de vencimiento (paymentDate)
-export async function updateTenantPaymentDate(req: AuthenticatedRequest, res: Response) {
+export async function updateTenantPaymentDate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const { paymentDate } = req.body;
@@ -185,13 +178,11 @@ export async function updateTenantPaymentDate(req: AuthenticatedRequest, res: Re
     });
     await logAudit('ACTUALIZAR_VENCIMIENTO', `Fecha de vencimiento de ${user.username} actualizada`, req, user.id);
     return res.json({ success: true, paymentDate: user.paymentDate });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // 5. Suplantación (Impersonate)
-export async function impersonateTenant(req: AuthenticatedRequest, res: Response) {
+export async function impersonateTenant(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const targetId = req.params.prestamistaId;
@@ -215,13 +206,12 @@ export async function impersonateTenant(req: AuthenticatedRequest, res: Response
     );
 
     await logAudit('IMPERSONATE', `Admin accedió como ${targetUser.username}`, req, targetUser.id);
+    logger.info({ event: 'IMPERSONATE', adminId: req.user?.id, targetId: targetUser.id, targetUsername: targetUser.username }, 'Admin impersonated lender');
     return res.json({ success: true, token, user: targetUser });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
-export async function impersonateCobrador(req: AuthenticatedRequest, res: Response) {
+export async function impersonateCobrador(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   // Se permite si el rol actual es ADMIN, o si es una sesión impersonada (isImpersonating: true)
   // La seguridad real está en validar que el cobrador pertenece al prestamista suplantado
   const isAdmin = req.user?.rol === Role.ADMIN;
@@ -292,14 +282,13 @@ export async function impersonateCobrador(req: AuthenticatedRequest, res: Respon
     );
 
     await logAudit('IMPERSONATE_COBRADOR', `Admin accedió al cobrador ${cobrador.username}`, req, cobrador.id);
+    logger.info({ event: 'IMPERSONATE_COBRADOR', callerId: caller.id, cobradorId: cobrador.id, cobradorUsername: cobrador.username }, 'Admin impersonated cobrador');
     return res.json({ success: true, token, user: cobrador });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // 6. Obtener Logs de Auditoría
-export async function getLogs(req: AuthenticatedRequest, res: Response) {
+export async function getLogs(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -347,13 +336,11 @@ export async function getLogs(req: AuthenticatedRequest, res: Response) {
         totalPages
       }
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // 7. Obtener Stats
-export async function getStats(req: AuthenticatedRequest, res: Response) {
+export async function getStats(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const totalPrestamistas = await prisma.user.count({ where: { rol: Role.PRESTAMISTA } });
@@ -379,25 +366,21 @@ export async function getStats(req: AuthenticatedRequest, res: Response) {
       planes: { bronce, plata, oro, platino, diamante },
       volumenTransaccional: pagos._sum.montoAbonado || 0
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // 8. Obtener configuración de los planes SaaS
-export async function getPlanConfigs(req: AuthenticatedRequest, res: Response) {
+export async function getPlanConfigs(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const { PlanManager } = await import('../services/planManager.js');
     const configs = await PlanManager.getAllPlanConfigs();
     return res.json(configs);
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 // 9. Actualizar configuración de un plan SaaS
-export async function updatePlanConfig(req: AuthenticatedRequest, res: Response) {
+export async function updatePlanConfig(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const { plan, maxClientes, maxCobradores, precioMensual } = req.body;
@@ -406,7 +389,5 @@ export async function updatePlanConfig(req: AuthenticatedRequest, res: Response)
     
     await logAudit('ACTUALIZAR_PLAN', `El admin actualizó los límites y precio del plan ${plan}`, req);
     return res.json({ success: true, config });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }

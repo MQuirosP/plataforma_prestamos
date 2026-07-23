@@ -1,8 +1,8 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 
-export async function getSettings(req: AuthenticatedRequest, res: Response) {
+export async function getSettings(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const userId = req.user?.id || 'mock-lender-id-123';
 
   if (isUsingMemoryStore()) {
@@ -51,12 +51,10 @@ export async function getSettings(req: AuthenticatedRequest, res: Response) {
       ...settings,
       telefono: user?.telefono || ''
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch settings', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
-export async function updateSettings(req: AuthenticatedRequest, res: Response) {
+export async function updateSettings(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const userId = req.user?.id || 'mock-lender-id-123';
   const { monedaSimbolo, monedaCodigo, nombreNegocio, plantillaWhatsapp, gananciaPorcentaje, diasMinimosPrimerCobro, telefono } = req.body;
 
@@ -133,7 +131,5 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response) {
       ...settings,
       telefono
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to update settings', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }

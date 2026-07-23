@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma, isUsingMemoryStore } from '../services/db';
 import * as jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
+import { logger } from '../services/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
@@ -45,10 +46,12 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
     });
 
     if (!userDb) {
+      logger.warn({ userId: decoded.id, url: req.url }, 'Auth rejected: user not found in DB');
       return res.status(401).json({ error: 'Usuario no encontrado' });
     }
 
     if (userDb.rol === Role.PRESTAMISTA && userDb.suspendido) {
+      logger.warn({ userId: userDb.id, username: userDb.username }, 'Auth rejected: lender account suspended');
       return res.status(403).json({ error: 'Su suscripción se encuentra suspendida. Contacte al administrador.' });
     }
 
@@ -57,6 +60,7 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
         where: { id: userDb.prestamistaId }
       });
       if (prestamistaDb?.suspendido) {
+        logger.warn({ userId: userDb.id, prestamistaId: userDb.prestamistaId }, 'Auth rejected: cobrador parent lender suspended');
         return res.status(403).json({ error: 'La suscripción de su administrador se encuentra suspendida.' });
       }
     }
@@ -65,8 +69,10 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
       ...decoded,
       rol: userDb.rol // Priorizamos el rol de la base de datos por si cambió
     };
+    logger.debug({ userId: userDb.id, rol: userDb.rol, url: req.url }, 'Auth OK');
     next();
   } catch (err: any) {
+    logger.warn({ err: err.message, url: req.url }, 'Auth rejected: invalid or expired token');
     return res.status(401).json({ error: 'Token inválido o expirado' });
   }
 }

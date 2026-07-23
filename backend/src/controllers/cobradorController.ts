@@ -1,13 +1,14 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { Role, LiquidacionEstado } from '@prisma/client';
+import { logger } from '../services/logger';
 
 /**
  * GET /api/caja/:cobradorId
  * Retorna el resumen de caja actual del cobrador (solo accesible para el Prestamista dueño o Admin)
  */
-export async function getCajaCobrador(req: AuthenticatedRequest, res: Response) {
+export async function getCajaCobrador(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const { cobradorId } = req.params;
   const requestorRole = req.user?.rol;
 
@@ -66,24 +67,22 @@ export async function getCajaCobrador(req: AuthenticatedRequest, res: Response) 
       },
       total: Number(caja.saldoEfectivo) + Number(caja.saldoSinpe) + Number(caja.saldoTransferencia)
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Error al obtener caja', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
 /**
  * GET /api/liquidaciones/resumen/:cobradorId
  * Alias del endpoint de caja para el panel del prestamista
  */
-export async function getResumenLiquidacion(req: AuthenticatedRequest, res: Response) {
-  return getCajaCobrador(req, res);
+export async function getResumenLiquidacion(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  return getCajaCobrador(req, res, next);
 }
 
 /**
  * POST /api/liquidaciones/procesar
  * El prestamista procesa la liquidación: verifica montos, registra el historial y resetea la caja del cobrador a 0
  */
-export async function procesarLiquidacion(req: AuthenticatedRequest, res: Response) {
+export async function procesarLiquidacion(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const requestorRole = req.user?.rol;
   const prestamistaId = req.user?.id;
 
@@ -169,7 +168,5 @@ export async function procesarLiquidacion(req: AuthenticatedRequest, res: Respon
     });
 
     return res.json({ success: true, liquidacion });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Error al procesar liquidación', details: err.message });
-  }
+  } catch (err: any) { next(err); }
 }

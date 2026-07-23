@@ -1,12 +1,13 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
 import * as bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
+import { logger } from '../services/logger';
 
 // Crear un nuevo cobrador bajo la cuenta del prestamista actual
-export async function createCobrador(req: AuthenticatedRequest, res: Response) {
+export async function createCobrador(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.PRESTAMISTA) return res.status(403).json({ error: 'Denegado. Solo prestamistas pueden crear cobradores.' });
   const prestamistaId = req.user.id;
   const { nombre, username, password, telefono } = req.body;
@@ -68,12 +69,10 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response) {
     });
 
     return res.json({ success: true, cobrador: { id: newCobrador.id, nombre: newCobrador.nombre, username: newCobrador.username } });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
 
-export async function getCobradores(req: AuthenticatedRequest, res: Response) {
+export async function getCobradores(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.PRESTAMISTA) return res.status(403).json({ error: 'Denegado' });
   try {
     const cobradores = await prisma.user.findMany({
@@ -81,7 +80,5 @@ export async function getCobradores(req: AuthenticatedRequest, res: Response) {
       select: { id: true, nombre: true, username: true, telefono: true, createdAt: true }
     });
     return res.json(cobradores);
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+  } catch (err: any) { next(err); }
 }
