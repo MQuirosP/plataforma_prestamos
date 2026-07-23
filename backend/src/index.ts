@@ -18,21 +18,27 @@ const allowedOrigins = [
   'https://plataforma-prestamos.pages.dev'
 ];
 
-// HTTP request logger — logs every request with method, route, status, response time
+// HTTP request logger — one compact line per request
 app.use(pinoHttp({
   logger,
-  // Don't log health checks to avoid noise
+  // Suppress automatic per-field logging — we build the whole message ourselves
+  customSuccessMessage: (req: any, res: any, responseTime: number) =>
+    `${req.method} ${req.url} → ${res.statusCode} (${responseTime}ms)`,
+  customErrorMessage: (req: any, res: any, err: Error) =>
+    `${req.method} ${req.url} → ${res.statusCode} [${err.message}]`,
+  // Skip health-check noise
   autoLogging: {
     ignore: (req) => req.url === '/health'
   },
-  customLogLevel: (_req, res, err) => {
+  customLogLevel: (_req: any, res: any, err: any) => {
     if (err || res.statusCode >= 500) return 'error';
     if (res.statusCode >= 400) return 'warn';
     return 'info';
   },
+  // Don't emit req/res as separate fields — the message already contains everything
   serializers: {
-    req: (req) => ({ method: req.method, url: req.url, ip: req.remoteAddress }),
-    res: (res) => ({ statusCode: res.statusCode })
+    req: () => undefined as any,
+    res: () => undefined as any
   }
 }));
 
