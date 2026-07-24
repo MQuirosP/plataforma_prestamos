@@ -32,7 +32,16 @@ export async function getTenants(req: AuthenticatedRequest, res: Response, next:
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
 
   if (isUsingMemoryStore()) {
-    return res.json(inMemoryStore.users.filter(u => u.rol === Role.PRESTAMISTA));
+    const mapped = inMemoryStore.users
+      .filter(u => u.rol === Role.PRESTAMISTA)
+      .map(u => ({
+        ...u,
+        _count: {
+          loans: inMemoryStore.loans.filter(l => l.prestamistaId === u.id).length,
+          cobradores: inMemoryStore.users.filter(cob => cob.rol === Role.COBRADOR && cob.prestamistaId === u.id).length
+        }
+      }));
+    return res.json(mapped);
   }
 
   try {
@@ -42,6 +51,12 @@ export async function getTenants(req: AuthenticatedRequest, res: Response, next:
         subscriptions: {
           orderBy: { createdAt: 'desc' },
           take: 1
+        },
+        _count: {
+          select: {
+            loans: true,
+            cobradores: true
+          }
         }
       },
       orderBy: { createdAt: 'desc' }

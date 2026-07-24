@@ -3,14 +3,43 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, BehaviorSubject, Observable, from, throwError } from 'rxjs';
 import { map, catchError, filter, take } from 'rxjs/operators';
 
+export enum Role {
+  ADMIN = 'ADMIN',
+  PRESTAMISTA = 'PRESTAMISTA',
+  COBRADOR = 'COBRADOR'
+}
+
+export enum PaymentMethod {
+  EFECTIVO = 'EFECTIVO',
+  SINPE = 'SINPE',
+  TRANSFERENCIA = 'TRANSFERENCIA'
+}
+
+export enum FineFrequency {
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+  MONTHLY = 'MONTHLY'
+}
+
 export interface Payment {
   id: string;
   loanId: string;
   montoAbonado: number;
   numeroRecibo: string;
   notas?: string;
-  metodoPago?: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
+  metodoPago?: PaymentMethod;
   fechaPago: string;
+}
+
+export enum LoanStatus {
+  ACTIVE = 'ACTIVE',
+  PAID = 'PAID'
+}
+
+export enum SubscriptionType {
+  TRIAL = 'TRIAL',
+  ACTIVE = 'ACTIVE',
+  EXPIRED = 'EXPIRED'
 }
 
 export interface Loan {
@@ -22,10 +51,10 @@ export interface Loan {
   totalAPagar: number;
   cuotaSemanal: number;
   diaCobro: number;
-  estado: 'ACTIVE' | 'PAID';
+  estado: LoanStatus;
   fechaInicio: string;
   fineAmount?: number | null;
-  fineFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null;
+  fineFrequency?: FineFrequency | null;
   graceDays?: number;
   multasAcumuladas?: number;
   balancePendiente: number;
@@ -52,7 +81,7 @@ export interface Subscriber {
   nombre: string;
   email: string;
   telefono: string;
-  subscriptionType: 'TRIAL' | 'ACTIVE' | 'EXPIRED';
+  subscriptionType: SubscriptionType;
   validUntil: string;
   diasRestantes: number;
 }
@@ -348,7 +377,7 @@ export class LoanService {
     }
   }
 
-  async addPayment(loanId: string, montoAbonado: number, notas: string, metodoPago: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA' = 'EFECTIVO') {
+  async addPayment(loanId: string, montoAbonado: number, notas: string, metodoPago: PaymentMethod = PaymentMethod.EFECTIVO) {
     this.loading.set(true);
     try {
       const newPayment = await firstValueFrom(
@@ -372,7 +401,7 @@ export class LoanService {
               ...loan,
               balancePendiente,
               cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
-              estado: balancePendiente <= 0 ? 'PAID' as const : 'ACTIVE' as const,
+              estado: balancePendiente <= 0 ? LoanStatus.PAID : LoanStatus.ACTIVE,
               payments: updatedPayments
             };
           }
@@ -408,7 +437,7 @@ export class LoanService {
               ...loan,
               balancePendiente,
               cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
-              estado: 'ACTIVE' as const,
+              estado: LoanStatus.ACTIVE,
               payments: updatedPayments
             };
           }

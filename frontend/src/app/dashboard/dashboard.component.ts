@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LoanService, Loan, Payment } from '../services/loan.service';
+import { LoanService, Loan, Payment, Role, PaymentMethod, FineFrequency } from '../services/loan.service';
 import html2canvas from 'html2canvas';
 import { ToastService } from '../services/toast.service';
 
@@ -29,7 +29,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
         </div>
 
         <div class="flex items-center gap-1.5">
-          <ng-container *ngIf="loanService.currentUser()?.rol !== 'COBRADOR'">
+          <ng-container *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR">
             <!-- Add Loan button — principal action, hidden on mobile (uses FAB instead) -->
             <button (click)="openCreateModal()" 
                     class="hidden md:flex bg-caterpillar hover:bg-caterpillar-dark text-industrial-black px-3 py-2 rounded-lg font-bold transition duration-150 shadow-md items-center gap-1.5 text-xs"
@@ -202,7 +202,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </button>
 
               <!-- Edit button (Lender-Only) -->
-              <button *ngIf="loanService.currentUser()?.rol !== 'COBRADOR'"
+              <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR"
                       (click)="openEditModal(loan)" 
                       title="Editar Préstamo"
                       class="w-9 h-9 bg-industrial-surface hover:bg-industrial-border border border-industrial-border text-industrial-light flex items-center justify-center rounded-lg transition duration-150">
@@ -212,7 +212,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </button>
 
               <!-- Delete button (Lender-Only) -->
-              <button *ngIf="loanService.currentUser()?.rol !== 'COBRADOR'"
+              <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR"
                       (click)="performDeleteLoan(loan)" 
                       title="Eliminar Préstamo"
                       class="w-9 h-9 bg-red-950/20 hover:bg-red-900/40 border border-semantic-red/30 text-semantic-red flex items-center justify-center rounded-lg transition duration-150">
@@ -233,9 +233,11 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
         </section>
       </main>
 
-      <!-- FAB: Floating Action Button (mobile only) -->
-      <button (click)="openCreateModal()"
-              class="fixed bottom-6 right-5 z-40 md:hidden bg-caterpillar hover:bg-caterpillar-dark text-industrial-black w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 active:scale-95"
+      <!-- FAB: Floating Action Button (mobile only, hidden for COBRADOR) -->
+      <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR"
+              (click)="openCreateModal()"
+              [class]="'fixed right-5 z-40 md:hidden bg-caterpillar hover:bg-caterpillar-dark text-industrial-black w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 active:scale-95 ' + 
+                (loanService.currentUser()?.isImpersonating ? 'bottom-32' : 'bottom-6')"
               title="Agregar Préstamo"
               style="box-shadow: 0 4px 24px 0 rgba(255, 193, 7, 0.45);">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -289,7 +291,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             </div>
 
             <!-- Calculations (disabled if has payments) -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-4">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cálculo de Cobro</label>
                 <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface"
@@ -317,7 +319,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-4">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Día de Cobro Pactado</label>
                 <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
@@ -338,7 +340,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                   </div>
                 </div>
               </div>
-              <div class="flex items-center pt-5">
+              <div class="flex items-center pt-2">
                 <label class="flex items-center gap-2 text-xs text-industrial-light cursor-pointer select-none">
                   <input type="checkbox" [(ngModel)]="editLoanData.hasFine" name="editHasFine"
                          class="rounded border-industrial-border text-caterpillar focus:ring-0 bg-industrial-surface w-4 h-4">
@@ -353,15 +355,15 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Multa</label>
                 <app-numeric-stepper [(ngModel)]="editLoanData.fineAmount" name="editFineAmount" [min]="0" [step]="100"></app-numeric-stepper>
               </div>
-              <div class="grid grid-cols-2 gap-3">
+              <div class="space-y-4">
                 <div>
                   <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia</label>
                   <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
                     <select [(ngModel)]="editLoanData.fineFrequency" name="editFineFrequency"
                             class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
-                      <option value="DAILY">Diario</option>
-                      <option value="WEEKLY">Semanal</option>
-                      <option value="MONTHLY">Mensual</option>
+                      <option [value]="FineFrequency.DAILY">Diario</option>
+                      <option [value]="FineFrequency.WEEKLY">Semanal</option>
+                      <option [value]="FineFrequency.MONTHLY">Mensual</option>
                     </select>
                     <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -396,8 +398,8 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
       </div>
 
       <!-- MODAL 2: Add Payment / Abono -->
-      <div *ngIf="showAbonoModal()" class="fixed inset-0 z-50 bg-black/80 flex items-end justify-center backdrop-blur-sm">
-        <div class="bg-industrial-dark w-full max-w-md rounded-t-2xl border-t border-industrial-border p-6 pb-8">
+      <div *ngIf="showAbonoModal()" class="fixed inset-0 z-50 bg-black/80 flex items-end sm:items-center justify-center backdrop-blur-sm">
+        <div class="bg-industrial-dark w-full max-w-md rounded-t-2xl sm:rounded-2xl border-t sm:border border-industrial-border p-6 pb-8">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-black text-white uppercase tracking-tight">Registrar Abono</h2>
             <button (click)="showAbonoModal.set(false)" class="text-industrial-muted hover:text-caterpillar">
@@ -430,12 +432,12 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Método de Pago</label>
                 <div class="grid grid-cols-3 gap-2">
-                  <button type="button" (click)="abonoMetodoPago = 'EFECTIVO'" 
-                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoMetodoPago === 'EFECTIVO' ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">💵 Efectivo</button>
-                  <button type="button" (click)="abonoMetodoPago = 'SINPE'" 
-                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoMetodoPago === 'SINPE' ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">📲 SINPE</button>
-                  <button type="button" (click)="abonoMetodoPago = 'TRANSFERENCIA'" 
-                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoMetodoPago === 'TRANSFERENCIA' ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">🏦 Transfer.</button>
+                  <button type="button" (click)="abonoMetodoPago = PaymentMethod.EFECTIVO" 
+                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoMetodoPago === PaymentMethod.EFECTIVO ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">💵 Efectivo</button>
+                  <button type="button" (click)="abonoMetodoPago = PaymentMethod.SINPE" 
+                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoMetodoPago === PaymentMethod.SINPE ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">📲 SINPE</button>
+                  <button type="button" (click)="abonoMetodoPago = PaymentMethod.TRANSFERENCIA" 
+                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoMetodoPago === PaymentMethod.TRANSFERENCIA ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">🏦 Transfer.</button>
                 </div>
               </div>
               <div>
@@ -748,6 +750,9 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
   `]
 })
 export class DashboardComponent implements OnInit {
+  Role = Role;
+  PaymentMethod = PaymentMethod;
+  FineFrequency = FineFrequency;
   loanService = inject(LoanService);
   toastService = inject(ToastService);
   adminService = inject(AdminService);
@@ -790,14 +795,14 @@ export class DashboardComponent implements OnInit {
     creationMode: 'porcentaje' as 'porcentaje' | 'monto_fijo',
     totalAPagarDirect: null as number | null,
     fineAmount: null as number | null,
-    fineFrequency: 'DAILY' as 'DAILY' | 'WEEKLY' | 'MONTHLY',
+    fineFrequency: FineFrequency.DAILY as FineFrequency,
     graceDays: 0,
     hasFine: false,
     hasPayments: false
   };
   abonoMonto: number | null = null;
   abonoNotas: string = '';
-  abonoMetodoPago: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA' = 'EFECTIVO';
+  abonoMetodoPago: PaymentMethod = PaymentMethod.EFECTIVO;
 
   // Get current weekday mapped to 1-7 based on tenant's timezone
   get currentWeekday(): number {
@@ -1090,9 +1095,9 @@ export class DashboardComponent implements OnInit {
 
   openAbonoModal(loan: Loan) {
     this.selectedLoanForAbono = loan;
-    this.abonoMonto = null;
+    this.abonoMonto = Number(loan.cuotaSemanal);
     this.abonoNotas = '';
-    this.abonoMetodoPago = 'EFECTIVO';
+    this.abonoMetodoPago = PaymentMethod.EFECTIVO;
     this.showAbonoModal.set(true);
   }
 

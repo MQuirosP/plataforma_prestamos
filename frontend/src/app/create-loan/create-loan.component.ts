@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LoanService } from '../services/loan.service';
+import { LoanService, Role, FineFrequency } from '../services/loan.service';
 import { ToastService } from '../services/toast.service';
 import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepper.component';
 
@@ -52,7 +52,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             </div>
 
             <!-- Monto Original & Cuota Semanal -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-4">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Original</label>
                 <app-numeric-stepper [(ngModel)]="newLoanData.montoOriginal" name="montoOriginal" [required]="true" [min]="0" [step]="1000"></app-numeric-stepper>
@@ -64,7 +64,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             </div>
 
             <!-- Tipo de Interés & Porcentaje / Monto Fijo -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-4">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Tipo de Interés</label>
                 <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
@@ -122,26 +122,24 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                        class="rounded border-industrial-border text-caterpillar focus:ring-0 bg-industrial-surface h-5 w-5">
               </div>
 
-              <div *ngIf="newLoanData.hasFine" class="space-y-3 pt-2 border-t border-industrial-border/30">
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto de Multa</label>
-                    <app-numeric-stepper [(ngModel)]="newLoanData.fineAmount" name="fineAmount" [min]="0" [step]="100"></app-numeric-stepper>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia</label>
-                    <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
-                      <select [(ngModel)]="newLoanData.fineFrequency" name="fineFrequency"
-                              class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
-                        <option value="DAILY">Diario</option>
-                        <option value="WEEKLY">Semanal</option>
-                        <option value="MONTHLY">Mensual</option>
-                      </select>
-                      <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                      </div>
+              <div *ngIf="newLoanData.hasFine" class="space-y-4 pt-2 border-t border-industrial-border/30">
+                <div>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto de Multa</label>
+                  <app-numeric-stepper [(ngModel)]="newLoanData.fineAmount" name="fineAmount" [min]="0" [step]="100"></app-numeric-stepper>
+                </div>
+                <div>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia</label>
+                  <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                    <select [(ngModel)]="newLoanData.fineFrequency" name="fineFrequency"
+                            class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                      <option [value]="FineFrequency.DAILY">Diario</option>
+                      <option [value]="FineFrequency.WEEKLY">Semanal</option>
+                      <option [value]="FineFrequency.MONTHLY">Mensual</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -181,6 +179,8 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
   `
 })
 export class CreateLoanComponent implements OnInit {
+  Role = Role;
+  FineFrequency = FineFrequency;
   loanService = inject(LoanService);
   toastService = inject(ToastService);
 
@@ -196,7 +196,7 @@ export class CreateLoanComponent implements OnInit {
     creationMode: 'porcentaje' as 'porcentaje' | 'monto_fijo',
     totalAPagarDirect: null as number | null,
     fineAmount: null as number | null,
-    fineFrequency: 'DAILY' as 'DAILY' | 'WEEKLY' | 'MONTHLY',
+    fineFrequency: FineFrequency.DAILY as FineFrequency,
     graceDays: 0,
     hasFine: false
   };
@@ -216,7 +216,7 @@ export class CreateLoanComponent implements OnInit {
       creationMode: 'porcentaje',
       totalAPagarDirect: null,
       fineAmount: null,
-      fineFrequency: 'DAILY',
+      fineFrequency: FineFrequency.DAILY,
       graceDays: 0,
       hasFine: false
     };

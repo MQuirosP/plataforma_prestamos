@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LoanService, BusinessSettings } from '../services/loan.service';
+import { LoanService, BusinessSettings, Role } from '../services/loan.service';
 import { CountriesService, Country } from '../services/countries.service';
 import { ToastService } from '../services/toast.service';
 
@@ -36,12 +36,12 @@ import { ToastService } from '../services/toast.service';
           <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
 
           <!-- Simple Close for Cobradores settings view -->
-          <div *ngIf="loanService.currentUser()?.rol === 'COBRADOR'" class="flex justify-between items-center pb-4 pt-2">
+          <div *ngIf="loanService.currentUser()?.rol === Role.COBRADOR" class="flex justify-between items-center pb-4 pt-2">
             <h3 class="text-white font-extrabold text-sm uppercase tracking-tight">Configuración de Cuenta</h3>
             <button (click)="goBack.emit()" class="text-xs text-caterpillar font-bold hover:underline">Regresar</button>
           </div>
 
-          <form *ngIf="loanService.currentUser()?.rol === 'PRESTAMISTA'" (submit)="saveSettings($event)" class="space-y-4 pt-2">
+          <form *ngIf="loanService.currentUser()?.rol === Role.PRESTAMISTA" (submit)="saveSettings($event)" class="space-y-4 pt-2">
             
             <!-- Nombre de Negocio -->
             <div>
@@ -195,6 +195,7 @@ import { ToastService } from '../services/toast.service';
   `
 })
 export class SettingsComponent implements OnInit {
+  Role = Role;
   loanService = inject(LoanService);
   countriesService = inject(CountriesService);
   toastService = inject(ToastService);

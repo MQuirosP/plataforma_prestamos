@@ -1,7 +1,7 @@
 <app-toast></app-toast>
 
-<!-- Impersonation Return Banner -->
-<div *ngIf="loanService.currentUser()?.isImpersonating" class="fixed bottom-24 md:bottom-6 right-4 z-50 flex flex-col items-end gap-1.5">
+<!-- Impersonation Return Banner (Desktop only) -->
+<div *ngIf="loanService.currentUser()?.isImpersonating" class="hidden md:flex fixed bottom-6 right-4 z-50 flex-col items-end gap-1.5">
   <!-- Context badge showing who is being impersonated -->
   <div class="bg-industrial-dark border border-caterpillar/40 text-white text-[9px] font-mono px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1.5">
     <span class="w-1.5 h-1.5 rounded-full bg-caterpillar animate-pulse inline-block"></span>
@@ -20,24 +20,47 @@
 
 <app-login *ngIf="!loanService.isLoggedIn()"></app-login>
 
-<ng-container *ngIf="loanService.isLoggedIn()">
-  <!-- Admin Panel view -->
-  <app-admin *ngIf="loanService.currentUser()?.rol === 'ADMIN'"></app-admin>
+<div *ngIf="loanService.isLoggedIn()" 
+     class="min-h-[100dvh] h-[100dvh] overflow-hidden flex flex-col transition-all duration-150">
+  <!-- Main Viewport Flow (Scrollable Content Area) -->
+  <div class="flex-grow overflow-y-auto flex flex-col"
+       [class.pb-[115px]]="loanService.currentUser()?.isImpersonating"
+       [class.md:pb-0]="loanService.currentUser()?.isImpersonating">
+    <!-- Admin Panel view -->
+    <app-admin *ngIf="loanService.currentUser()?.rol === Role.ADMIN"></app-admin>
 
-  <!-- Lender standard flow -->
-  <ng-container *ngIf="loanService.currentUser()?.rol !== 'ADMIN'">
-    <!-- New User Onboarding Intercept (Skip for Cobradores) -->
-    <app-onboarding *ngIf="loanService.isNewUser() && loanService.currentUser()?.rol !== 'COBRADOR'" (onboardingComplete)="onOnboardingFinished()"></app-onboarding>
+    <!-- Lender standard flow -->
+    <ng-container *ngIf="loanService.currentUser()?.rol !== Role.ADMIN">
+      <!-- New User Onboarding Intercept (Skip for Cobradores) -->
+      <app-onboarding *ngIf="loanService.isNewUser() && loanService.currentUser()?.rol !== Role.COBRADOR" (onboardingComplete)="onOnboardingFinished()"></app-onboarding>
 
-    <ng-container *ngIf="!loanService.isNewUser() || loanService.currentUser()?.rol === 'COBRADOR'">
-      <app-expired *ngIf="loanService.isExpired()"></app-expired>
-      <ng-container *ngIf="!loanService.isExpired()">
-        <app-settings *ngIf="currentScreen() === 'settings'" (goBack)="currentScreen.set('dashboard')"></app-settings>
-        <app-create-loan *ngIf="currentScreen() === 'create-loan'" (goBack)="currentScreen.set('dashboard')"></app-create-loan>
-        <app-dashboard *ngIf="currentScreen() === 'dashboard'" 
-                       (openSettings)="currentScreen.set('settings')" 
-                       (openCreateLoan)="currentScreen.set('create-loan')"></app-dashboard>
+      <ng-container *ngIf="!loanService.isNewUser() || loanService.currentUser()?.rol === Role.COBRADOR">
+        <app-expired *ngIf="loanService.isExpired()"></app-expired>
+        <ng-container *ngIf="!loanService.isExpired()">
+          <app-settings *ngIf="currentScreen() === 'settings'" (goBack)="currentScreen.set('dashboard')"></app-settings>
+          <app-create-loan *ngIf="currentScreen() === 'create-loan'" (goBack)="currentScreen.set('dashboard')"></app-create-loan>
+          <app-dashboard *ngIf="currentScreen() === 'dashboard'" 
+                         (openSettings)="currentScreen.set('settings')" 
+                         (openCreateLoan)="currentScreen.set('create-loan')"></app-dashboard>
+        </ng-container>
       </ng-container>
     </ng-container>
-  </ng-container>
-</ng-container>
+  </div>
+
+  <!-- Impersonation Return Banner (Mobile Footer - Fixed at bottom-0) -->
+  <footer *ngIf="loanService.currentUser()?.isImpersonating" 
+          class="md:hidden fixed bottom-0 left-0 right-0 border-t border-industrial-border bg-industrial-dark/95 backdrop-blur-md px-5 py-4 flex flex-col items-center gap-3 z-40 shadow-2xl">
+    <div class="bg-industrial-surface border border-caterpillar/30 text-white text-[10px] font-mono px-3 py-1.5 rounded-full flex items-center gap-1.5">
+      <span class="w-1.5 h-1.5 rounded-full bg-caterpillar animate-pulse inline-block"></span>
+      <span class="text-industrial-muted">Viendo como:</span>
+      <span class="text-caterpillar font-bold">{{ loanService.currentUser()?.nombre }}</span>
+      <span class="text-[9px] text-industrial-muted uppercase ml-0.5">({{ loanService.currentUser()?.rol }})</span>
+    </div>
+    <button (click)="returnToAdmin()" class="w-full bg-semantic-red text-white py-3.5 rounded-xl shadow-lg font-black uppercase text-xs hover:bg-red-600 transition flex items-center justify-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Volver a Admin
+    </button>
+  </footer>
+</div>

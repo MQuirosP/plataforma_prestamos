@@ -84,42 +84,42 @@ import html2canvas from 'html2canvas';
             <button 
               (click)="activeSubFilter.set('TODO')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
+                (activeSubFilter() === 'TODO' ? 'bg-white text-industrial-black border-white' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar hover:border-caterpillar/30')"
             >
               Todos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-white text-[9px] font-mono">{{ getTenantCount('TODO') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('ACTIVO')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'ACTIVO' ? 'bg-semantic-emerald/20 text-semantic-emerald border-semantic-emerald/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
+                (activeSubFilter() === 'ACTIVO' ? 'bg-semantic-emerald/20 text-semantic-emerald border-semantic-emerald/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar hover:border-caterpillar/30')"
             >
               Activos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('ACTIVO') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('POR_VENCER')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'POR_VENCER' ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
+                (activeSubFilter() === 'POR_VENCER' ? 'bg-caterpillar/20 text-caterpillar border-caterpillar/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar hover:border-caterpillar/30')"
             >
               Por Vencer <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('POR_VENCER') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('VENCIDO')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'VENCIDO' ? 'bg-semantic-red/20 text-semantic-red border-semantic-red/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
+                (activeSubFilter() === 'VENCIDO' ? 'bg-semantic-red/20 text-semantic-red border-semantic-red/80' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar hover:border-caterpillar/30')"
             >
               Vencidos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('VENCIDO') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('SUSPENDIDO')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'SUSPENDIDO' ? 'bg-industrial-surface border-industrial-border text-industrial-muted' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
+                (activeSubFilter() === 'SUSPENDIDO' ? 'bg-industrial-surface border-industrial-border text-industrial-muted' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar hover:border-caterpillar/30')"
             >
               Suspendidos <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('SUSPENDIDO') }}</span>
             </button>
             <button 
               (click)="activeSubFilter.set('TRIAL')"
               [class]="'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition border ' + 
-                (activeSubFilter() === 'TRIAL' ? 'bg-blue-500/10 text-blue-400 border-blue-500/50' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar')"
+                (activeSubFilter() === 'TRIAL' ? 'bg-blue-500/10 text-blue-400 border-blue-500/50' : 'bg-industrial-surface/40 text-industrial-muted border-industrial-border/60 hover:text-caterpillar hover:border-caterpillar/30')"
             >
               Demos/Trials <span class="ml-1 px-1.5 py-0.2 rounded-full bg-industrial-dark text-[9px] font-mono">{{ getTenantCount('TRIAL') }}</span>
             </button>

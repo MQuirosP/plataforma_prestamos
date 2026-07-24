@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LoanService } from './services/loan.service';
+import { LoanService, Role } from './services/loan.service';
 import { AdminService } from './services/admin.service';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { ExpiredComponent } from './expired/expired.component';
@@ -19,6 +19,7 @@ import { CreateLoanComponent } from './create-loan/create-loan.component';
   styleUrl: './app.component.css'
 })
 export class AppComponent {
+  Role = Role;
   loanService = inject(LoanService);
   adminService = inject(AdminService);
   currentScreen = signal<'dashboard' | 'settings' | 'create-loan'>('dashboard');
