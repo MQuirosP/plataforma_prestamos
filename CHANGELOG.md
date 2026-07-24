@@ -4,6 +4,19 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 
 ---
 
+## [1.2.0] - 2026-07-24
+### Añadido
+- **Enums de Dominio**: Introducidos enums tipados para `Role`, `PaymentMethod`, `FineFrequency`, `LoanStatus`, y `SubscriptionType` reemplazando cadenas de texto hardcodeadas en toda la aplicación (frontend y backend).
+- **Estadísticas en Panel de Administración**: Implementado el conteo en tiempo real de clientes y cobradores por prestamista en la vista de administración, tanto para base de datos real (Prisma `_count`) como para el fallback en memoria.
+
+### Modificado
+- **Comportamiento del Modal de Abono**: 
+  - La ventana emergente para registrar un abono ahora se centra verticalmente en pantallas de escritorio (`sm:items-center` y esquinas redondeadas completas) para evitar que aparezca desplazada al fondo.
+  - El campo de monto del abono ahora tiene como valor predeterminado el valor de la cuota acordada (`cuotaSemanal`) del préstamo seleccionado, mejorando la rapidez de registro.
+- **Seguridad y Roles**: Bloqueado el botón de crear préstamo para usuarios con rol `COBRADOR` tanto en la interfaz de usuario móvil (botón flotante FAB) como en el backend.
+
+---
+
 ## [1.1.0] - 2026-06-06
 ### Añadido
 - **Prefijo telefónico automático**: Se pre-llena automáticamente el código de llamada de país (ej. `+506` para Costa Rica, `+52` para México) en el formulario de creación de préstamos y en el onboarding inicial basándose en la moneda/país de operación del cobrador.

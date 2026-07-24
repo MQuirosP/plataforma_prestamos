@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide explains how to deploy the frontend to Cloudflare Pages and backend to Railway.
+This guide explains how to deploy the frontend to Cloudflare Pages and backend to Render.
 
 ## Frontend (Cloudflare Pages)
 
@@ -12,7 +12,7 @@ The frontend uses Angular. To deploy to Cloudflare Pages for production:
    cd frontend
    npm run build:prod
    ```
-   This ensures the application is built using `src/environments/environment.prod.ts`, which points to the production Railway backend (`https://loans-cat-server-production.up.railway.app/api`).
+   This ensures the application is built using `src/environments/environment.prod.ts`, which points to the production Render backend (`https://plataforma-prestamos-g2nw.onrender.com/api`).
 
 2. **Deploy to Cloudflare Pages**
    Ensure you are logged into Wrangler (`npx wrangler login`). Then, deploy the built files:
