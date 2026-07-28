@@ -39,9 +39,15 @@
         <ng-container *ngIf="!loanService.isExpired()">
           <app-settings *ngIf="currentScreen() === 'settings'" (goBack)="currentScreen.set('dashboard')"></app-settings>
           <app-create-loan *ngIf="currentScreen() === 'create-loan'" (goBack)="currentScreen.set('dashboard')"></app-create-loan>
+          <app-edit-loan *ngIf="currentScreen() === 'edit-loan' && selectedLoanForEdit()" 
+                         [loan]="selectedLoanForEdit()!" 
+                         (goBack)="currentScreen.set('dashboard')">
+          </app-edit-loan>
           <app-dashboard *ngIf="currentScreen() === 'dashboard'" 
                          (openSettings)="currentScreen.set('settings')" 
-                         (openCreateLoan)="currentScreen.set('create-loan')"></app-dashboard>
+                         (openCreateLoan)="currentScreen.set('create-loan')"
+                         (openEditLoan)="openEditLoanScreen($event)"></app-dashboard>
+
         </ng-container>
       </ng-container>
     </ng-container>

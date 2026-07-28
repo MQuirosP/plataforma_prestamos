@@ -717,15 +717,21 @@ export async function deletePayment(req: AuthenticatedRequest, res: Response, ne
   } catch (err: any) { next(err); }
 }
 
-// Update/Edit a loan (Restricted: COBRADOR cannot do this)
+// Update/Edit a loan (Restricted: ONLY Admin in Impersonation Mode can edit loans)
 export async function updateLoan(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const { id } = req.params;
   const prestamistaId = req.user?.id || 'mock-lender-id-123';
   const userRole = req.user?.rol;
+  const isImpersonating = req.user?.isImpersonating;
+
+  if (!isImpersonating) {
+    return res.status(403).json({ error: 'La edición de préstamos es una función exclusiva del Administrador mediante impersonación.' });
+  }
 
   if (userRole === Role.COBRADOR) {
     return res.status(403).json({ error: 'Los cobradores no pueden editar préstamos.' });
   }
+
 
   const {
     clienteNombre, clienteTelefono, tipoIdentificacion, numeroIdentificacion,

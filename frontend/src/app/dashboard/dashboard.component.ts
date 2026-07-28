@@ -209,15 +209,16 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                 Registrar Abono
               </button>
 
-              <!-- Edit button (Lender-Only) -->
-              <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR"
-                      (click)="openEditModal(loan)" 
-                      title="Editar Préstamo"
-                      class="w-9 h-9 bg-industrial-surface hover:bg-industrial-border border border-industrial-border text-industrial-light flex items-center justify-center rounded-lg transition duration-150">
+              <!-- Edit button (Admin Impersonating Only) -->
+              <button *ngIf="loanService.currentUser()?.isImpersonating"
+                      (click)="openEditLoan.emit(loan)" 
+                      title="Editar Préstamo (Admin)"
+                      class="w-9 h-9 bg-industrial-surface hover:bg-industrial-border border border-industrial-border text-caterpillar flex items-center justify-center rounded-lg transition duration-150">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
               </button>
+
 
               <!-- Delete button (Lender-Only) -->
               <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR"
@@ -252,158 +253,6 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
         </svg>
       </button>
-
-
-
-      <!-- MODAL 5: Edit Loan (Lender-Only) -->
-      <div *ngIf="showEditModal()" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
-        <div class="bg-industrial-dark w-full max-w-md rounded-2xl border border-industrial-border p-6 shadow-2xl relative overflow-hidden">
-          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
-          
-          <div class="flex justify-between items-center mb-4 mt-2">
-            <div>
-              <h2 class="text-lg font-black text-white uppercase tracking-tight">Editar Préstamo</h2>
-              <p *ngIf="editLoanData.hasPayments" class="text-[10px] text-amber-500 font-mono mt-0.5">
-                ⚠ Préstamo con abonos: Campos financieros bloqueados.
-              </p>
-            </div>
-            <button (click)="showEditModal.set(false)" class="text-industrial-muted hover:text-caterpillar">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <form (submit)="submitEditLoan()" class="space-y-4">
-            <div>
-              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nombre del Cliente</label>
-              <input type="text" [(ngModel)]="editLoanData.clienteNombre" name="editClienteNombre" required 
-                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-            </div>
-            <div>
-              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Teléfono (WhatsApp)</label>
-              <input type="text" [(ngModel)]="editLoanData.clienteTelefono" name="editClienteTelefono" required 
-                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-            </div>
-
-            <!-- Financial fields (disabled if has payments) -->
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Prestado</label>
-                <app-numeric-stepper [(ngModel)]="editLoanData.montoOriginal" name="editMontoOriginal" [required]="true" [min]="0" [step]="1000" [disabled]="editLoanData.hasPayments"></app-numeric-stepper>
-              </div>
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cuota Pactada</label>
-                <app-numeric-stepper [(ngModel)]="editLoanData.cuotaSemanal" name="editCuotaSemanal" [required]="true" [min]="0" [step]="500" [disabled]="editLoanData.hasPayments"></app-numeric-stepper>
-              </div>
-            </div>
-
-            <!-- Calculations (disabled if has payments) -->
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cálculo de Cobro</label>
-                <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface"
-                     [class.opacity-50]="editLoanData.hasPayments" [class.cursor-not-allowed]="editLoanData.hasPayments">
-                  <select [(ngModel)]="editLoanData.creationMode" name="editCreationMode" [disabled]="editLoanData.hasPayments"
-                          class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer disabled:cursor-not-allowed">
-                    <option value="porcentaje">% de Interés</option>
-                    <option value="monto_fijo">Monto Final de Pago</option>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150"
-                       [class.opacity-50]="editLoanData.hasPayments">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div *ngIf="editLoanData.creationMode === 'porcentaje'">
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Interés (%)</label>
-                <app-numeric-stepper [(ngModel)]="editLoanData.porcentaje" name="editPorcentaje" [min]="0" [max]="100" [step]="5" [disabled]="editLoanData.hasPayments"></app-numeric-stepper>
-              </div>
-              <div *ngIf="editLoanData.creationMode === 'monto_fijo'">
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Final de Pago</label>
-                <app-numeric-stepper [(ngModel)]="editLoanData.totalAPagarDirect" name="editTotalAPagarDirect" [min]="0" [step]="1000" [disabled]="editLoanData.hasPayments"></app-numeric-stepper>
-              </div>
-            </div>
-
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Día de Cobro Pactado</label>
-                <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
-                  <select [(ngModel)]="editLoanData.diaCobro" name="editDiaCobro" required 
-                          class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
-                    <option [value]="1">Lunes</option>
-                    <option [value]="2">Martes</option>
-                    <option [value]="3">Miércoles</option>
-                    <option [value]="4">Jueves</option>
-                    <option [value]="5">Viernes</option>
-                    <option [value]="6">Sábado</option>
-                    <option [value]="7">Domingo</option>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center pt-2">
-                <label class="flex items-center gap-2 text-xs text-industrial-light cursor-pointer select-none">
-                  <input type="checkbox" [(ngModel)]="editLoanData.hasFine" name="editHasFine"
-                         class="rounded border-industrial-border text-caterpillar focus:ring-0 bg-industrial-surface w-4 h-4">
-                  <span>Habilitar Multas</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Fine configuration fields -->
-            <div *ngIf="editLoanData.hasFine" class="bg-industrial-surface/50 p-4 rounded-xl border border-industrial-border/60 space-y-4">
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Multa</label>
-                <app-numeric-stepper [(ngModel)]="editLoanData.fineAmount" name="editFineAmount" [min]="0" [step]="100"></app-numeric-stepper>
-              </div>
-              <div class="space-y-4">
-                <div>
-                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia</label>
-                  <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
-                    <select [(ngModel)]="editLoanData.fineFrequency" name="editFineFrequency"
-                            class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
-                      <option [value]="FineFrequency.DAILY">Diario</option>
-                      <option [value]="FineFrequency.WEEKLY">Semanal</option>
-                      <option [value]="FineFrequency.MONTHLY">Mensual</option>
-                    </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Días Gracia</label>
-                  <app-numeric-stepper [(ngModel)]="editLoanData.graceDays" name="editGraceDays" [min]="0" [step]="1"></app-numeric-stepper>
-                </div>
-              </div>
-            </div>
-
-            <div class="bg-industrial-surface p-3 rounded-lg border border-industrial-border text-xs text-industrial-muted font-mono flex justify-between items-center mt-2">
-              <span>Total Estimado a Cobrar:</span>
-              <span class="text-white font-extrabold text-sm">
-                {{ loanService.settings()?.monedaSimbolo || '₡' }} 
-                {{ (editLoanData.creationMode === 'porcentaje' 
-                     ? (editLoanData.montoOriginal || 0) * (1 + (editLoanData.porcentaje || 0) / 100) 
-                     : (editLoanData.totalAPagarDirect || 0)) | number:'1.0-0' }}
-              </span>
-            </div>
-            
-            <button type="submit" 
-                    class="w-full bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3 rounded-lg font-black uppercase tracking-wider text-sm transition duration-150 mt-4 shadow-lg">
-              Guardar Cambios
-            </button>
-          </form>
-        </div>
-      </div>
 
       <!-- MODAL 2: Add Payment / Abono -->
       <div *ngIf="showAbonoModal()" class="fixed inset-0 z-50 bg-black/80 flex items-end sm:items-center justify-center backdrop-blur-sm">
@@ -782,6 +631,8 @@ export class DashboardComponent implements OnInit {
 
   @Output() openSettings = new EventEmitter<void>();
   @Output() openCreateLoan = new EventEmitter<void>();
+  @Output() openEditLoan = new EventEmitter<Loan>();
+
 
   // States
   activeTab = signal<'atrasados' | 'hoy' | 'dia'>('hoy');

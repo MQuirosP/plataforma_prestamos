@@ -73,6 +73,9 @@ export interface Loan {
   fineAmount?: number | null;
   fineFrequency?: FineFrequency | null;
   graceDays?: number;
+  tipoIdentificacion?: string | null;
+  numeroIdentificacion?: string | null;
+
   multasAcumuladas?: number;
   modalidad?: LoanModalidad;
   frecuenciaPago?: LoanFrecuencia;
