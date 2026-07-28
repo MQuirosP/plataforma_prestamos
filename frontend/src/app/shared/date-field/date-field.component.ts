@@ -42,8 +42,9 @@ export interface DatePreset {
   imports: [CommonModule, FormsModule],
 
   template: `
-    <div class="px-2 py-2 border-b border-industrial-border bg-industrial-dark max-w-full overflow-hidden space-y-2">
+    <div class="p-3 pt-3.5 border-b border-industrial-border bg-industrial-dark max-w-full overflow-hidden space-y-2.5">
       <!-- Month & Year Selector Controls -->
+
       <div class="flex items-center gap-2">
         <!-- Month Select -->
         <div class="group relative flex-1 flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">

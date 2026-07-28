@@ -108,19 +108,21 @@ app-date-picker-presets-header {
 }
 
 .mat-calendar-table-header {
-  color: #8E8E8E !important;
+  color: #FFCD00 !important;
   font-family: 'Outfit', 'Inter', sans-serif !important;
-  font-size: 11px !important;
+  font-size: 12px !important;
   text-transform: uppercase !important;
   border-bottom: 1px solid #2A2A2A !important;
 }
 
 .mat-calendar-table-header th {
-  padding-top: 10px !important;
-  padding-bottom: 10px !important;
-  font-weight: 700 !important;
+  color: #FFCD00 !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  font-weight: 800 !important;
   letter-spacing: 0.05em !important;
 }
+
 
 /* Day cells (WCAG minimum 44x44px touch target on mobile) */
 .mat-calendar-body-cell-content {
