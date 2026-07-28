@@ -97,6 +97,8 @@ app-date-picker-presets-header {
 .mat-calendar-header {
   background-color: #121212 !important;
   color: #E2E2E2 !important;
+  padding-top: 12px !important;
+  padding-bottom: 6px !important;
 }
 
 .mat-calendar-period-button,
@@ -110,6 +112,14 @@ app-date-picker-presets-header {
   font-family: 'Outfit', 'Inter', sans-serif !important;
   font-size: 11px !important;
   text-transform: uppercase !important;
+  border-bottom: 1px solid #2A2A2A !important;
+}
+
+.mat-calendar-table-header th {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
 }
 
 /* Day cells (WCAG minimum 44x44px touch target on mobile) */
@@ -137,6 +147,21 @@ app-date-picker-presets-header {
   color: #0B0B0B !important;
   font-weight: 800 !important;
   border-radius: 6px !important;
+}
+
+/* Today Indicator (Highlighted in Caterpillar Yellow with Bold text) */
+.mat-calendar-body-today {
+  border-color: #FFCD00 !important;
+  border-width: 2px !important;
+}
+
+.mat-calendar-body-today .mat-calendar-body-cell-content {
+  color: #FFCD00 !important;
+  font-weight: 900 !important;
+}
+
+.mat-calendar-body-today.mat-calendar-body-selected .mat-calendar-body-cell-content {
+  color: #0B0B0B !important;
 }
 
 /* Range Selection & Continuous Highlight */
