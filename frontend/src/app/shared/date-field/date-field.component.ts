@@ -8,8 +8,10 @@ import {
   inject,
   forwardRef,
   ViewChild,
-  ChangeDetectionStrategy
+  ChangeDetectionStrategy,
+  signal
 } from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import {
   ControlValueAccessor,
@@ -36,9 +38,34 @@ export interface DatePreset {
 @Component({
   selector: 'app-date-picker-presets-header',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
+
   template: `
-    <div class="px-2 py-2 border-b border-industrial-border bg-industrial-dark max-w-full overflow-hidden">
+    <div class="px-2 py-2 border-b border-industrial-border bg-industrial-dark max-w-full overflow-hidden space-y-2">
+      <!-- Month & Year Selector Controls -->
+      <div class="flex items-center gap-2">
+        <!-- Month Select -->
+        <div class="group relative flex-1 flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+          <select [ngModel]="selectedMonth()" (ngModelChange)="onMonthChange($event)" class="w-full bg-transparent text-white text-xs px-2.5 py-1.5 pr-6 focus:outline-none appearance-none cursor-pointer">
+            <option *ngFor="let m of months; let i = index" [value]="i" class="bg-industrial-dark text-white">{{ m }}</option>
+          </select>
+          <div class="absolute inset-y-0 right-0 flex items-center justify-center w-6 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
+
+        <!-- Year Select -->
+        <div class="group relative w-24 flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+          <select [ngModel]="selectedYear()" (ngModelChange)="onYearChange($event)" class="w-full bg-transparent text-white text-xs px-2.5 py-1.5 pr-6 focus:outline-none appearance-none cursor-pointer">
+            <option *ngFor="let y of years" [value]="y" class="bg-industrial-dark text-white">{{ y }}</option>
+          </select>
+          <div class="absolute inset-y-0 right-0 flex items-center justify-center w-6 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Preset Chips -->
       <div #scrollContainer (wheel)="onWheel($event)" class="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 text-xs whitespace-nowrap scrollbar-none scroll-smooth">
         <button
           type="button"
@@ -56,6 +83,42 @@ export class DatePickerPresetsHeader {
   static activeRangeGroup?: FormGroup;
   static activePicker?: MatDateRangePicker<Date>;
 
+  months = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  years: number[] = [];
+  selectedMonth = signal<number>(new Date().getMonth());
+  selectedYear = signal<number>(new Date().getFullYear());
+
+  constructor() {
+    const currentYr = new Date().getFullYear();
+    for (let y = currentYr - 5; y <= currentYr + 2; y++) {
+      this.years.push(y);
+    }
+  }
+
+  onMonthChange(mIndex: number) {
+    const month = Number(mIndex);
+    this.selectedMonth.set(month);
+    this.updateRangeByMonthYear(month, this.selectedYear());
+  }
+
+  onYearChange(yr: number) {
+    const year = Number(yr);
+    this.selectedYear.set(year);
+    this.updateRangeByMonthYear(this.selectedMonth(), year);
+  }
+
+  private updateRangeByMonthYear(month: number, year: number) {
+    if (DatePickerPresetsHeader.activeRangeGroup) {
+      const start = new Date(year, month, 1);
+      const end = new Date(year, month + 1, 0);
+      DatePickerPresetsHeader.activeRangeGroup.setValue({ start, end });
+    }
+  }
+
   onWheel(event: WheelEvent) {
     if (event.deltaY !== 0) {
       event.preventDefault();
@@ -66,8 +129,6 @@ export class DatePickerPresetsHeader {
       });
     }
   }
-
-
 
   presets: DatePreset[] = [
     { label: 'Hoy', getValue: () => { const d = new Date(); return { start: d, end: d }; } },
@@ -88,6 +149,7 @@ export class DatePickerPresetsHeader {
     }
   }
 }
+
 
 @Component({
   selector: 'app-date-field',
