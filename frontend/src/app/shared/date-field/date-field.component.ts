@@ -124,14 +124,19 @@ export class DatePickerPresetsHeader {
 
   onWheel(event: WheelEvent) {
     if (event.deltaY !== 0) {
-      event.preventDefault();
       const container = event.currentTarget as HTMLElement;
-      container.scrollBy({
-        left: event.deltaY > 0 ? 120 : -120,
-        behavior: 'smooth'
-      });
+      const isAtLeft = container.scrollLeft <= 0 && event.deltaY < 0;
+      const isAtRight = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1 && event.deltaY > 0;
+      if (!isAtLeft && !isAtRight) {
+        event.preventDefault();
+        container.scrollBy({
+          left: event.deltaY > 0 ? 120 : -120,
+          behavior: 'smooth'
+        });
+      }
     }
   }
+
 
   presets: DatePreset[] = [
     { label: 'Hoy', getValue: () => { const d = new Date(); return { start: d, end: d }; } },

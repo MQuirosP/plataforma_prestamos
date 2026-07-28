@@ -868,11 +868,16 @@ export class AdminComponent implements OnInit {
 
   onWheelScroll(event: WheelEvent) {
     if (event.deltaY !== 0) {
-      event.preventDefault();
       const container = event.currentTarget as HTMLElement;
-      container.scrollLeft += event.deltaY;
+      const isAtLeft = container.scrollLeft <= 0 && event.deltaY < 0;
+      const isAtRight = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1 && event.deltaY > 0;
+      if (!isAtLeft && !isAtRight) {
+        event.preventDefault();
+        container.scrollBy({ left: event.deltaY > 0 ? 120 : -120, behavior: 'smooth' });
+      }
     }
   }
+
 
   isExpiringSoon(tenant: Tenant): boolean {
     const expiry = this.getEffectiveExpiryDate(tenant).getTime();
