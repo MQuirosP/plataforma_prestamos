@@ -401,20 +401,50 @@ export async function getStats(req: AuthenticatedRequest, res: Response, next: N
     const platino = await prisma.user.count({ where: { rol: Role.PRESTAMISTA, plan: PlanSaaS.PLATINO } });
     const diamante = await prisma.user.count({ where: { rol: Role.PRESTAMISTA, plan: PlanSaaS.DIAMANTE } });
 
-    // Volumen de transacciones (Pagos)
-    const pagos = await prisma.payment.aggregate({
-      _sum: { montoAbonado: true }
+    // Precios de planes para cálculo MRR
+    const { PlanManager } = await import('../services/planManager.js');
+    const planConfigs = await PlanManager.getAllPlanConfigs();
+    const priceMap: Record<string, number> = {};
+    planConfigs.forEach(c => priceMap[c.plan] = Number(c.precioMensual));
+
+    const mrrEstimado = (bronce * (priceMap['BRONCE'] || 5000)) +
+                        (plata * (priceMap['PLATA'] || 7500)) +
+                        (oro * (priceMap['ORO'] || 10000)) +
+                        (platino * (priceMap['PLATINO'] || 20000)) +
+                        (diamante * (priceMap['DIAMANTE'] || 30000));
+
+    // Expiraciones / Alertas de cobro
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const porVencerCount = await prisma.user.count({
+      where: {
+        rol: Role.PRESTAMISTA,
+        paymentDate: { gte: now, lte: sevenDaysFromNow }
+      }
+    });
+
+    const vencidosCount = await prisma.user.count({
+      where: {
+        rol: Role.PRESTAMISTA,
+        paymentDate: { lt: now }
+      }
     });
 
     return res.json({
       totalPrestamistas,
       totalCobradores,
       totalPrestamos,
-      planes: { bronce, plata, oro, platino, diamante },
-      volumenTransaccional: pagos._sum.montoAbonado || 0
+      mrrEstimado,
+      alertasCobro: {
+        porVencer: porVencerCount,
+        vencidos: vencidosCount
+      },
+      planes: { bronce, plata, oro, platino, diamante }
     });
   } catch (err: any) { next(err); }
 }
+
 
 // 8. Obtener configuración de los planes SaaS
 export async function getPlanConfigs(req: AuthenticatedRequest, res: Response, next: NextFunction) {

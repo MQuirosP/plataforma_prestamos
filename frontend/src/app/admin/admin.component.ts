@@ -45,29 +45,73 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
       <!-- Main Layout -->
       <main class="max-w-4xl mx-auto px-4 mt-6">
         
-        <!-- Stats Row -->
+        <!-- Stats Row (Interactive KPIs) -->
         <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" *ngIf="stats()">
-          <div class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl">
-            <span class="text-[9px] text-industrial-muted uppercase font-mono">Prestamistas</span>
-            <span class="text-xl font-black text-white block mt-1">{{ stats()?.totalPrestamistas }}</span>
-          </div>
-          <div class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl">
-            <span class="text-[9px] text-industrial-muted uppercase font-mono">Cobradores</span>
-            <span class="text-xl font-black text-white block mt-1">{{ stats()?.totalCobradores }}</span>
-          </div>
-          <div class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl">
-            <span class="text-[9px] text-industrial-muted uppercase font-mono">Volumen Total</span>
-            <span class="text-xl font-black text-caterpillar block mt-1">₡{{ stats()?.volumenTransaccional | number:'1.0-0' }}</span>
-          </div>
-          <div class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl flex items-center justify-between">
-            <div>
-              <span class="text-[9px] text-industrial-muted uppercase font-mono">Planes</span>
-              <div class="text-[10px] text-white mt-1">
-                BR: {{ stats()?.planes?.bronce }} | PL: {{ stats()?.planes?.plata }} | OR: {{ stats()?.planes?.oro }} | PT: {{ stats()?.planes?.platino }} | DM: {{ stats()?.planes?.diamante }}
-              </div>
+          
+          <!-- Card 1: Prestamistas -->
+          <div (click)="activeTab.set('tenants'); activeSubFilter.set('TODO')"
+               title="Ver todos los prestamistas"
+               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar hover:scale-[1.02] transition duration-150 group">
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] text-industrial-muted uppercase font-mono group-hover:text-caterpillar transition">Prestamistas</span>
+              <svg class="w-3.5 h-3.5 text-industrial-muted group-hover:text-caterpillar transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+            <div class="flex items-baseline justify-between mt-1">
+              <span class="text-xl font-black text-white">{{ stats()?.totalPrestamistas }}</span>
+              <span class="text-[10px] text-semantic-emerald font-mono font-bold">● {{ getTenantCount('ACTIVO') }} Activos</span>
             </div>
           </div>
+
+          <!-- Card 2: Alertas de Cobro SaaS (Reemplaza Volumen) -->
+          <div (click)="activeTab.set('tenants'); activeSubFilter.set('POR_VENCER')"
+               title="Ver clientes por vencer / vencidos"
+               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar hover:scale-[1.02] transition duration-150 group">
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] text-industrial-muted uppercase font-mono group-hover:text-caterpillar transition">Alertas Cobro</span>
+              <svg class="w-3.5 h-3.5 text-caterpillar" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-[11px] font-bold text-caterpillar">⚡ {{ stats()?.alertasCobro?.porVencer || 0 }} por vencer</span>
+              <span class="text-[11px] font-bold text-semantic-red">🚨 {{ stats()?.alertasCobro?.vencidos || 0 }} vencidos</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Ingreso Recurrente SaaS (MRR) -->
+          <div (click)="showSettingsPanel.set(true)"
+               title="Ver Precios e Ingresos Recurrentes"
+               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar hover:scale-[1.02] transition duration-150 group">
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] text-industrial-muted uppercase font-mono group-hover:text-caterpillar transition">MRR Est. SaaS</span>
+              <svg class="w-3.5 h-3.5 text-semantic-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div class="flex items-baseline justify-between mt-1">
+              <span class="text-lg font-black text-caterpillar">₡{{ stats()?.mrrEstimado | number:'1.0-0' }}</span>
+              <span class="text-[9px] text-industrial-muted font-mono">/mes</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Distribución de Planes -->
+          <div (click)="activeTab.set('tenants'); activeSubFilter.set('TODO')"
+               title="Ver prestamistas por plan"
+               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar hover:scale-[1.02] transition duration-150 group">
+            <span class="text-[9px] text-industrial-muted uppercase font-mono block mb-1 group-hover:text-caterpillar transition">Planes SaaS</span>
+            <div class="flex items-center gap-1 text-[10px] font-mono flex-wrap">
+              <span class="px-1.5 py-0.5 rounded bg-amber-950/40 text-amber-400 border border-amber-500/20">BR:{{ stats()?.planes?.bronce }}</span>
+              <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-600/30">PL:{{ stats()?.planes?.plata }}</span>
+              <span class="px-1.5 py-0.5 rounded bg-yellow-950/40 text-caterpillar border border-caterpillar/30">OR:{{ stats()?.planes?.oro }}</span>
+              <span class="px-1.5 py-0.5 rounded bg-purple-950/40 text-purple-400 border border-purple-500/30">PT:{{ stats()?.planes?.platino }}</span>
+              <span class="px-1.5 py-0.5 rounded bg-cyan-950/40 text-cyan-400 border border-cyan-500/30">DM:{{ stats()?.planes?.diamante }}</span>
+            </div>
+          </div>
+
         </section>
+
 
         <!-- Tabs -->
         <div class="flex border-b border-industrial-border mb-6">

@@ -38,6 +38,11 @@ export interface SaaSStats {
   totalPrestamistas: number;
   totalCobradores: number;
   totalPrestamos: number;
+  mrrEstimado?: number;
+  alertasCobro?: {
+    porVencer: number;
+    vencidos: number;
+  };
   planes: {
     bronce: number;
     plata: number;
@@ -45,8 +50,9 @@ export interface SaaSStats {
     platino: number;
     diamante: number;
   };
-  volumenTransaccional: number;
+  volumenTransaccional?: number;
 }
+
 
 export interface SaaSLog {
   id: string;
