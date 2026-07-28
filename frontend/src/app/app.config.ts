@@ -21,10 +21,12 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimations(),
+    provideNativeDateAdapter(),
     { provide: MAT_DATE_LOCALE, useValue: 'es-CR' },
     { provide: DateAdapter, useClass: CustomMondayDateAdapter }
   ]
 };
+
 
 
 
