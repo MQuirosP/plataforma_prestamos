@@ -71,34 +71,51 @@ function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro
   
   // Calculate total payments received
   const payments = loan.payments || [];
-  const totalAbonado = payments.reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
-  const numCuotasAbonadas = Math.floor(totalAbonado / cuotaAmount);
+  const isAlquiler = loan.modalidad === 'ALQUILER';
+  const freq = loan.frecuenciaPago || 'SEMANAL';
+  
+  let numCuotasAbonadas = 0;
+  if (isAlquiler) {
+    const totalAbonadoRenta = payments.filter((p: any) => p.tipoPago === 'CUOTA_RENTA').reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+    numCuotasAbonadas = Math.floor(totalAbonadoRenta / cuotaAmount);
+  } else {
+    const totalAbonado = payments.reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+    numCuotasAbonadas = Math.floor(totalAbonado / cuotaAmount);
+  }
 
   // Generate due dates since startDate up to today
-  // diaCobro: 1 = Lunes, 7 = Domingo
   const dueDates: Date[] = [];
   let current = new Date(startDate);
   
-  // Align current to the first diaCobro on or after startDate
-  const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
-  let dayOffset = jsDayCobro - current.getDay();
-  if (dayOffset < 0) {
-    dayOffset += 7;
-  }
-  
-  // Regla de propuesta 3: si el primer cobro cae a menos del umbral de días mínimos, sumar 7 días (pasar a la siguiente semana)
-  if (dayOffset < diasMinimosPrimerCobro) {
-    dayOffset += 7;
-  }
-  
-  current.setDate(current.getDate() + dayOffset);
+  if (freq === 'SEMANAL') {
+    const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
+    let dayOffset = jsDayCobro - current.getDay();
+    if (dayOffset < 0) dayOffset += 7;
+    if (dayOffset < diasMinimosPrimerCobro) dayOffset += 7;
+    current.setDate(current.getDate() + dayOffset);
+    
+    const totalCuotasEstimadas = isAlquiler ? 999999 : Math.ceil(Number(loan.totalAPagar) / cuotaAmount);
 
-  // We generate up to the total number of expected installments
-  const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / cuotaAmount);
-
-  while (current <= today && dueDates.length < totalCuotasEstimadas) {
-    dueDates.push(new Date(current));
-    current.setDate(current.getDate() + 7);
+    while (current <= today && dueDates.length < totalCuotasEstimadas) {
+      dueDates.push(new Date(current));
+      current.setDate(current.getDate() + 7);
+    }
+  } else if (freq === 'QUINCENAL') {
+    current.setDate(current.getDate() + 15);
+    const totalCuotasEstimadas = isAlquiler ? 999999 : Math.ceil(Number(loan.totalAPagar) / cuotaAmount);
+    
+    while (current <= today && dueDates.length < totalCuotasEstimadas) {
+      dueDates.push(new Date(current));
+      current.setDate(current.getDate() + 15);
+    }
+  } else {
+    current.setMonth(current.getMonth() + 1);
+    const totalCuotasEstimadas = isAlquiler ? 999999 : Math.ceil(Number(loan.totalAPagar) / cuotaAmount);
+    
+    while (current <= today && dueDates.length < totalCuotasEstimadas) {
+      dueDates.push(new Date(current));
+      current.setMonth(current.getMonth() + 1);
+    }
   }
 
   const N = dueDates.length; // number of installments that have fallen due

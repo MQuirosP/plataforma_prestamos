@@ -61,27 +61,30 @@ app.use(cors({
 // JSON parsing
 app.use(express.json());
 
-// Rate limiters
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde." },
-  statusCode: 429
-});
+// Rate limiters (enabled in production only to avoid blocking local dev/testing)
+if (process.env.NODE_ENV === 'production') {
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 500,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde." },
+    statusCode: 429
+  });
 
-const strictAuthLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde." },
-  statusCode: 429
-});
+  const strictAuthLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Demasiadas peticiones desde esta IP. Bloqueo de seguridad industrial activado. Reintente más tarde." },
+    statusCode: 429
+  });
 
-app.use('/api/auth', strictAuthLimiter);
-app.use('/api', generalLimiter);
+  app.use('/api/auth', strictAuthLimiter);
+  app.use('/api', generalLimiter);
+}
+
 
 // Health check
 app.get('/health', (_req: Request, res: Response) => {

@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { LoanService } from './loan.service';
+import { LoanService, Role } from './loan.service';
 
 export interface Tenant {
   id: string;
@@ -118,6 +118,7 @@ export class AdminService {
     tipoEvento?: string;
     startDate?: string;
     endDate?: string;
+    prestamistaId?: string;
   } = {}): Promise<SaaSLogResponse> {
     let httpParams = new HttpParams();
     if (params.page !== undefined) httpParams = httpParams.set('page', params.page.toString());
@@ -125,6 +126,7 @@ export class AdminService {
     if (params.tipoEvento) httpParams = httpParams.set('tipoEvento', params.tipoEvento);
     if (params.startDate) httpParams = httpParams.set('startDate', params.startDate);
     if (params.endDate) httpParams = httpParams.set('endDate', params.endDate);
+    if (params.prestamistaId) httpParams = httpParams.set('prestamistaId', params.prestamistaId);
 
     const headers = this.getHeaders();
     return firstValueFrom(this.http.get<SaaSLogResponse>(`${this.apiUrl}/admin/logs`, {
@@ -174,7 +176,7 @@ export class AdminService {
     const backupToken = localStorage.getItem('admin_backup_token');
     if (backupToken) {
       // Decode the backup token payload to restore the real admin user identity
-      let adminUser: any = { id: 'admin', nombre: 'Admin', rol: 'ADMIN' };
+      let adminUser: any = { id: 'admin', nombre: 'Admin', rol: Role.ADMIN };
       try {
         const payloadBase64 = backupToken.split('.')[1];
         const decoded = JSON.parse(atob(payloadBase64));

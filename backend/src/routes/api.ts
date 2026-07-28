@@ -51,9 +51,10 @@ router.get('/caja/:cobradorId', getCajaCobrador as any);
 router.post('/liquidaciones/procesar', procesarLiquidacion as any);
 
 // Prestamista: manage cobradores
-import { createCobrador, getCobradores } from '../controllers/tenantController';
+import { createCobrador, getCobradores, getTenantLogs } from '../controllers/tenantController';
 router.get('/cobradores', getCobradores as any);
 router.post('/cobradores', createCobrador as any);
+router.get('/tenant/logs', getTenantLogs as any);
 
 // Developer Helper: Endpoint to toggle the current user's subscription status between ACTIVE and EXPIRED
 // This allows the user to test the Expired Subscription View block screen on the frontend immediately.

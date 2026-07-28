@@ -1,15 +1,18 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminService, Tenant, SaaSStats, SaaSLog, SaaSPlanConfig } from '../services/admin.service';
 import { ToastService } from '../services/toast.service';
 import { LoanService } from '../services/loan.service';
+import { AuditLogListComponent, AuditLogEntry } from '../shared/audit-log-list/audit-log-list.component';
 import html2canvas from 'html2canvas';
+
+import { DateFieldComponent } from '../shared/date-field/date-field.component';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AuditLogListComponent, DateFieldComponent],
   template: `
     <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
       
@@ -218,6 +221,9 @@ import html2canvas from 'html2canvas';
                     <button (click)="toggleSuspend(tenant)" class="flex-1 bg-industrial-surface border border-industrial-border text-xs py-2 px-3 rounded text-white hover:border-caterpillar transition">
                       {{ tenant.suspendido ? 'Activar' : 'Suspender' }}
                     </button>
+                    <button (click)="viewTenantActivity(tenant)" class="flex-1 bg-industrial-surface border border-industrial-border text-xs py-2 px-3 rounded text-industrial-muted hover:text-caterpillar hover:border-caterpillar/30 transition">
+                      Actividad
+                    </button>
                     <button (click)="impersonate(tenant)" class="flex-1 bg-caterpillar text-industrial-black font-black text-xs py-2 px-3 rounded uppercase shadow hover:bg-caterpillar-dark transition text-center">
                       Ingresar
                     </button>
@@ -276,7 +282,7 @@ import html2canvas from 'html2canvas';
 
         <!-- Logs Tab -->
         <section *ngIf="activeTab() === 'logs'" class="space-y-4">
-          <!-- Filtros de Auditoría -->
+        <!-- Filtros de Auditoría -->
           <div class="bg-industrial-dark border border-industrial-border rounded-xl p-4 flex flex-col md:flex-row gap-3 items-end">
             <div class="flex-1 w-full">
               <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Tipo de Actividad</label>
@@ -293,47 +299,47 @@ import html2canvas from 'html2canvas';
                 </div>
               </div>
             </div>
-            <div class="w-full md:w-36">
-              <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Desde</label>
-              <input type="date" [ngModel]="filterStartDate()" (ngModelChange)="onFilterStartDateChange($event)" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs focus:border-caterpillar outline-none">
+            <div class="flex-1 w-full">
+              <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Prestamista</label>
+              <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                <select [ngModel]="filterPrestamistaId()" (ngModelChange)="onFilterPrestamistaIdChange($event)"
+                        class="w-full bg-transparent text-white text-xs px-3 py-2.5 pr-12 focus:outline-none appearance-none cursor-pointer">
+                  <option value="">Todos los prestamistas</option>
+                  <option *ngFor="let t of tenants()" [value]="t.id">{{ t.nombre }}</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
             </div>
-            <div class="w-full md:w-36">
-              <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Hasta</label>
-              <input type="date" [ngModel]="filterEndDate()" (ngModelChange)="onFilterEndDateChange($event)" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-2 text-white text-xs focus:border-caterpillar outline-none">
+            <div class="flex-1 w-full min-w-[240px]">
+              <app-date-field
+                mode="range"
+                label="Rango de Fechas"
+                placeholder="Filtrar fechas"
+                [ngModel]="dateRangeValue()"
+                (ngModelChange)="onDateRangeChange($event)">
+              </app-date-field>
             </div>
-            <button (click)="clearLogsFilters()" class="w-full md:w-auto bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-industrial-light text-xs font-bold px-4 py-2.5 rounded-lg transition shrink-0">
+
+            <button (click)="clearLogsFilters()" class="w-full md:w-auto bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-industrial-light text-xs font-bold px-4 py-2.5 rounded-lg transition shrink-0 self-end">
               Limpiar
             </button>
           </div>
 
-          <div *ngFor="let log of logs()" class="bg-industrial-surface border border-industrial-border rounded-lg p-3 text-xs">
-            <div class="flex justify-between items-start mb-1">
-              <span class="font-bold text-white">{{ log.tipoEvento }}</span>
-              <span class="text-[10px] text-industrial-muted font-mono">{{ log.fecha | date:'dd/MM HH:mm:ss' }}</span>
-            </div>
-            <p class="text-industrial-muted">{{ log.descripcion }}</p>
-            <div class="mt-1 flex gap-3 text-[9px] text-industrial-muted font-mono opacity-70">
-              <span>IP: {{ log.ip }}</span>
-              <span *ngIf="log.prestamistaId">Cliente ID: {{ log.prestamistaId }}</span>
-            </div>
-          </div>
 
-          <div *ngIf="logs().length === 0" class="text-center py-8 text-industrial-muted text-xs">
-            No se encontraron registros de auditoría.
-          </div>
+          <app-audit-log-list
+            [logs]="logsForDisplay()"
+            [loading]="false"
+            [page]="logsPage()"
+            [totalPages]="logsTotalPages()"
+            [total]="logsTotal()"
+            [showMeta]="true"
+            (pageChange)="changeLogsPage($event)">
+          </app-audit-log-list>
 
-          <!-- Paginación de Auditoría -->
-          <div *ngIf="logsTotalPages() > 1" class="flex items-center justify-between border-t border-industrial-border/60 pt-4 mt-2">
-            <button [disabled]="logsPage() <= 1" (click)="changeLogsPage(logsPage() - 1)" class="bg-industrial-surface border border-industrial-border px-3.5 py-2 rounded-lg text-xs font-bold text-industrial-light hover:text-caterpillar disabled:opacity-40 disabled:hover:text-industrial-light transition">
-              Anterior
-            </button>
-            <span class="text-[10px] text-industrial-muted font-mono uppercase">
-              Página {{ logsPage() }} de {{ logsTotalPages() }} (Total: {{ logsTotal() }})
-            </span>
-            <button [disabled]="logsPage() >= logsTotalPages()" (click)="changeLogsPage(logsPage() + 1)" class="bg-industrial-surface border border-industrial-border px-3.5 py-2 rounded-lg text-xs font-bold text-industrial-light hover:text-caterpillar disabled:opacity-40 disabled:hover:text-industrial-light transition">
-              Siguiente
-            </button>
-          </div>
         </section>
 
       </main>
@@ -554,10 +560,23 @@ export class AdminComponent implements OnInit {
   logs = signal<SaaSLog[]>([]);
   planConfigs = signal<SaaSPlanConfig[]>([]);
 
+  /** Maps SaaSLog[] to AuditLogEntry[] for the shared component. */
+  logsForDisplay = computed<AuditLogEntry[]>(() =>
+    this.logs().map(l => ({
+      id: l.id,
+      tipoEvento: l.tipoEvento,
+      descripcion: l.descripcion,
+      fecha: l.fecha,
+      ip: l.ip,
+      prestamistaId: l.prestamistaId
+    }))
+  );
+
   // Logs filters & pagination state
   filterTipoEvento = signal<string>('');
   filterStartDate = signal<string>('');
   filterEndDate = signal<string>('');
+  filterPrestamistaId = signal<string>('');
   logsPage = signal<number>(1);
   logsTotalPages = signal<number>(1);
   logsTotal = signal<number>(0);
@@ -569,7 +588,13 @@ export class AdminComponent implements OnInit {
     'CAMBIO_PLAN',
     'IMPERSONATE',
     'ACTUALIZAR_PLAN',
-    'CREAR_COBRADOR'
+    'CREAR_COBRADOR',
+    'CREAR_LOAN',
+    'EDITAR_LOAN',
+    'ELIMINAR_LOAN',
+    'AGREGAR_PAGO',
+    'ELIMINAR_PAGO',
+    'ACTUALIZAR_SETTINGS'
   ];
 
   searchTerm = '';
@@ -592,7 +617,20 @@ export class AdminComponent implements OnInit {
   confirmModalConfig = signal<{ title: string; message: string; danger?: boolean; action: () => void } | null>(null);
 
   ngOnInit() {
+    this.applyImpersonationFilter();
     this.loadData();
+  }
+
+  /** If the admin is currently impersonating a tenant (or cobrador), pre-filter logs to that tenant. */
+  applyImpersonationFilter() {
+    const user = this.loanService.currentUser();
+    if (!user?.isImpersonating) return;
+    // When impersonating a PRESTAMISTA, user.id IS the tenant
+    // When impersonating a COBRADOR, user.prestamistaId is the tenant
+    const tenantId = user.rol === 'COBRADOR' ? user.prestamistaId : user.id;
+    if (tenantId) {
+      this.filterPrestamistaId.set(tenantId);
+    }
   }
 
   async loadData() {
@@ -628,7 +666,8 @@ export class AdminComponent implements OnInit {
         limit: this.logsLimit,
         tipoEvento: this.filterTipoEvento() || undefined,
         startDate: this.filterStartDate() || undefined,
-        endDate: this.filterEndDate() || undefined
+        endDate: this.filterEndDate() || undefined,
+        prestamistaId: this.filterPrestamistaId() || undefined
       });
       this.logs.set(res.data);
       this.logsTotalPages.set(res.meta.totalPages);
@@ -644,14 +683,33 @@ export class AdminComponent implements OnInit {
     await this.loadLogs();
   }
 
-  async onFilterStartDateChange(val: string) {
-    this.filterStartDate.set(val);
+  dateRangeValue = computed(() => ({
+    start: this.filterStartDate(),
+    end: this.filterEndDate()
+  }));
+
+  async onDateRangeChange(range: { start: string; end: string }) {
+    const newStart = range?.start || '';
+    const newEnd = range?.end || '';
+    if (newStart === this.filterStartDate() && newEnd === this.filterEndDate()) {
+      return;
+    }
+    this.filterStartDate.set(newStart);
+    this.filterEndDate.set(newEnd);
     this.logsPage.set(1);
     await this.loadLogs();
   }
 
-  async onFilterEndDateChange(val: string) {
-    this.filterEndDate.set(val);
+
+  async viewTenantActivity(tenant: Tenant) {
+    this.filterPrestamistaId.set(tenant.id);
+    this.activeTab.set('logs');
+    this.logsPage.set(1);
+    await this.loadLogs();
+  }
+
+  async onFilterPrestamistaIdChange(val: string) {
+    this.filterPrestamistaId.set(val);
     this.logsPage.set(1);
     await this.loadLogs();
   }
@@ -660,6 +718,7 @@ export class AdminComponent implements OnInit {
     this.filterTipoEvento.set('');
     this.filterStartDate.set('');
     this.filterEndDate.set('');
+    this.filterPrestamistaId.set('');
     this.logsPage.set(1);
     await this.loadLogs();
   }

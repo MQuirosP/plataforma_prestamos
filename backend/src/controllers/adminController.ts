@@ -319,19 +319,37 @@ export async function impersonateCobrador(req: AuthenticatedRequest, res: Respon
 // 6. Obtener Logs de Auditoría
 export async function getLogs(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
+
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const skip = (page - 1) * limit;
+
+  const tipoEvento = req.query.tipoEvento as string | undefined;
+  const startDate = req.query.startDate as string | undefined;
+  const endDate = req.query.endDate as string | undefined;
+  const filterPrestamistaId = req.query.prestamistaId as string | undefined;
+
+  if (isUsingMemoryStore()) {
+    let logs = [...inMemoryStore.logs];
+    if (tipoEvento) logs = logs.filter(l => l.tipoEvento === tipoEvento);
+    if (filterPrestamistaId) logs = logs.filter(l => l.prestamistaId === filterPrestamistaId);
+    if (startDate) logs = logs.filter(l => new Date(l.fecha) >= new Date(`${startDate}T00:00:00-06:00`));
+    if (endDate) logs = logs.filter(l => new Date(l.fecha) <= new Date(`${endDate}T23:59:59.999-06:00`));
+    logs.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    const total = logs.length;
+    const paginated = logs.slice(skip, skip + limit);
+    return res.json({ data: paginated, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } });
+  }
+
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
-
-    const tipoEvento = req.query.tipoEvento as string | undefined;
-    const startDate = req.query.startDate as string | undefined;
-    const endDate = req.query.endDate as string | undefined;
-
     const where: any = {};
 
     if (tipoEvento) {
       where.tipoEvento = tipoEvento;
+    }
+
+    if (filterPrestamistaId) {
+      where.prestamistaId = filterPrestamistaId;
     }
 
     if (startDate || endDate) {

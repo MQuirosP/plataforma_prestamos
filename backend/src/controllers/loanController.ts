@@ -2,11 +2,54 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
-import { Role, SubscriptionType, MetodoPago, LoanStatus, FineFrequency, TipoIdentificacion } from '@prisma/client';
+import { Role, SubscriptionType, MetodoPago, LoanStatus, FineFrequency, TipoIdentificacion, LoanModalidad, LoanFrecuencia, PaymentTipo } from '@prisma/client';
 import { updatePenaltiesForTenant } from '../services/fineService';
 import { logger } from '../services/logger';
 import { sanitizeString, sanitizePhone, validatePositiveNumber, validateIntegerRange } from '../services/validation';
+import { logActivity } from '../services/auditLogger';
 
+
+function getDuePeriodsCount(loan: any, today: Date = new Date(), diasMinimos: number = 3): number {
+  const startDate = new Date(loan.fechaInicio);
+  const freq = loan.frecuenciaPago || 'SEMANAL';
+  
+  if (freq === 'SEMANAL') {
+    let current = new Date(startDate);
+    const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
+    let dayOffset = jsDayCobro - current.getDay();
+    if (dayOffset < 0) dayOffset += 7;
+    if (dayOffset < diasMinimos) dayOffset += 7;
+    current.setDate(current.getDate() + dayOffset);
+    
+    let count = 0;
+    while (current <= today) {
+      count++;
+      current.setDate(current.getDate() + 7);
+      if (count > 5000) break;
+    }
+    return count;
+  } else if (freq === 'QUINCENAL') {
+    let current = new Date(startDate);
+    current.setDate(current.getDate() + 15);
+    let count = 0;
+    while (current <= today) {
+      count++;
+      current.setDate(current.getDate() + 15);
+      if (count > 2500) break;
+    }
+    return count;
+  } else {
+    let current = new Date(startDate);
+    current.setMonth(current.getMonth() + 1);
+    let count = 0;
+    while (current <= today) {
+      count++;
+      current.setMonth(current.getMonth() + 1);
+      if (count > 1200) break;
+    }
+    return count;
+  }
+}
 
 // List all loans for the logged-in lender (or cobrador's prestamista)
 export async function getLoans(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -31,9 +74,14 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
   await updatePenaltiesForTenant(prestamistaId);
 
   let isExpired = false;
+  let diasMinimos = 3;
   if (isUsingMemoryStore()) {
     const sub = inMemoryStore.subscriptions.find(s => s.userId === prestamistaId);
     isExpired = sub?.tipo === SubscriptionType.EXPIRED;
+    const sett = inMemoryStore.settings.find(s => s.userId === prestamistaId);
+    if (sett) {
+      diasMinimos = sett.diasMinimosPrimerCobro;
+    }
   } else {
     try {
       const sub = await prisma.subscription.findFirst({
@@ -41,6 +89,10 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         orderBy: { createdAt: 'desc' }
       });
       isExpired = sub?.tipo === SubscriptionType.EXPIRED;
+      const sett = await prisma.businessSettings.findUnique({ where: { userId: prestamistaId } });
+      if (sett) {
+        diasMinimos = sett.diasMinimosPrimerCobro;
+      }
     } catch {
       isExpired = false;
     }
@@ -58,10 +110,25 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
     const loans = inMemoryStore.loans.filter(l => l.prestamistaId === prestamistaId);
     const loansWithBalance = loans.map(loan => {
       const payments = inMemoryStore.payments.filter(p => p.loanId === loan.id);
-      const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0);
-      const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
-      const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
-      const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+      const isAlquiler = loan.modalidad === 'ALQUILER';
+      
+      let balancePendiente = 0;
+      let cuotaActual = 0;
+      let cuotasTotales = 0;
+      
+      if (isAlquiler) {
+        const totalAbonadoCapital = payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + p.montoAbonado, 0);
+        const totalAbonadoRenta = payments.filter(p => p.tipoPago === 'CUOTA_RENTA').reduce((sum, p) => sum + p.montoAbonado, 0);
+        balancePendiente = Number(loan.montoOriginal) + Number(loan.multasAcumuladas || 0) - totalAbonadoCapital;
+        cuotaActual = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
+        cuotasTotales = getDuePeriodsCount(loan, new Date(), diasMinimos);
+      } else {
+        const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0);
+        balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
+        const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+        cuotaActual = Math.min(Math.floor(totalAbonado / Number(loan.cuotaSemanal)), totalCuotasEstimadas);
+        cuotasTotales = totalCuotasEstimadas;
+      }
 
       return {
         ...loan,
@@ -73,8 +140,8 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         graceDays: Number(loan.graceDays),
         multasAcumuladas: Number(loan.multasAcumuladas || 0),
         balancePendiente,
-        cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
-        cuotasTotales: totalCuotasEstimadas,
+        cuotaActual,
+        cuotasTotales,
         payments
       };
     });
@@ -88,10 +155,25 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
     });
 
     const loansWithBalance = loans.map(loan => {
-      const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-      const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
-      const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
-      const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+      const isAlquiler = loan.modalidad === 'ALQUILER';
+      
+      let balancePendiente = 0;
+      let cuotaActual = 0;
+      let cuotasTotales = 0;
+      
+      if (isAlquiler) {
+        const totalAbonadoCapital = loan.payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        const totalAbonadoRenta = loan.payments.filter(p => p.tipoPago === 'CUOTA_RENTA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        balancePendiente = Number(loan.montoOriginal) + Number(loan.multasAcumuladas || 0) - totalAbonadoCapital;
+        cuotaActual = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
+        cuotasTotales = getDuePeriodsCount(loan, new Date(), diasMinimos);
+      } else {
+        const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
+        const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+        cuotaActual = Math.min(Math.floor(totalAbonado / Number(loan.cuotaSemanal)), totalCuotasEstimadas);
+        cuotasTotales = totalCuotasEstimadas;
+      }
 
       return {
         ...loan,
@@ -103,8 +185,8 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         graceDays: Number(loan.graceDays),
         multasAcumuladas: Number(loan.multasAcumuladas || 0),
         balancePendiente,
-        cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
-        cuotasTotales: totalCuotasEstimadas,
+        cuotaActual,
+        cuotasTotales,
         payments: loan.payments.map(p => ({
           ...p,
           montoAbonado: Number(p.montoAbonado)
@@ -129,7 +211,8 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
   const {
     clienteNombre, clienteTelefono, montoOriginal, cuotaSemanal, diaCobro,
     tipoIdentificacion, numeroIdentificacion, porcentaje,
-    fineAmount, fineFrequency, graceDays, totalAPagarDirect
+    fineAmount, fineFrequency, graceDays, totalAPagarDirect,
+    modalidad, frecuenciaPago
   } = req.body;
 
   const cleanNombre = sanitizeString(clienteNombre, 100);
@@ -176,8 +259,39 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
     return res.status(400).json({ error: 'El monto total a pagar debe ser un número positivo.' });
   }
 
+  // Obtener la modalidad predeterminada de la configuración del prestamista
+  let defaultModalidad: 'TRADICIONAL' | 'ALQUILER' = 'TRADICIONAL';
+  if (isUsingMemoryStore()) {
+    const sett = inMemoryStore.settings.find(s => s.userId === prestamistaId);
+    if (sett && sett.modalidadPredeterminada) {
+      defaultModalidad = sett.modalidadPredeterminada;
+    }
+  } else {
+    try {
+      const sett = await prisma.businessSettings.findUnique({
+        where: { userId: prestamistaId },
+        select: { modalidadPredeterminada: true }
+      });
+      if (sett && sett.modalidadPredeterminada) {
+        defaultModalidad = sett.modalidadPredeterminada as any;
+      }
+    } catch {
+      defaultModalidad = 'TRADICIONAL';
+    }
+  }
+
+  const cleanModalidad = (modalidad === 'ALQUILER' || modalidad === 'TRADICIONAL')
+    ? (modalidad as LoanModalidad)
+    : (defaultModalidad as LoanModalidad);
+
+  const cleanFrecuencia = (frecuenciaPago === 'SEMANAL' || frecuenciaPago === 'QUINCENAL' || frecuenciaPago === 'MENSUAL')
+    ? (frecuenciaPago as LoanFrecuencia)
+    : ('SEMANAL' as LoanFrecuencia);
+
   let totalAPagar: number;
-  if (parsedTotalAPagarDirect !== null) {
+  if (cleanModalidad === 'ALQUILER') {
+    totalAPagar = parsedMonto;
+  } else if (parsedTotalAPagarDirect !== null) {
     totalAPagar = parsedTotalAPagarDirect;
   } else {
     let gananciaPorcentaje = 50;
@@ -262,10 +376,19 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
       fineAmount: parsedFineAmount,
       fineFrequency: fineFrequency || null,
       graceDays: parsedGraceDays,
-      multasAcumuladas: 0
+      multasAcumuladas: 0,
+      modalidad: cleanModalidad,
+      frecuenciaPago: cleanFrecuencia
     };
     inMemoryStore.loans.push(newLoan);
-    return res.status(201).json({ ...newLoan, balancePendiente: totalAPagar, payments: [] });
+    await logActivity(req, 'CREAR_LOAN', `Creó préstamo de ${totalAPagar} para el cliente ${cleanNombre} (${cleanModalidad})`);
+    return res.status(201).json({
+      ...newLoan,
+      balancePendiente: totalAPagar,
+      cuotaActual: 0,
+      cuotasTotales: cleanModalidad === 'ALQUILER' ? 0 : Math.ceil(totalAPagar / parsedCuota),
+      payments: []
+    });
   }
 
   try {
@@ -285,12 +408,15 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
           fineAmount: parsedFineAmount,
           fineFrequency: fineFrequency || null,
           graceDays: parsedGraceDays,
-          multasAcumuladas: 0
+          multasAcumuladas: 0,
+          modalidad: cleanModalidad,
+          frecuenciaPago: cleanFrecuencia
         }
       });
       return loan;
     });
 
+    await logActivity(req, 'CREAR_LOAN', `Creó préstamo de ${totalAPagar} para el cliente ${cleanNombre} (${cleanModalidad})`);
     return res.status(201).json({
       ...result,
       montoOriginal: Number(result.montoOriginal),
@@ -301,6 +427,8 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
       graceDays: Number(result.graceDays),
       multasAcumuladas: Number(result.multasAcumuladas || 0),
       balancePendiente: Number(result.totalAPagar),
+      cuotaActual: 0,
+      cuotasTotales: cleanModalidad === 'ALQUILER' ? 0 : Math.ceil(Number(result.totalAPagar) / Number(result.cuotaSemanal)),
       payments: []
     });
   } catch (err: any) { next(err); }
@@ -308,7 +436,7 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
 
 export async function addPayment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const { id: loanId } = req.params;
-  const { montoAbonado, notas, metodoPago } = req.body;
+  const { montoAbonado, notas, metodoPago, tipoPago } = req.body;
   const creadoPorId = req.user?.id;
   const userRole = req.user?.rol;
 
@@ -330,12 +458,25 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       return res.status(404).json({ error: 'Préstamo no encontrado' });
     }
 
-    const payments = inMemoryStore.payments.filter(p => p.loanId === loanId);
-    const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0);
-    const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
+    const isAlquiler = loan.modalidad === 'ALQUILER';
+    const cleanTipoPago = isAlquiler
+      ? (tipoPago === 'ABONO_CAPITAL' ? 'ABONO_CAPITAL' : 'CUOTA_RENTA')
+      : 'ABONO_CAPITAL';
 
-    if (parsedMonto > balancePendiente) {
-      return res.status(400).json({ error: `El abono supera el balance pendiente de ${balancePendiente}` });
+    const payments = inMemoryStore.payments.filter(p => p.loanId === loanId);
+    
+    if (isAlquiler && cleanTipoPago === 'ABONO_CAPITAL') {
+      const totalAbonadoCapital = payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + p.montoAbonado, 0);
+      const balanceCapital = Number(loan.montoOriginal) - totalAbonadoCapital;
+      if (parsedMonto > balanceCapital) {
+        return res.status(400).json({ error: `El abono a capital supera el balance de capital pendiente de ${balanceCapital}` });
+      }
+    } else if (!isAlquiler) {
+      const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0);
+      const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
+      if (parsedMonto > balancePendiente) {
+        return res.status(400).json({ error: `El abono supera el balance pendiente de ${balancePendiente}` });
+      }
     }
 
     const newPayment = {
@@ -346,6 +487,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       notes: cleanNotas,
       metodoPago: metodo,
       creadoPorId: creadoPorId || null,
+      tipoPago: cleanTipoPago,
       fechaPago: new Date()
     };
     inMemoryStore.payments.push(newPayment as any);
@@ -362,15 +504,24 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       else if (metodo === MetodoPago.TRANSFERENCIA) caja.saldoTransferencia += parsedMonto;
     }
 
-    const newTotalAbonado = totalAbonado + parsedMonto;
-    if (newTotalAbonado >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
-      loan.estado = LoanStatus.PAID;
+    if (isAlquiler && cleanTipoPago === 'ABONO_CAPITAL') {
+      const totalAbonadoCapital = payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + p.montoAbonado, 0) + parsedMonto;
+      if (totalAbonadoCapital >= Number(loan.montoOriginal)) {
+        loan.estado = LoanStatus.PAID;
+      }
+    } else if (!isAlquiler) {
+      const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0) + parsedMonto;
+      if (totalAbonado >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
+        loan.estado = LoanStatus.PAID;
+      }
     }
 
+    await logActivity(req, 'CREAR_PAGO', `Registró abono de ${parsedMonto} (${cleanTipoPago}) en préstamo del cliente ${loan.clienteNombre}`);
     return res.status(201).json(newPayment);
   }
 
   try {
+    let clienteNombre = '';
     const result = await prisma.$transaction(async (tx) => {
       const loan = await tx.loan.findUnique({
         where: { id: loanId },
@@ -378,12 +529,25 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       });
 
       if (!loan) throw new Error('Préstamo no encontrado');
+      clienteNombre = loan.clienteNombre;
 
-      const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-      const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
+      const isAlquiler = loan.modalidad === 'ALQUILER';
+      const cleanTipoPago = isAlquiler
+        ? (tipoPago === 'ABONO_CAPITAL' ? PaymentTipo.ABONO_CAPITAL : PaymentTipo.CUOTA_RENTA)
+        : PaymentTipo.ABONO_CAPITAL;
 
-      if (parsedMonto > balancePendiente) {
-        throw new Error(`El abono supera el balance pendiente de ${balancePendiente}`);
+      if (isAlquiler && cleanTipoPago === PaymentTipo.ABONO_CAPITAL) {
+        const totalAbonadoCapital = loan.payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        const balanceCapital = Number(loan.montoOriginal) - totalAbonadoCapital;
+        if (parsedMonto > balanceCapital) {
+          throw new Error(`El abono a capital supera el balance de capital pendiente de ${balanceCapital}`);
+        }
+      } else if (!isAlquiler) {
+        const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
+        if (parsedMonto > balancePendiente) {
+          throw new Error(`El abono supera el balance pendiente de ${balancePendiente}`);
+        }
       }
 
       const payment = await tx.payment.create({
@@ -393,15 +557,27 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
           numeroRecibo,
           notas: cleanNotas,
           metodoPago: metodo,
-          creadoPorId: creadoPorId || null
+          creadoPorId: creadoPorId || null,
+          tipoPago: cleanTipoPago
         }
       });
 
-      if (totalAbonado + parsedMonto >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
-        await tx.loan.update({
-          where: { id: loanId },
-          data: { estado: LoanStatus.PAID }
-        });
+      if (isAlquiler && cleanTipoPago === PaymentTipo.ABONO_CAPITAL) {
+        const totalAbonadoCapital = loan.payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + Number(p.montoAbonado), 0) + parsedMonto;
+        if (totalAbonadoCapital >= Number(loan.montoOriginal)) {
+          await tx.loan.update({
+            where: { id: loanId },
+            data: { estado: LoanStatus.PAID }
+          });
+        }
+      } else if (!isAlquiler) {
+        const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0) + parsedMonto;
+        if (totalAbonado >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
+          await tx.loan.update({
+            where: { id: loanId },
+            data: { estado: LoanStatus.PAID }
+          });
+        }
       }
 
       // Actualizar CajaCobrador si quien paga es COBRADOR
@@ -436,6 +612,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       return payment;
     });
 
+    await logActivity(req, 'CREAR_PAGO', `Registró abono de ${parsedMonto} (${result.tipoPago}) en préstamo del cliente ${clienteNombre}`);
     return res.status(201).json({
       ...result,
       montoAbonado: Number(result.montoAbonado)
@@ -631,18 +808,23 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
       if (parsedCuota !== undefined) {
         loan.cuotaSemanal = parsedCuota!;
       }
-      if (parsedTotalAPagarDirect !== undefined && parsedTotalAPagarDirect !== null) {
-        loan.totalAPagar = parsedTotalAPagarDirect!;
-      } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null && parsedMonto !== undefined) {
-        loan.totalAPagar = parsedMonto! * (1 + (parsedPorcentaje! / 100));
-      } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null) {
-        loan.totalAPagar = Number(loan.montoOriginal) * (1 + (parsedPorcentaje! / 100));
-      } else if (parsedMonto !== undefined) {
-        const currentPercentage = ((Number(loan.totalAPagar) / Number(loan.montoOriginal)) - 1) * 100;
-        loan.totalAPagar = parsedMonto! * (1 + (currentPercentage / 100));
+      if (loan.modalidad === 'ALQUILER') {
+        loan.totalAPagar = loan.montoOriginal;
+      } else {
+        if (parsedTotalAPagarDirect !== undefined && parsedTotalAPagarDirect !== null) {
+          loan.totalAPagar = parsedTotalAPagarDirect!;
+        } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null && parsedMonto !== undefined) {
+          loan.totalAPagar = parsedMonto! * (1 + (parsedPorcentaje! / 100));
+        } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null) {
+          loan.totalAPagar = Number(loan.montoOriginal) * (1 + (parsedPorcentaje! / 100));
+        } else if (parsedMonto !== undefined) {
+          const currentPercentage = ((Number(loan.totalAPagar) / Number(loan.montoOriginal)) - 1) * 100;
+          loan.totalAPagar = parsedMonto! * (1 + (currentPercentage / 100));
+        }
       }
     }
 
+    await logActivity(req, 'EDITAR_LOAN', `Actualizó préstamo del cliente ${loan.clienteNombre} (ID: ${loan.id})`);
     return res.json({ success: true, loan });
   }
 
@@ -686,15 +868,19 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
       if (parsedCuota !== undefined) {
         dataToUpdate.cuotaSemanal = parsedCuota!;
       }
-      if (parsedTotalAPagarDirect !== undefined && parsedTotalAPagarDirect !== null) {
-        dataToUpdate.totalAPagar = parsedTotalAPagarDirect!;
-      } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null && parsedMonto !== undefined) {
-        dataToUpdate.totalAPagar = parsedMonto! * (1 + (parsedPorcentaje! / 100));
-      } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null) {
-        dataToUpdate.totalAPagar = Number(loan.montoOriginal) * (1 + (parsedPorcentaje! / 100));
-      } else if (parsedMonto !== undefined) {
-        const currentPercentage = ((Number(loan.totalAPagar) / Number(loan.montoOriginal)) - 1) * 100;
-        dataToUpdate.totalAPagar = parsedMonto! * (1 + (currentPercentage / 100));
+      if (loan.modalidad === 'ALQUILER') {
+        dataToUpdate.totalAPagar = parsedMonto !== undefined ? parsedMonto : loan.montoOriginal;
+      } else {
+        if (parsedTotalAPagarDirect !== undefined && parsedTotalAPagarDirect !== null) {
+          dataToUpdate.totalAPagar = parsedTotalAPagarDirect!;
+        } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null && parsedMonto !== undefined) {
+          dataToUpdate.totalAPagar = parsedMonto! * (1 + (parsedPorcentaje! / 100));
+        } else if (parsedPorcentaje !== undefined && parsedPorcentaje !== null) {
+          dataToUpdate.totalAPagar = Number(loan.montoOriginal) * (1 + (parsedPorcentaje! / 100));
+        } else if (parsedMonto !== undefined) {
+          const currentPercentage = ((Number(loan.totalAPagar) / Number(loan.montoOriginal)) - 1) * 100;
+          dataToUpdate.totalAPagar = parsedMonto! * (1 + (currentPercentage / 100));
+        }
       }
     }
 
@@ -703,6 +889,7 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
       data: dataToUpdate
     });
 
+    await logActivity(req, 'EDITAR_LOAN', `Actualizó préstamo del cliente ${updatedLoan.clienteNombre} (ID: ${updatedLoan.id})`);
     return res.json({ success: true, loan: updatedLoan });
   } catch (err: any) { next(err); }
 }
@@ -722,12 +909,12 @@ export async function deleteLoan(req: AuthenticatedRequest, res: Response, next:
     if (loanIdx === -1) {
       return res.status(404).json({ error: 'Préstamo no encontrado' });
     }
-
+    const deletedLoan = inMemoryStore.loans[loanIdx];
     // Delete associated payments
     inMemoryStore.payments = inMemoryStore.payments.filter(p => p.loanId !== id);
     // Delete loan
     inMemoryStore.loans.splice(loanIdx, 1);
-
+    await logActivity(req, 'ELIMINAR_LOAN', `Eliminó préstamo del cliente ${deletedLoan.clienteNombre} (ID: ${deletedLoan.id})`);
     return res.json({ success: true, message: 'Préstamo eliminado correctamente en memoria' });
   }
 
@@ -780,6 +967,7 @@ export async function deleteLoan(req: AuthenticatedRequest, res: Response, next:
       return loan;
     });
 
+    await logActivity(req, 'ELIMINAR_LOAN', `Eliminó préstamo del cliente ${result.clienteNombre} (ID: ${result.id})`);
     return res.json({ success: true, message: 'Préstamo y abonos eliminados correctamente', loan: result });
   } catch (err: any) { next(err); }
 }

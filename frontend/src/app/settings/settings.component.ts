@@ -1,14 +1,17 @@
-import { Component, OnInit, inject, signal, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LoanService, BusinessSettings, Role } from '../services/loan.service';
+import { LoanService, BusinessSettings, Role, ActivityLog } from '../services/loan.service';
 import { CountriesService, Country } from '../services/countries.service';
 import { ToastService } from '../services/toast.service';
+import { AuditLogListComponent, AuditLogEntry } from '../shared/audit-log-list/audit-log-list.component';
+import { DateFieldComponent } from '../shared/date-field/date-field.component';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AuditLogListComponent, DateFieldComponent],
+
   template: `
     <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
       
@@ -35,13 +38,29 @@ import { ToastService } from '../services/toast.service';
           <!-- Industrial stripe -->
           <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
 
+          <!-- Tab bar (PRESTAMISTA only) -->
+          <div *ngIf="loanService.currentUser()?.rol === Role.PRESTAMISTA" class="flex border-b border-industrial-border mb-5 pt-2">
+            <button (click)="activeTab.set('config')" 
+                    [class.text-caterpillar]="activeTab() === 'config'"
+                    [class.border-caterpillar]="activeTab() === 'config'"
+                    class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-caterpillar transition">
+              Configuración
+            </button>
+            <button (click)="onActivityTabClick()" 
+                    [class.text-caterpillar]="activeTab() === 'actividades'"
+                    [class.border-caterpillar]="activeTab() === 'actividades'"
+                    class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-caterpillar transition">
+              Actividades
+            </button>
+          </div>
+
           <!-- Simple Close for Cobradores settings view -->
           <div *ngIf="loanService.currentUser()?.rol === Role.COBRADOR" class="flex justify-between items-center pb-4 pt-2">
             <h3 class="text-white font-extrabold text-sm uppercase tracking-tight">Configuración de Cuenta</h3>
             <button (click)="goBack.emit()" class="text-xs text-caterpillar font-bold hover:underline">Regresar</button>
           </div>
 
-          <form *ngIf="loanService.currentUser()?.rol === Role.PRESTAMISTA" (submit)="saveSettings($event)" class="space-y-4 pt-2">
+          <form *ngIf="loanService.currentUser()?.rol === Role.PRESTAMISTA && activeTab() === 'config'" (submit)="saveSettings($event)" class="space-y-4">
             
             <!-- Nombre de Negocio -->
             <div>
@@ -122,6 +141,23 @@ import { ToastService } from '../services/toast.service';
               <span class="text-[10px] text-industrial-muted mt-1 block">Si el día de cobro pactado queda a menos días de este límite desde la fecha de entrega del préstamo, se pospondrá automáticamente una semana.</span>
             </div>
 
+            <!-- Modalidad Predeterminada de Préstamo -->
+            <div>
+              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Modalidad Predeterminada de Préstamo</label>
+              <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                <select [(ngModel)]="formData.modalidadPredeterminada" name="modalidadPredeterminada" required
+                        class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                  <option value="TRADICIONAL">Tradicional Amortizable</option>
+                  <option value="ALQUILER">Alquiler de Dinero</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
             <!-- Plantilla de WhatsApp -->
             <div>
               <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Plantilla de WhatsApp</label>
@@ -149,10 +185,48 @@ import { ToastService } from '../services/toast.service';
                 Cancelar
               </button>
             </div>
+
+            <!-- Section: Cambiar Contraseña (Only under Configuración) -->
+            <div class="space-y-4 pt-4 border-t border-industrial-border/60">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-[10px] text-caterpillar uppercase font-mono tracking-widest">Cambiar Contraseña</span>
+                <div class="flex-1 h-px bg-industrial-border/50"></div>
+              </div>
+              
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Contraseña Actual</label>
+                  <input type="password" [(ngModel)]="oldPassword" name="oldPassword" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                </div>
+                <div>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nueva Contraseña</label>
+                  <input type="password" [(ngModel)]="newPassword" name="newPassword" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                </div>
+                <div>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Confirmar Nueva Contraseña</label>
+                  <input type="password" [(ngModel)]="confirmPassword" name="confirmPassword" class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                </div>
+                <button type="button" (click)="changeUserPassword()" [disabled]="changingPassword()" class="w-full bg-caterpillar text-industrial-black font-black py-3.5 rounded-lg text-xs uppercase hover:bg-caterpillar-dark transition shadow-lg">
+                  {{ changingPassword() ? 'Cambiando...' : 'Cambiar Contraseña' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Cerrar Sesión (Under Configuración tab) -->
+            <div class="pt-6 border-t border-industrial-border/60 mt-6 text-center">
+              <button type="button" (click)="logout()"
+                      class="w-full flex items-center justify-center gap-2 bg-semantic-red/10 border border-semantic-red/30 hover:bg-semantic-red/20 text-semantic-red py-3 rounded-lg text-xs font-bold uppercase tracking-wider transition duration-150">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Cerrar Sesión Activa
+              </button>
+            </div>
           </form>
 
-          <!-- Section: Cambiar Contraseña (Available to both Lenders and Collectors) -->
-          <div class="space-y-4 pt-4 border-t border-industrial-border/60">
+
+          <!-- For Cobradores: show password change & logout directly -->
+          <div *ngIf="loanService.currentUser()?.rol === Role.COBRADOR" class="space-y-4">
             <div class="flex items-center gap-2 mb-2">
               <span class="text-[10px] text-caterpillar uppercase font-mono tracking-widest">Cambiar Contraseña</span>
               <div class="flex-1 h-px bg-industrial-border/50"></div>
@@ -175,18 +249,74 @@ import { ToastService } from '../services/toast.service';
                 {{ changingPassword() ? 'Cambiando...' : 'Cambiar Contraseña' }}
               </button>
             </div>
+
+            <div class="pt-6 border-t border-industrial-border/60 mt-6 text-center">
+              <button type="button" (click)="logout()"
+                      class="w-full flex items-center justify-center gap-2 bg-semantic-red/10 border border-semantic-red/30 hover:bg-semantic-red/20 text-semantic-red py-3 rounded-lg text-xs font-bold uppercase tracking-wider transition duration-150">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Cerrar Sesión Activa
+              </button>
+            </div>
           </div>
 
-          <!-- Cerrar Sesión (Always at the bottom) -->
-          <div class="pt-6 border-t border-industrial-border/60 mt-6 text-center">
-            <button type="button" (click)="logout()"
-                    class="w-full flex items-center justify-center gap-2 bg-semantic-red/10 border border-semantic-red/30 hover:bg-semantic-red/20 text-semantic-red py-3 rounded-lg text-xs font-bold uppercase tracking-wider transition duration-150">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Cerrar Sesión Activa
-            </button>
+          <!-- Actividades Tab (PRESTAMISTA only) -->
+          <div *ngIf="loanService.currentUser()?.rol === Role.PRESTAMISTA && activeTab() === 'actividades'" class="space-y-5">
+            <!-- Filter Block (Mobile-first vertical stack) -->
+            <div class="bg-industrial-dark/50 border border-industrial-border/60 rounded-xl p-4 space-y-3">
+              <div class="w-full">
+                <label class="block text-[10px] text-industrial-muted uppercase font-mono mb-1">Tipo de Actividad</label>
+                <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                  <select [ngModel]="filterTipoEvento()" (ngModelChange)="onFilterChange($event)" name="actividadFiltro"
+                          class="w-full bg-transparent text-white text-xs px-3 py-2.5 pr-12 focus:outline-none appearance-none cursor-pointer">
+                    <option value="">Todos los eventos</option>
+                    <option value="CREAR_LOAN">Crear Préstamo</option>
+                    <option value="EDITAR_LOAN">Editar Préstamo</option>
+                    <option value="ELIMINAR_LOAN">Eliminar Préstamo</option>
+                    <option value="AGREGAR_PAGO">Agregar Pago</option>
+                    <option value="ELIMINAR_PAGO">Eliminar Pago</option>
+                    <option value="CREAR_COBRADOR">Crear Cobrador</option>
+                    <option value="ACTUALIZAR_SETTINGS">Actualizar Configuración</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
+                </div>
+              </div>
+
+              <div class="w-full">
+                <app-date-field
+                  mode="range"
+                  label="Rango de Fechas"
+                  placeholder="Filtrar fechas"
+                  [ngModel]="activityDateRangeValue()"
+                  (ngModelChange)="onActivityDateRangeChange($event)">
+                </app-date-field>
+              </div>
+
+              <div class="pt-1 flex justify-end">
+                <button type="button" (click)="clearActivityFilters()" class="w-full sm:w-auto bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-industrial-light text-xs font-bold px-4 py-2.5 rounded-lg transition">
+                  Limpiar Filtros
+                </button>
+              </div>
+            </div>
+
+
+
+
+            <!-- Log entries using shared component with pagination -->
+            <app-audit-log-list
+              [logs]="paginatedLogs()"
+              [loading]="loadingLogs()"
+              [page]="logsPage()"
+              [totalPages]="logsTotalPages()"
+              [total]="activityLogs().length"
+              [showMeta]="false"
+              (pageChange)="onPageChange($event)">
+            </app-audit-log-list>
           </div>
+
         </div>
 
       </main>
@@ -201,6 +331,41 @@ export class SettingsComponent implements OnInit {
   toastService = inject(ToastService);
 
   @Output() goBack = new EventEmitter<void>();
+
+  // Tab state
+  activeTab = signal<'config' | 'actividades'>('config');
+
+  // Activity log state & pagination
+  activityLogs = signal<ActivityLog[]>([]);
+  filterTipoEvento = signal<string>('');
+  filterStartDate = signal<string>('');
+  filterEndDate = signal<string>('');
+  loadingLogs = signal(false);
+  logsPage = signal<number>(1);
+  logsLimit = 15;
+
+  activityDateRangeValue = computed(() => ({
+    start: this.filterStartDate(),
+    end: this.filterEndDate()
+  }));
+
+
+  paginatedLogs = computed<AuditLogEntry[]>(() => {
+    const all = this.activityLogs();
+    const start = (this.logsPage() - 1) * this.logsLimit;
+    return all.slice(start, start + this.logsLimit).map(l => ({
+      id: l.id,
+      tipoEvento: l.tipoEvento,
+      descripcion: l.descripcion,
+      fecha: l.fecha,
+      ip: l.ip,
+      prestamistaId: l.prestamistaId
+    }));
+  });
+
+  logsTotalPages = computed<number>(() => {
+    return Math.ceil(this.activityLogs().length / this.logsLimit) || 1;
+  });
 
   // Signals
   countriesList = signal<Country[]>([]);
@@ -241,13 +406,68 @@ export class SettingsComponent implements OnInit {
     nombreNegocio: 'CAT-LOAN Credit',
     plantillaWhatsapp: '',
     gananciaPorcentaje: 50,
-    diasMinimosPrimerCobro: 3
+    diasMinimosPrimerCobro: 3,
+    modalidadPredeterminada: 'TRADICIONAL' as any
   };
 
   oldPassword = '';
   newPassword = '';
   confirmPassword = '';
   changingPassword = signal(false);
+
+  async onActivityTabClick() {
+    this.activeTab.set('actividades');
+    if (this.activityLogs().length === 0) {
+      await this.loadActivityLogs();
+    }
+  }
+
+  async loadActivityLogs() {
+    this.loadingLogs.set(true);
+    try {
+      const logs = await this.loanService.getTenantLogs({
+        tipoEvento: this.filterTipoEvento() || undefined,
+        startDate: this.filterStartDate() || undefined,
+        endDate: this.filterEndDate() || undefined
+      });
+      this.activityLogs.set(logs);
+    } catch (err) {
+      this.toastService.error('Error al cargar el registro de actividades');
+    } finally {
+      this.loadingLogs.set(false);
+    }
+  }
+
+  async onFilterChange(val: string) {
+    this.filterTipoEvento.set(val);
+    this.logsPage.set(1);
+    await this.loadActivityLogs();
+  }
+
+  async onActivityDateRangeChange(range: { start: string; end: string }) {
+    const newStart = range?.start || '';
+    const newEnd = range?.end || '';
+    if (newStart === this.filterStartDate() && newEnd === this.filterEndDate()) {
+      return;
+    }
+    this.filterStartDate.set(newStart);
+    this.filterEndDate.set(newEnd);
+    this.logsPage.set(1);
+    await this.loadActivityLogs();
+  }
+
+  async clearActivityFilters() {
+    this.filterTipoEvento.set('');
+    this.filterStartDate.set('');
+    this.filterEndDate.set('');
+    this.logsPage.set(1);
+    await this.loadActivityLogs();
+  }
+
+
+  onPageChange(page: number) {
+    this.logsPage.set(page);
+  }
 
   async changeUserPassword() {
     if (!this.oldPassword || !this.newPassword || !this.confirmPassword) {

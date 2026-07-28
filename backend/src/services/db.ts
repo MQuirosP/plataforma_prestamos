@@ -54,6 +54,8 @@ export interface MemoryLoan {
   multasAcumuladas?: number;
   tipoIdentificacion?: string | null;
   numeroIdentificacion?: string | null;
+  modalidad?: 'TRADICIONAL' | 'ALQUILER';
+  frecuenciaPago?: 'SEMANAL' | 'QUINCENAL' | 'MENSUAL';
 }
 
 export interface MemoryPayment {
@@ -64,6 +66,7 @@ export interface MemoryPayment {
   notas?: string;
   metodoPago: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
   creadoPorId?: string;
+  tipoPago?: 'CUOTA_RENTA' | 'ABONO_CAPITAL';
   fechaPago: Date;
 }
 
@@ -97,6 +100,7 @@ export interface MemoryBusinessSettings {
   plantillaWhatsapp: string;
   gananciaPorcentaje: number;
   diasMinimosPrimerCobro: number;
+  modalidadPredeterminada?: 'TRADICIONAL' | 'ALQUILER';
 }
 
 export interface MemoryRefreshToken {
@@ -105,6 +109,15 @@ export interface MemoryRefreshToken {
   userId: string;
   expiresAt: Date;
   createdAt: Date;
+}
+
+export interface MemoryLog {
+  id: string;
+  fecha: Date;
+  tipoEvento: string;
+  descripcion: string;
+  ip: string;
+  prestamistaId: string | null;
 }
 
 class InMemoryStore {
@@ -119,6 +132,7 @@ class InMemoryStore {
     }
   ];
   cajas: MemoryCajaCobrador[] = [];
+  logs: MemoryLog[] = [];
   liquidaciones: MemoryLiquidacion[] = [];
 
   subscriptions: MemorySubscription[] = [
@@ -143,7 +157,8 @@ class InMemoryStore {
       nombreNegocio: 'CAT-LOAN Admin',
       plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
       gananciaPorcentaje: 50,
-      diasMinimosPrimerCobro: 3
+      diasMinimosPrimerCobro: 3,
+      modalidadPredeterminada: 'TRADICIONAL'
     }
   ];
   refreshTokens: MemoryRefreshToken[] = [];

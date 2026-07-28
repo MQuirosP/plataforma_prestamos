@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LoanService, Loan, Payment, Role, PaymentMethod, FineFrequency } from '../services/loan.service';
+import { LoanService, Loan, Payment, Role, PaymentMethod, FineFrequency, LoanStatus, LoanModalidad, LoanFrecuencia, PaymentTipo } from '../services/loan.service';
 import html2canvas from 'html2canvas';
 import { ToastService } from '../services/toast.service';
 
@@ -158,11 +158,15 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                class="bg-industrial-dark border border-industrial-border rounded-xl p-4 transition-all duration-200 hover:border-caterpillar/30">
             <div class="flex justify-between items-start mb-2">
               <div>
-                <h3 class="font-extrabold text-white text-base">{{ loan.clienteNombre }}</h3>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <h3 class="font-extrabold text-white text-base leading-tight">{{ loan.clienteNombre }}</h3>
+                  <span *ngIf="loan.modalidad === 'ALQUILER'" class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase font-mono tracking-wider bg-caterpillar/20 text-caterpillar border border-caterpillar/30">Alquiler</span>
+                  <span *ngIf="loan.modalidad !== 'ALQUILER'" class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase font-mono tracking-wider bg-industrial-surface border border-industrial-border text-industrial-muted">Tradicional</span>
+                </div>
                 <span class="text-xs text-industrial-muted font-mono">{{ loan.clienteTelefono }}</span>
               </div>
               <div class="text-right">
-                <span class="text-xs text-industrial-muted font-mono block">Pendiente</span>
+                <span class="text-xs text-industrial-muted font-mono block">{{ loan.modalidad === 'ALQUILER' ? 'Saldo Capital' : 'Pendiente' }}</span>
                 <span class="text-sm font-black text-white block">
                   {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.balancePendiente | number:'1.0-0' }}
                 </span>
@@ -173,7 +177,9 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-industrial-border/60 text-[11px] leading-tight">
               <div>
                 <span class="text-industrial-muted block">Progreso:</span>
-                <span class="text-white font-bold block">Cuota {{ loan.cuotaActual }}/{{ loan.cuotasTotales }}</span>
+                <span class="text-white font-bold block">
+                  {{ loan.modalidad === 'ALQUILER' ? 'Renta pagadas: ' + loan.cuotaActual : 'Cuota ' + loan.cuotaActual + '/' + loan.cuotasTotales }}
+                </span>
               </div>
               <div class="text-center">
                 <span class="text-industrial-muted block">Siguiente Abono:</span>
@@ -182,7 +188,9 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                 </span>
               </div>
               <div class="text-right">
-                <span class="text-industrial-muted block">Cuota Semanal:</span>
+                <span class="text-industrial-muted block">
+                  Cuota {{ loan.frecuenciaPago === 'SEMANAL' ? 'Semanal' : loan.frecuenciaPago === 'QUINCENAL' ? 'Quincenal' : 'Mensual' }}:
+                </span>
                 <span class="text-caterpillar font-bold block">
                   {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.cuotaSemanal | number:'1.0-0' }}
                 </span>
@@ -428,6 +436,17 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto a Abonar</label>
                 <app-numeric-stepper [(ngModel)]="abonoMonto" name="abonoMonto" [required]="true" [min]="0" [step]="1000"></app-numeric-stepper>
               </div>
+
+              <!-- Tipo de Abono (Solo para ALQUILER) -->
+              <div *ngIf="selectedLoanForAbono?.modalidad === 'ALQUILER'">
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Concepto de Abono</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" (click)="abonoTipoPago = 'CUOTA_RENTA'" 
+                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoTipoPago === 'CUOTA_RENTA' ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">🔄 Pago de Renta</button>
+                  <button type="button" (click)="abonoTipoPago = 'ABONO_CAPITAL'" 
+                          [class]="'py-2 text-xs font-bold rounded-lg border transition-all ' + (abonoTipoPago === 'ABONO_CAPITAL' ? 'bg-caterpillar text-industrial-black border-caterpillar' : 'bg-industrial-surface text-industrial-muted border-industrial-border hover:border-caterpillar/50')">💰 Retorno Capital</button>
+                </div>
+              </div>
               <!-- Método de Pago -->
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Método de Pago</label>
@@ -619,7 +638,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                           {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
                         </span>
                         <!-- Trash Icon for Deletion (Visible only if current user is not COBRADOR) -->
-                        <button *ngIf="loanService.currentUser()?.rol !== 'COBRADOR'" 
+                        <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR" 
                                 (click)="onDeletePayment(pay.id)"
                                 class="text-semantic-red hover:text-red-400 p-0.5"
                                 title="Anular Abono">
@@ -753,6 +772,10 @@ export class DashboardComponent implements OnInit {
   Role = Role;
   PaymentMethod = PaymentMethod;
   FineFrequency = FineFrequency;
+  LoanStatus = LoanStatus;
+  LoanModalidad = LoanModalidad;
+  LoanFrecuencia = LoanFrecuencia;
+  PaymentTipo = PaymentTipo;
   loanService = inject(LoanService);
   toastService = inject(ToastService);
   adminService = inject(AdminService);
@@ -803,6 +826,7 @@ export class DashboardComponent implements OnInit {
   abonoMonto: number | null = null;
   abonoNotas: string = '';
   abonoMetodoPago: PaymentMethod = PaymentMethod.EFECTIVO;
+  abonoTipoPago: 'CUOTA_RENTA' | 'ABONO_CAPITAL' = 'CUOTA_RENTA';
 
   // Get current weekday mapped to 1-7 based on tenant's timezone
   get currentWeekday(): number {
@@ -844,13 +868,24 @@ export class DashboardComponent implements OnInit {
     let aldia = 0;
 
     list.forEach(l => {
-      if (l.estado === 'PAID') return;
+      if (l.estado === LoanStatus.PAID) return;
 
-      const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-      const weeksActive = Math.max(0, Math.floor((Date.now() - new Date(l.fechaInicio).getTime()) / (7 * 24 * 60 * 60 * 1000)));
-      const targetWeeklyExpectation = Number(l.cuotaSemanal) * weeksActive;
+      const isAlquiler = l.modalidad === LoanModalidad.ALQUILER;
+      const freq = l.frecuenciaPago || LoanFrecuencia.SEMANAL;
+      const daysPerPeriod = freq === LoanFrecuencia.SEMANAL ? 7 : freq === LoanFrecuencia.QUINCENAL ? 15 : 30;
+      
+      const periodsActive = Math.max(0, Math.floor((Date.now() - new Date(l.fechaInicio).getTime()) / (daysPerPeriod * 24 * 60 * 60 * 1000)));
+      let isAtrasado = false;
 
-      if (paymentsTotal < targetWeeklyExpectation) {
+      if (isAlquiler) {
+        const rentPaymentsTotal = l.payments.filter(p => p.tipoPago === PaymentTipo.CUOTA_RENTA).reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        isAtrasado = rentPaymentsTotal < (Number(l.cuotaSemanal) * periodsActive);
+      } else {
+        const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        isAtrasado = paymentsTotal < (Number(l.cuotaSemanal) * periodsActive);
+      }
+
+      if (isAtrasado) {
         atrasados++;
       } else if (l.diaCobro === today) {
         hoy++;
@@ -866,38 +901,57 @@ export class DashboardComponent implements OnInit {
 
   getLoansCountForDay(dayKey: string): number {
     const list = this.loans();
-    if (dayKey === 'TODO') return list.filter(l => l.estado !== 'PAID').length;
+    if (dayKey === 'TODO') return list.filter(l => l.estado !== LoanStatus.PAID).length;
     const dayNum = Number(dayKey);
-    return list.filter(l => l.estado !== 'PAID' && l.diaCobro === dayNum).length;
+    return list.filter(l => l.estado !== LoanStatus.PAID && l.diaCobro === dayNum).length;
   }
 
   getNextPaymentDate(loan: any): string {
     const startDate = new Date(loan.fechaInicio);
     startDate.setHours(0, 0, 0, 0);
 
-    const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
-    let dayOffset = jsDayCobro - startDate.getDay();
-    if (dayOffset < 0) {
-      dayOffset += 7;
-    }
+    const isAlquiler = loan.modalidad === LoanModalidad.ALQUILER;
+    const freq = loan.frecuenciaPago || LoanFrecuencia.SEMANAL;
+    const daysPerPeriod = freq === LoanFrecuencia.SEMANAL ? 7 : freq === LoanFrecuencia.QUINCENAL ? 15 : 30;
 
-    // Obtener días mínimos configurados (por defecto 3)
-    const diasMinimos = this.loanService.settings()?.diasMinimosPrimerCobro ?? 3;
-    if (dayOffset < diasMinimos) {
-      dayOffset += 7;
+    let dayOffset = 0;
+    if (freq === LoanFrecuencia.SEMANAL) {
+      const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
+      dayOffset = jsDayCobro - startDate.getDay();
+      if (dayOffset < 0) {
+        dayOffset += 7;
+      }
+
+      const diasMinimos = this.loanService.settings()?.diasMinimosPrimerCobro ?? 3;
+      if (dayOffset < diasMinimos) {
+        dayOffset += 7;
+      }
+    } else {
+      dayOffset = daysPerPeriod;
     }
 
     const current = new Date(startDate);
     current.setDate(current.getDate() + dayOffset);
 
-    const totalAbonado = (loan.payments || []).reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
-    const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
-    const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+    let numCuotasAbonadas = 0;
+    let totalCuotasEstimadas = 999999;
 
-    // Buscar la fecha de vencimiento de la próxima cuota no pagada
+    if (isAlquiler) {
+      const totalAbonadoRenta = (loan.payments || []).filter((p: any) => p.tipoPago === PaymentTipo.CUOTA_RENTA).reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+      numCuotasAbonadas = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
+    } else {
+      const totalAbonado = (loan.payments || []).reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+      numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
+      totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+    }
+
     const targetIdx = Math.max(0, Math.min(numCuotasAbonadas, totalCuotasEstimadas - 1));
     const targetDate = new Date(current);
-    targetDate.setDate(current.getDate() + targetIdx * 7);
+    if (freq === LoanFrecuencia.MENSUAL) {
+      targetDate.setMonth(current.getMonth() + targetIdx);
+    } else {
+      targetDate.setDate(current.getDate() + targetIdx * daysPerPeriod);
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -928,18 +982,28 @@ export class DashboardComponent implements OnInit {
     const dayF = this.activeDayFilter();
 
     return list.filter(l => {
-      if (l.estado === 'PAID') return false;
+      if (l.estado === LoanStatus.PAID) return false;
 
       // Filter by day of week if specified (and tab is not 'hoy')
       if (this.activeTab() !== 'hoy' && dayF !== 'TODO' && l.diaCobro !== Number(dayF)) {
         return false;
       }
 
-      const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-      const weeksActive = Math.max(0, Math.floor((Date.now() - new Date(l.fechaInicio).getTime()) / (7 * 24 * 60 * 60 * 1000)));
-      const targetWeeklyExpectation = Number(l.cuotaSemanal) * weeksActive;
+      const isAlquiler = l.modalidad === LoanModalidad.ALQUILER;
+      const freq = l.frecuenciaPago || LoanFrecuencia.SEMANAL;
+      const daysPerPeriod = freq === LoanFrecuencia.SEMANAL ? 7 : freq === LoanFrecuencia.QUINCENAL ? 15 : 30;
+      
+      const periodsActive = Math.max(0, Math.floor((Date.now() - new Date(l.fechaInicio).getTime()) / (daysPerPeriod * 24 * 60 * 60 * 1000)));
+      let isAtrasado = false;
 
-      const isAtrasado = paymentsTotal < targetWeeklyExpectation;
+      if (isAlquiler) {
+        const rentPaymentsTotal = l.payments.filter(p => p.tipoPago === PaymentTipo.CUOTA_RENTA).reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        isAtrasado = rentPaymentsTotal < (Number(l.cuotaSemanal) * periodsActive);
+      } else {
+        const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        isAtrasado = paymentsTotal < (Number(l.cuotaSemanal) * periodsActive);
+      }
+
       const isHoy = l.diaCobro === today;
 
       if (this.activeTab() === 'atrasados') {
@@ -962,6 +1026,13 @@ export class DashboardComponent implements OnInit {
 
   getProgressPercentage(): number {
     if (!this.selectedStatementLoan) return 0;
+    const isAlquiler = this.selectedStatementLoan.modalidad === 'ALQUILER';
+    if (isAlquiler) {
+      const totalAbonadoCapital = this.selectedStatementLoan.payments
+        .filter(p => p.tipoPago === 'ABONO_CAPITAL')
+        .reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+      return Math.min(100, Math.round((totalAbonadoCapital / Number(this.selectedStatementLoan.montoOriginal)) * 100));
+    }
     const paid = Number(this.selectedStatementLoan.totalAPagar) - Number(this.selectedStatementLoan.balancePendiente);
     return Math.min(100, Math.round((paid / Number(this.selectedStatementLoan.totalAPagar)) * 100));
   }
@@ -1023,7 +1094,7 @@ export class DashboardComponent implements OnInit {
       creationMode: 'monto_fijo',
       totalAPagarDirect: Number(loan.totalAPagar),
       fineAmount: loan.fineAmount ? Number(loan.fineAmount) : null,
-      fineFrequency: (loan.fineFrequency || 'DAILY') as any,
+      fineFrequency: (loan.fineFrequency || FineFrequency.DAILY) as FineFrequency,
       graceDays: Number(loan.graceDays || 0),
       hasFine: !!loan.fineAmount,
       hasPayments: (loan.payments || []).length > 0
@@ -1098,6 +1169,7 @@ export class DashboardComponent implements OnInit {
     this.abonoMonto = Number(loan.cuotaSemanal);
     this.abonoNotas = '';
     this.abonoMetodoPago = PaymentMethod.EFECTIVO;
+    this.abonoTipoPago = loan.modalidad === 'ALQUILER' ? 'CUOTA_RENTA' : 'ABONO_CAPITAL';
     this.showAbonoModal.set(true);
   }
 
@@ -1113,7 +1185,8 @@ export class DashboardComponent implements OnInit {
         this.selectedLoanForAbono.id,
         this.abonoMonto,
         this.abonoNotas,
-        this.abonoMetodoPago
+        this.abonoMetodoPago,
+        this.selectedLoanForAbono.modalidad === 'ALQUILER' ? (this.abonoTipoPago as any) : undefined
       );
       this.showAbonoModal.set(false);
       this.recalculateCounts();

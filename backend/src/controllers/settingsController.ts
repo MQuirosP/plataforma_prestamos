@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { sanitizeString, sanitizePhone, validatePositiveNumber, validateIntegerRange } from '../services/validation';
+import { logActivity } from '../services/auditLogger';
 
 export async function getSettings(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const userId = req.user?.id || 'mock-lender-id-123';
@@ -17,7 +18,8 @@ export async function getSettings(req: AuthenticatedRequest, res: Response, next
         nombreNegocio: 'CAT-LOAN Credit',
         plantillaWhatsapp: 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!',
         gananciaPorcentaje: 50,
-        diasMinimosPrimerCobro: 3
+        diasMinimosPrimerCobro: 3,
+        modalidadPredeterminada: 'TRADICIONAL'
       };
       inMemoryStore.settings.push(settings);
     }
@@ -41,7 +43,8 @@ export async function getSettings(req: AuthenticatedRequest, res: Response, next
           monedaSimbolo: '₡',
           monedaCodigo: 'CRC',
           nombreNegocio: 'CAT-LOAN Credit',
-          gananciaPorcentaje: 50
+          gananciaPorcentaje: 50,
+          modalidadPredeterminada: 'TRADICIONAL'
         }
       });
     }
@@ -57,13 +60,14 @@ export async function getSettings(req: AuthenticatedRequest, res: Response, next
 
 export async function updateSettings(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const userId = req.user?.id || 'mock-lender-id-123';
-  const { monedaSimbolo, monedaCodigo, nombreNegocio, plantillaWhatsapp, gananciaPorcentaje, diasMinimosPrimerCobro, telefono } = req.body;
+  const { monedaSimbolo, monedaCodigo, nombreNegocio, plantillaWhatsapp, gananciaPorcentaje, diasMinimosPrimerCobro, telefono, modalidadPredeterminada } = req.body;
 
   const cleanSimbolo = sanitizeString(monedaSimbolo, 10) || '₡';
   const cleanCodigo = sanitizeString(monedaCodigo, 10) || 'CRC';
   const cleanNombre = sanitizeString(nombreNegocio, 100) || 'CAT-LOAN Credit';
   const cleanPlantilla = sanitizeString(plantillaWhatsapp, 500) || 'Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!';
   const cleanTelefono = telefono ? sanitizePhone(telefono) : undefined;
+  const cleanModalidad = (modalidadPredeterminada === 'ALQUILER') ? 'ALQUILER' : 'TRADICIONAL';
 
   const validGanancia = validatePositiveNumber(gananciaPorcentaje, true);
   const parsedGanancia = validGanancia !== null ? Math.min(500, validGanancia) : 50;
@@ -82,7 +86,8 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
         nombreNegocio: cleanNombre,
         plantillaWhatsapp: cleanPlantilla,
         gananciaPorcentaje: parsedGanancia,
-        diasMinimosPrimerCobro: parsedDiasMinimos
+        diasMinimosPrimerCobro: parsedDiasMinimos,
+        modalidadPredeterminada: cleanModalidad
       };
       inMemoryStore.settings.push(settings);
     } else {
@@ -92,6 +97,7 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
       settings.plantillaWhatsapp = cleanPlantilla;
       settings.gananciaPorcentaje = parsedGanancia;
       settings.diasMinimosPrimerCobro = parsedDiasMinimos;
+      settings.modalidadPredeterminada = cleanModalidad;
     }
 
     if (cleanTelefono) {
@@ -101,6 +107,7 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
       }
     }
 
+    await logActivity(req, 'ACTUALIZAR_SETTINGS', `Actualizó configuración del negocio: ${cleanNombre}`);
     return res.json({ ...settings, telefono: cleanTelefono || '' });
   }
 
@@ -114,7 +121,8 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
           nombreNegocio: cleanNombre,
           plantillaWhatsapp: cleanPlantilla,
           gananciaPorcentaje: parsedGanancia,
-          diasMinimosPrimerCobro: parsedDiasMinimos
+          diasMinimosPrimerCobro: parsedDiasMinimos,
+          modalidadPredeterminada: cleanModalidad
         },
         create: {
           userId,
@@ -123,7 +131,8 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
           nombreNegocio: cleanNombre,
           plantillaWhatsapp: cleanPlantilla,
           gananciaPorcentaje: parsedGanancia,
-          diasMinimosPrimerCobro: parsedDiasMinimos
+          diasMinimosPrimerCobro: parsedDiasMinimos,
+          modalidadPredeterminada: cleanModalidad
         }
       });
 
@@ -137,6 +146,7 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response, n
       return sett;
     });
 
+    await logActivity(req, 'ACTUALIZAR_SETTINGS', `Actualizó configuración del negocio: ${cleanNombre}`);
     return res.json({
       ...settings,
       telefono: cleanTelefono || ''

@@ -1,11 +1,12 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
-import { prisma } from '../services/db';
+import { prisma, isUsingMemoryStore, inMemoryStore } from '../services/db';
 import { PlanManager } from '../services/planManager.js';
 import * as bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
 import { logger } from '../services/logger';
 import { sanitizeString, sanitizeUsername, sanitizePhone } from '../services/validation';
+import { logActivity } from '../services/auditLogger';
 
 // Crear un nuevo cobrador bajo la cuenta del prestamista actual
 export async function createCobrador(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -69,15 +70,8 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response, n
       }
     });
 
-    // Auditoría
-    await prisma.logActividadSaaS.create({
-      data: {
-        tipoEvento: 'CREAR_COBRADOR',
-        descripcion: `Prestamista creó al cobrador ${username}`,
-        ip: req.ip || '0.0.0.0',
-        prestamistaId
-      }
-    });
+    // Auditoría centralizada
+    await logActivity(req, 'CREAR_COBRADOR', `Creó el cobrador ${cleanNombre} (usuario: ${cleanUsername})`);
 
     return res.json({ success: true, cobrador: { id: newCobrador.id, nombre: newCobrador.nombre, username: newCobrador.username } });
   } catch (err: any) { next(err); }
@@ -91,5 +85,41 @@ export async function getCobradores(req: AuthenticatedRequest, res: Response, ne
       select: { id: true, nombre: true, username: true, telefono: true, createdAt: true }
     });
     return res.json(cobradores);
+  } catch (err: any) { next(err); }
+}
+
+// GET /tenant/logs — devuelve la bitácora de actividades del prestamista (y sus cobradores)
+export async function getTenantLogs(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const userRole = req.user?.rol;
+  if (userRole !== Role.PRESTAMISTA) {
+    return res.status(403).json({ error: 'Solo prestamistas pueden consultar su bitácora.' });
+  }
+  const prestamistaId = req.user!.id;
+
+  const { tipoEvento, startDate, endDate } = req.query;
+
+  if (isUsingMemoryStore()) {
+    let logs = inMemoryStore.logs.filter(l => l.prestamistaId === prestamistaId);
+    if (tipoEvento) logs = logs.filter(l => l.tipoEvento === tipoEvento);
+    if (startDate) logs = logs.filter(l => new Date(l.fecha) >= new Date(startDate as string));
+    if (endDate) logs = logs.filter(l => new Date(l.fecha) <= new Date(endDate as string));
+    return res.json(logs.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()));
+  }
+
+  try {
+    const where: any = { prestamistaId };
+    if (tipoEvento) where.tipoEvento = tipoEvento;
+    if (startDate || endDate) {
+      where.fecha = {};
+      if (startDate) where.fecha.gte = new Date(startDate as string);
+      if (endDate) where.fecha.lte = new Date(endDate as string);
+    }
+
+    const logs = await prisma.logActividadSaaS.findMany({
+      where,
+      orderBy: { fecha: 'desc' },
+      take: 500
+    });
+    return res.json(logs);
   } catch (err: any) { next(err); }
 }

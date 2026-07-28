@@ -21,6 +21,22 @@ export enum FineFrequency {
   MONTHLY = 'MONTHLY'
 }
 
+export enum LoanModalidad {
+  TRADICIONAL = 'TRADICIONAL',
+  ALQUILER = 'ALQUILER'
+}
+
+export enum LoanFrecuencia {
+  SEMANAL = 'SEMANAL',
+  QUINCENAL = 'QUINCENAL',
+  MENSUAL = 'MENSUAL'
+}
+
+export enum PaymentTipo {
+  CUOTA_RENTA = 'CUOTA_RENTA',
+  ABONO_CAPITAL = 'ABONO_CAPITAL'
+}
+
 export interface Payment {
   id: string;
   loanId: string;
@@ -28,6 +44,7 @@ export interface Payment {
   numeroRecibo: string;
   notas?: string;
   metodoPago?: PaymentMethod;
+  tipoPago?: PaymentTipo;
   fechaPago: string;
 }
 
@@ -57,6 +74,8 @@ export interface Loan {
   fineFrequency?: FineFrequency | null;
   graceDays?: number;
   multasAcumuladas?: number;
+  modalidad?: LoanModalidad;
+  frecuenciaPago?: LoanFrecuencia;
   balancePendiente: number;
   cuotaActual: number;
   cuotasTotales: number;
@@ -73,6 +92,7 @@ export interface BusinessSettings {
   plantillaWhatsapp: string;
   gananciaPorcentaje: number;
   diasMinimosPrimerCobro?: number;
+  modalidadPredeterminada?: LoanModalidad;
   telefono?: string;
 }
 
@@ -109,13 +129,13 @@ export class LoanService {
   // Computed KPIs
   capitalEnCalle = computed(() => {
     return this.loans()
-      .filter(l => l.estado === 'ACTIVE')
+      .filter(l => l.estado === LoanStatus.ACTIVE)
       .reduce((sum, l) => sum + Number(l.balancePendiente), 0);
   });
 
   porCobrarEstaSemana = computed(() => {
     return this.loans()
-      .filter(l => l.estado === 'ACTIVE')
+      .filter(l => l.estado === LoanStatus.ACTIVE)
       .reduce((sum, l) => sum + Number(l.cuotaSemanal), 0);
   });
 
@@ -330,6 +350,8 @@ export class LoanService {
     fineFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null;
     graceDays?: number;
     totalAPagarDirect?: number | null;
+    modalidad?: LoanModalidad;
+    frecuenciaPago?: LoanFrecuencia;
   }) {
     this.loading.set(true);
     try {
@@ -377,14 +399,15 @@ export class LoanService {
     }
   }
 
-  async addPayment(loanId: string, montoAbonado: number, notas: string, metodoPago: PaymentMethod = PaymentMethod.EFECTIVO) {
+  async addPayment(loanId: string, montoAbonado: number, notas: string, metodoPago: PaymentMethod = PaymentMethod.EFECTIVO, tipoPago?: PaymentTipo) {
     this.loading.set(true);
     try {
       const newPayment = await firstValueFrom(
         this.http.post<Payment>(`${this.apiUrl}/loans/${loanId}/payments`, {
           montoAbonado,
           notas,
-          metodoPago
+          metodoPago,
+          tipoPago
         }, this.getHeaders())
       );
 
@@ -392,16 +415,36 @@ export class LoanService {
         return currentLoans.map(loan => {
           if (loan.id === loanId) {
             const updatedPayments = [...loan.payments, newPayment];
-            const totalAbonado = updatedPayments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-            const balancePendiente = Math.max(0, Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado);
-            const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
-            const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+            const isAlquiler = loan.modalidad === 'ALQUILER';
+            
+            let balancePendiente = 0;
+            let cuotaActual = 0;
+            let estado = loan.estado;
+
+            if (isAlquiler) {
+              const totalAbonadoCapital = updatedPayments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+              const totalAbonadoRenta = updatedPayments.filter(p => p.tipoPago === 'CUOTA_RENTA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+              balancePendiente = Math.max(0, Number(loan.montoOriginal) + Number(loan.multasAcumuladas || 0) - totalAbonadoCapital);
+              cuotaActual = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
+              if (totalAbonadoCapital >= Number(loan.montoOriginal)) {
+                estado = LoanStatus.PAID;
+              }
+            } else {
+              const totalAbonado = updatedPayments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+              balancePendiente = Math.max(0, Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado);
+              const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+              const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
+              cuotaActual = Math.min(numCuotasAbonadas, totalCuotasEstimadas);
+              if (balancePendiente <= 0) {
+                estado = LoanStatus.PAID;
+              }
+            }
 
             return {
               ...loan,
               balancePendiente,
-              cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
-              estado: balancePendiente <= 0 ? LoanStatus.PAID : LoanStatus.ACTIVE,
+              cuotaActual,
+              estado,
               payments: updatedPayments
             };
           }
@@ -428,15 +471,28 @@ export class LoanService {
         return currentLoans.map(loan => {
           if (loan.id === loanId) {
             const updatedPayments = loan.payments.filter(p => p.id !== paymentId);
-            const totalAbonado = updatedPayments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-            const balancePendiente = Math.max(0, Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado);
-            const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
-            const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+            const isAlquiler = loan.modalidad === 'ALQUILER';
+            
+            let balancePendiente = 0;
+            let cuotaActual = 0;
+
+            if (isAlquiler) {
+              const totalAbonadoCapital = updatedPayments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+              const totalAbonadoRenta = updatedPayments.filter(p => p.tipoPago === 'CUOTA_RENTA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+              balancePendiente = Math.max(0, Number(loan.montoOriginal) + Number(loan.multasAcumuladas || 0) - totalAbonadoCapital);
+              cuotaActual = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
+            } else {
+              const totalAbonado = updatedPayments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+              balancePendiente = Math.max(0, Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado);
+              const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
+              const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
+              cuotaActual = Math.min(numCuotasAbonadas, totalCuotasEstimadas);
+            }
 
             return {
               ...loan,
               balancePendiente,
-              cuotaActual: Math.min(numCuotasAbonadas, totalCuotasEstimadas),
+              cuotaActual,
               estado: LoanStatus.ACTIVE,
               payments: updatedPayments
             };
@@ -494,4 +550,24 @@ export class LoanService {
       this.http.post<any>(`${this.apiUrl}/cobradores`, data, this.getHeaders())
     );
   }
+
+  async getTenantLogs(filters: { tipoEvento?: string; startDate?: string; endDate?: string } = {}) {
+    const params = new URLSearchParams();
+    if (filters.tipoEvento) params.set('tipoEvento', filters.tipoEvento);
+    if (filters.startDate) params.set('startDate', filters.startDate);
+    if (filters.endDate) params.set('endDate', filters.endDate);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return firstValueFrom(
+      this.http.get<ActivityLog[]>(`${this.apiUrl}/tenant/logs${query}`, this.getHeaders())
+    );
+  }
+}
+
+export interface ActivityLog {
+  id: string;
+  tipoEvento: string;
+  descripcion: string;
+  ip?: string;
+  prestamistaId?: string;
+  fecha: string;
 }

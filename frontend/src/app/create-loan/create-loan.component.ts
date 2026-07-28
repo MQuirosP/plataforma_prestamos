@@ -51,20 +51,58 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                      class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
             </div>
 
-            <!-- Monto Original & Cuota Semanal -->
+            <!-- Modalidad del Préstamo -->
+            <div>
+              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Modalidad del Préstamo</label>
+              <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                <select [(ngModel)]="newLoanData.modalidad" name="modalidad" required
+                        class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                  <option value="TRADICIONAL">Tradicional Amortizable</option>
+                  <option value="ALQUILER">Alquiler de Dinero (Renta)</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Frecuencia de Cobro -->
+            <div>
+              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Frecuencia de Cobro</label>
+              <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                <select [(ngModel)]="newLoanData.frecuenciaPago" name="frecuenciaPago" required
+                        class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                  <option value="SEMANAL">Semanal</option>
+                  <option value="QUINCENAL">Quincenal</option>
+                  <option value="MENSUAL">Mensual</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Monto Original & Cuota -->
             <div class="space-y-4">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto Original</label>
                 <app-numeric-stepper [(ngModel)]="newLoanData.montoOriginal" name="montoOriginal" [required]="true" [min]="0" [step]="1000"></app-numeric-stepper>
               </div>
               <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cuota Semanal</label>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">
+                  Cuota {{ newLoanData.frecuenciaPago === 'SEMANAL' ? 'Semanal' : newLoanData.frecuenciaPago === 'QUINCENAL' ? 'Quincenal' : 'Mensual' }}
+                  {{ newLoanData.modalidad === 'ALQUILER' ? '(Renta)' : '' }}
+                </label>
                 <app-numeric-stepper [(ngModel)]="newLoanData.cuotaSemanal" name="cuotaSemanal" [required]="true" [min]="0" [step]="500"></app-numeric-stepper>
               </div>
             </div>
 
             <!-- Tipo de Interés & Porcentaje / Monto Fijo -->
-            <div class="space-y-4">
+            <div *ngIf="newLoanData.modalidad !== 'ALQUILER'" class="space-y-4">
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Tipo de Interés</label>
                 <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
@@ -152,12 +190,14 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
 
             <!-- Estimación/Cálculo del Total -->
             <div class="bg-industrial-surface p-3 rounded-lg border border-industrial-border text-xs text-industrial-muted font-mono flex justify-between items-center mt-2">
-              <span>Total Estimado a Cobrar:</span>
+              <span>{{ newLoanData.modalidad === 'ALQUILER' ? 'Retorno de Capital:' : 'Total Estimado a Cobrar:' }}</span>
               <span class="text-white font-extrabold text-sm">
                 {{ loanService.settings()?.monedaSimbolo || '₡' }} 
-                {{ (newLoanData.creationMode === 'porcentaje' 
-                     ? (newLoanData.montoOriginal || 0) * (1 + (newLoanData.porcentaje || 0) / 100) 
-                     : (newLoanData.totalAPagarDirect || 0)) | number:'1.0-0' }}
+                {{ (newLoanData.modalidad === 'ALQUILER'
+                     ? (newLoanData.montoOriginal || 0)
+                     : (newLoanData.creationMode === 'porcentaje' 
+                         ? (newLoanData.montoOriginal || 0) * (1 + (newLoanData.porcentaje || 0) / 100) 
+                         : (newLoanData.totalAPagarDirect || 0))) | number:'1.0-0' }}
               </span>
             </div>
 
@@ -198,7 +238,9 @@ export class CreateLoanComponent implements OnInit {
     fineAmount: null as number | null,
     fineFrequency: FineFrequency.DAILY as FineFrequency,
     graceDays: 0,
-    hasFine: false
+    hasFine: false,
+    modalidad: 'TRADICIONAL' as any,
+    frecuenciaPago: 'SEMANAL' as any
   };
 
   ngOnInit() {
@@ -218,7 +260,9 @@ export class CreateLoanComponent implements OnInit {
       fineAmount: null,
       fineFrequency: FineFrequency.DAILY,
       graceDays: 0,
-      hasFine: false
+      hasFine: false,
+      modalidad: settings?.modalidadPredeterminada || 'TRADICIONAL',
+      frecuenciaPago: 'SEMANAL'
     };
   }
 
@@ -261,11 +305,13 @@ export class CreateLoanComponent implements OnInit {
         montoOriginal: Number(this.newLoanData.montoOriginal),
         cuotaSemanal: Number(this.newLoanData.cuotaSemanal),
         diaCobro: Number(this.newLoanData.diaCobro),
-        porcentaje: this.newLoanData.creationMode === 'porcentaje' && this.newLoanData.porcentaje !== null ? Number(this.newLoanData.porcentaje) : undefined,
-        totalAPagarDirect: this.newLoanData.creationMode === 'monto_fijo' ? Number(this.newLoanData.totalAPagarDirect) : null,
+        porcentaje: this.newLoanData.modalidad !== 'ALQUILER' && this.newLoanData.creationMode === 'porcentaje' && this.newLoanData.porcentaje !== null ? Number(this.newLoanData.porcentaje) : undefined,
+        totalAPagarDirect: this.newLoanData.modalidad !== 'ALQUILER' && this.newLoanData.creationMode === 'monto_fijo' ? Number(this.newLoanData.totalAPagarDirect) : null,
         fineAmount: this.newLoanData.hasFine && this.newLoanData.fineAmount ? Number(this.newLoanData.fineAmount) : null,
         fineFrequency: this.newLoanData.hasFine ? this.newLoanData.fineFrequency : null,
-        graceDays: this.newLoanData.hasFine ? Number(this.newLoanData.graceDays) : 0
+        graceDays: this.newLoanData.hasFine ? Number(this.newLoanData.graceDays) : 0,
+        modalidad: this.newLoanData.modalidad,
+        frecuenciaPago: this.newLoanData.frecuenciaPago
       });
 
       this.toastService.success('Préstamo creado correctamente');

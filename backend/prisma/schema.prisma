@@ -31,6 +31,22 @@ enum LoanStatus {
   PAID
 }
 
+enum LoanModalidad {
+  TRADICIONAL
+  ALQUILER
+}
+
+enum LoanFrecuencia {
+  SEMANAL
+  QUINCENAL
+  MENSUAL
+}
+
+enum PaymentTipo {
+  CUOTA_RENTA
+  ABONO_CAPITAL
+}
+
 enum FineFrequency {
   DAILY
   WEEKLY
@@ -95,6 +111,7 @@ model BusinessSettings {
   plantillaWhatsapp  String @default("Hola {cliente}, te escribo para recordarte que tu balance pendiente es de {moneda}{saldo}. Tu cuota programada es de {moneda}{cuota}. Favor de enviar el abono a la brevedad. ¡Gracias!")
   gananciaPorcentaje Int    @default(50)
   diasMinimosPrimerCobro Int @default(3)
+  modalidadPredeterminada LoanModalidad @default(TRADICIONAL)
 }
 
 model Subscription {
@@ -139,6 +156,8 @@ model Loan {
   fineFrequency       FineFrequency?
   graceDays           Int        @default(0)
   multasAcumuladas    Decimal    @default(0)
+  modalidad           LoanModalidad @default(TRADICIONAL)
+  frecuenciaPago      LoanFrecuencia @default(SEMANAL)
   payments            Payment[]
 
   @@index([prestamistaId])
@@ -155,6 +174,7 @@ model Payment {
   /// ID del cobrador que registró este pago (auditoría)
   creadoPorId   String?
   creadoPor     User?      @relation("PagosCreados", fields: [creadoPorId], references: [id])
+  tipoPago      PaymentTipo @default(ABONO_CAPITAL)
   fechaPago     DateTime   @default(now())
 
   @@index([loanId])
