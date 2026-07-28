@@ -22,7 +22,8 @@ import {
   FormsModule
 } from '@angular/forms';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { MatDatepickerModule, MatDateRangePicker } from '@angular/material/datepicker';
+import { MatDatepickerModule, MatDateRangePicker, MatCalendar } from '@angular/material/datepicker';
+
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
@@ -83,14 +84,16 @@ export class DatePickerPresetsHeader {
   static activeRangeGroup?: FormGroup;
   static activePicker?: MatDateRangePicker<Date>;
 
+  private calendar = inject(MatCalendar<Date>);
+
   months = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
 
   years: number[] = [];
-  selectedMonth = signal<number>(new Date().getMonth());
-  selectedYear = signal<number>(new Date().getFullYear());
+  selectedMonth = signal<number>(this.calendar.activeDate ? this.calendar.activeDate.getMonth() : new Date().getMonth());
+  selectedYear = signal<number>(this.calendar.activeDate ? this.calendar.activeDate.getFullYear() : new Date().getFullYear());
 
   constructor() {
     const currentYr = new Date().getFullYear();
@@ -102,22 +105,21 @@ export class DatePickerPresetsHeader {
   onMonthChange(mIndex: number) {
     const month = Number(mIndex);
     this.selectedMonth.set(month);
-    this.updateRangeByMonthYear(month, this.selectedYear());
+    this.navigateCalendar(month, this.selectedYear());
   }
 
   onYearChange(yr: number) {
     const year = Number(yr);
     this.selectedYear.set(year);
-    this.updateRangeByMonthYear(this.selectedMonth(), year);
+    this.navigateCalendar(this.selectedMonth(), year);
   }
 
-  private updateRangeByMonthYear(month: number, year: number) {
-    if (DatePickerPresetsHeader.activeRangeGroup) {
-      const start = new Date(year, month, 1);
-      const end = new Date(year, month + 1, 0);
-      DatePickerPresetsHeader.activeRangeGroup.setValue({ start, end });
-    }
+  private navigateCalendar(month: number, year: number) {
+    const currentDay = this.calendar.activeDate ? this.calendar.activeDate.getDate() : 1;
+    const targetDate = new Date(year, month, Math.min(currentDay, 28));
+    this.calendar.activeDate = targetDate;
   }
+
 
   onWheel(event: WheelEvent) {
     if (event.deltaY !== 0) {
