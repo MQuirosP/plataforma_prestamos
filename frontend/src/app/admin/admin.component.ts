@@ -19,7 +19,8 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
       <!-- Header -->
       <header class="border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95" style="background-color: #111111;">
         <div class="flex items-center gap-2.5">
-          <img src="/assets/images/logo-header.webp" class="h-8 w-auto object-contain" alt="Cat-Loan Logo">
+          <img src="/assets/images/logo-header.webp" width="160" height="32" class="h-8 w-auto object-contain" alt="Cat-Loan Logo">
+
           <div>
             <h1 class="text-sm font-black text-white leading-none tracking-tight uppercase">PANEL DE CONTROL</h1>
             <p class="text-[9px] text-caterpillar uppercase tracking-wider font-mono mt-0.5">CAT-LOAN · PANEL ADMIN</p>
@@ -518,7 +519,8 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
         <div id="reminder-card" class="bg-industrial-dark border border-industrial-border p-6 font-sans">
           <div class="flex justify-between items-start mb-6 border-b border-industrial-border pb-4">
             <div>
-              <img src="/assets/images/logo-header.webp" class="h-8 w-auto mb-2 opacity-90" alt="Cat-Loan">
+              <img src="/assets/images/logo-header.webp" width="160" height="32" class="h-8 w-auto mb-2 opacity-90" alt="Cat-Loan">
+
               <h2 class="text-white font-black uppercase text-lg leading-tight tracking-tight">Estado de Suscripción</h2>
               <p class="text-[10px] text-industrial-muted font-mono uppercase tracking-wider">CAT-LOAN</p>
             </div>
