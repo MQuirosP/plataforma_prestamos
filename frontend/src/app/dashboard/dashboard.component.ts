@@ -353,12 +353,14 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
 
             <!-- VIEW 1: RECIBO DE ABONO -->
             <div *ngIf="showAsReceipt() && lastPayment()" class="space-y-4">
-              <div class="text-center border-b border-industrial-border/60 pb-4 mt-2 mb-4">
+              <div class="text-center border-b border-industrial-border/60 pb-4 mt-2 mb-4 flex flex-col items-center">
+                <img src="/assets/images/logo-header.webp" width="160" height="32" class="h-8 w-auto object-contain mb-2" alt="Logo Cat-Loan">
                 <h2 class="text-xs text-caterpillar uppercase tracking-widest font-mono">Recibo de Abono Oficial</h2>
                 <p class="text-[9px] text-industrial-muted uppercase tracking-wider font-mono">
                   {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN Credit' }}
                 </p>
               </div>
+
 
               <!-- Receipt Number and Date -->
               <div class="flex justify-between text-[9px] text-industrial-muted font-mono mb-4">
@@ -405,12 +407,14 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
 
             <!-- VIEW 2: ESTADO DE CUENTA COMPLETO -->
             <div *ngIf="!showAsReceipt() || !lastPayment()" class="space-y-4">
-              <div class="text-center border-b border-industrial-border/60 pb-4 mt-2 mb-4">
+              <div class="text-center border-b border-industrial-border/60 pb-4 mt-2 mb-4 flex flex-col items-center">
+                <img src="/assets/images/logo-header.webp" width="160" height="32" class="h-8 w-auto object-contain mb-2" alt="Logo Cat-Loan">
                 <h2 class="text-xs text-caterpillar uppercase tracking-widest font-mono">Estado de Cuenta Oficial</h2>
                 <p class="text-[9px] text-industrial-muted uppercase tracking-wider font-mono">
                   {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN Credit' }}
                 </p>
               </div>
+
 
               <!-- Client Metadata -->
               <div class="space-y-1 text-sm mb-4">
