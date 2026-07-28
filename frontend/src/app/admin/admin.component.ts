@@ -119,10 +119,11 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
 
         <!-- Tabs -->
         <div class="flex border-b border-industrial-border mb-6">
-          <button (click)="activeTab.set('tenants')" [class.text-caterpillar]="activeTab() === 'tenants'" [class.border-caterpillar]="activeTab() === 'tenants'" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-caterpillar transition">Prestamistas</button>
-          <button (click)="activeTab.set('create')" [class.text-caterpillar]="activeTab() === 'create'" [class.border-caterpillar]="activeTab() === 'create'" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-caterpillar transition">Nuevo Cliente</button>
-          <button (click)="activeTab.set('logs')" [class.text-caterpillar]="activeTab() === 'logs'" [class.border-caterpillar]="activeTab() === 'logs'" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-transparent text-industrial-muted hover:text-caterpillar transition">Auditoría</button>
+          <button (click)="activeTab.set('tenants')" [class.text-caterpillar]="activeTab() === 'tenants'" [class.border-caterpillar]="activeTab() === 'tenants'" [class.text-industrial-muted]="activeTab() !== 'tenants'" class="px-4 py-2 text-xs font-black uppercase border-b-2 border-transparent hover:text-caterpillar transition">Prestamistas</button>
+          <button (click)="activeTab.set('create')" [class.text-caterpillar]="activeTab() === 'create'" [class.border-caterpillar]="activeTab() === 'create'" [class.text-industrial-muted]="activeTab() !== 'create'" class="px-4 py-2 text-xs font-black uppercase border-b-2 border-transparent hover:text-caterpillar transition">Nuevo Cliente</button>
+          <button (click)="activeTab.set('logs')" [class.text-caterpillar]="activeTab() === 'logs'" [class.border-caterpillar]="activeTab() === 'logs'" [class.text-industrial-muted]="activeTab() !== 'logs'" class="px-4 py-2 text-xs font-black uppercase border-b-2 border-transparent hover:text-caterpillar transition">Auditoría</button>
         </div>
+
 
         <!-- Tenants Tab -->
         <section *ngIf="activeTab() === 'tenants'" class="space-y-4">
