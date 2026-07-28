@@ -39,7 +39,7 @@ export interface DatePreset {
   imports: [CommonModule],
   template: `
     <div class="px-2 py-2 border-b border-industrial-border bg-industrial-dark max-w-full overflow-hidden">
-      <div #scrollContainer (wheel)="onWheel($event)" class="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 text-xs whitespace-nowrap scrollbar-none">
+      <div #scrollContainer (wheel)="onWheel($event)" class="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 text-xs whitespace-nowrap scrollbar-none scroll-smooth">
         <button
           type="button"
           *ngFor="let preset of presets"
@@ -60,9 +60,13 @@ export class DatePickerPresetsHeader {
     if (event.deltaY !== 0) {
       event.preventDefault();
       const container = event.currentTarget as HTMLElement;
-      container.scrollLeft += event.deltaY;
+      container.scrollBy({
+        left: event.deltaY > 0 ? 120 : -120,
+        behavior: 'smooth'
+      });
     }
   }
+
 
 
   presets: DatePreset[] = [
