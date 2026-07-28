@@ -117,11 +117,12 @@ app-date-picker-presets-header {
 
 .mat-calendar-table-header th {
   color: #FFCD00 !important;
-  padding-top: 12px !important;
-  padding-bottom: 12px !important;
+  padding-top: 6px !important;
+  padding-bottom: 2px !important;
   font-weight: 800 !important;
   letter-spacing: 0.05em !important;
 }
+
 
 
 /* Day cells (WCAG minimum 44x44px touch target on mobile) */

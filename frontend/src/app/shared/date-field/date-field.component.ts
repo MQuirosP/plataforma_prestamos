@@ -193,7 +193,8 @@ export class DatePickerPresetsHeader {
             (click)="singlePicker.open()"
             class="w-full bg-transparent text-white text-xs px-3 py-2.5 pr-10 focus:outline-none cursor-pointer placeholder:text-industrial-muted"
           />
-          <mat-datepicker #singlePicker [touchUi]="isMobile"></mat-datepicker>
+          <mat-datepicker #singlePicker [touchUi]="isMobile" [calendarHeaderComponent]="customHeader"></mat-datepicker>
+
           <button
             type="button"
             (click)="singlePicker.open()"
