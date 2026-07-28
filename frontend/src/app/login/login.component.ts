@@ -35,9 +35,10 @@ import { LoanService } from '../services/loan.service';
         <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:40px_8px]"></div>
 
         <div class="text-center mb-8 mt-4">
-          <img src="/assets/images/logo-header.webp" width="64" height="64" class="w-16 h-16 object-contain mx-auto mb-3" alt="Logo Cat-Loan">
+          <img src="/assets/images/logo-header.webp" width="80" height="80" class="w-20 h-20 object-contain mx-auto mb-3" alt="Logo Cat-Loan">
           <h2 class="text-2xl font-black text-white uppercase tracking-tight leading-tight">Plataforma Crediticia</h2>
         </div>
+
 
 
 
