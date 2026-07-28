@@ -19,7 +19,8 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
       <!-- Top Caterpillar Branded Bar -->
       <header class="border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95" style="background-color: #111111;">
         <div class="flex items-center gap-2.5">
-          <img src="/assets/images/logo-header.webp" width="160" height="32" class="h-8 w-auto object-contain" alt="Cat-Loan Logo">
+          <img src="/assets/images/logo-header.webp" width="180" height="36" class="h-9 w-auto object-contain" alt="Cat-Loan Logo">
+
 
           <div>
             <h1 class="text-sm font-black text-white leading-none tracking-tight uppercase">
