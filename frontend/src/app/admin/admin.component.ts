@@ -91,9 +91,10 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
               </svg>
             </div>
             <div class="flex items-baseline justify-between mt-1">
-              <span class="text-lg font-black text-caterpillar">₡{{ stats()?.mrrEstimado | number:'1.0-0' }}</span>
+              <span class="text-lg font-black text-caterpillar">₡{{ (stats()?.mrrEstimado ?? 0) | number:'1.0-0' }}</span>
               <span class="text-[9px] text-industrial-muted font-mono">/mes</span>
             </div>
+
           </div>
 
           <!-- Card 4: Distribución de Planes -->
