@@ -977,3 +977,64 @@ export async function deleteLoan(req: AuthenticatedRequest, res: Response, next:
     return res.json({ success: true, message: 'Préstamo y abonos eliminados correctamente', loan: result });
   } catch (err: any) { next(err); }
 }
+
+// Condonar mora acumulada de un préstamo (Restringido estrictamente a PRESTAMISTA o Admin)
+export async function condonarMora(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const { id } = req.params;
+  const prestamistaId = req.user?.id || 'mock-lender-id-123';
+  const userRole = req.user?.rol;
+
+  if (userRole === Role.COBRADOR) {
+    return res.status(403).json({ error: 'Los cobradores no tienen permisos para condonar mora.' });
+  }
+
+  const { montoCondonado, motivo } = req.body;
+  const parsedMonto = validatePositiveNumber(montoCondonado, true);
+
+  if (parsedMonto === null || parsedMonto <= 0) {
+    return res.status(400).json({ error: 'El monto a condonar debe ser un número válido mayor a 0.' });
+  }
+
+  const cleanMotivo = motivo ? sanitizeString(motivo, 250) : 'Sin motivo especificado';
+
+  if (isUsingMemoryStore()) {
+    const loan = inMemoryStore.loans.find(l => l.id === id && l.prestamistaId === prestamistaId);
+    if (!loan) {
+      return res.status(404).json({ error: 'Préstamo no encontrado' });
+    }
+    const currentMultas = Number(loan.multasAcumuladas || 0);
+    if (currentMultas <= 0) {
+      return res.status(400).json({ error: 'El préstamo no tiene mora acumulada para condonar.' });
+    }
+    const newMultas = Math.max(0, currentMultas - parsedMonto);
+    loan.multasAcumuladas = newMultas;
+
+    await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${loan.clienteNombre}. Motivo: ${cleanMotivo}`);
+    return res.json({ success: true, message: `Se condonaron ₡${parsedMonto} de mora correctamente`, loan });
+  }
+
+  try {
+    const loan = await prisma.loan.findFirst({
+      where: { id, prestamistaId }
+    });
+
+    if (!loan) {
+      return res.status(404).json({ error: 'Préstamo no encontrado' });
+    }
+
+    const currentMultas = Number(loan.multasAcumuladas || 0);
+    if (currentMultas <= 0) {
+      return res.status(400).json({ error: 'El préstamo no tiene mora acumulada para condonar.' });
+    }
+
+    const newMultas = Math.max(0, currentMultas - parsedMonto);
+    const updatedLoan = await prisma.loan.update({
+      where: { id },
+      data: { multasAcumuladas: newMultas }
+    });
+
+    await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${loan.clienteNombre}. Motivo: ${cleanMotivo}`);
+    return res.json({ success: true, message: `Se condonaron ₡${parsedMonto} de mora correctamente`, loan: updatedLoan });
+  } catch (err: any) { next(err); }
+}
+

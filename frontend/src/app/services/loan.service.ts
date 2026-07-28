@@ -388,7 +388,28 @@ export class LoanService {
     }
   }
 
+  async condonarMora(loanId: string, montoCondonado: number, motivo: string) {
+    this.loading.set(true);
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ success: boolean; message: string; loan: Loan }>(
+          `${this.apiUrl}/loans/${loanId}/condonar-mora`,
+          { montoCondonado, motivo },
+          this.getHeaders()
+        )
+      );
+
+      await this.loadLoans();
+      return res;
+    } catch (err: any) {
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
   async deleteLoan(id: string) {
+
     this.loading.set(true);
     try {
       await firstValueFrom(

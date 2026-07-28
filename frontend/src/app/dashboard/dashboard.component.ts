@@ -176,8 +176,24 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </div>
             </div>
 
+            <!-- Mora Acumulada Warning & Condonación Button -->
+            <div *ngIf="loan.multasAcumuladas && loan.multasAcumuladas > 0" class="mt-2.5 px-3 py-1.5 rounded-lg bg-red-950/30 border border-semantic-red/40 flex items-center justify-between gap-2 text-xs">
+              <div class="flex items-center gap-1.5 text-semantic-red font-semibold">
+                <svg class="w-4 h-4 shrink-0 fill-current" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <span>Mora acumulada: <strong>{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.multasAcumuladas | number:'1.0-0' }}</strong></span>
+              </div>
+              <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR"
+                      (click)="openCondonarModal(loan)"
+                      class="px-2.5 py-1 rounded bg-caterpillar/20 hover:bg-caterpillar text-caterpillar hover:text-industrial-black text-[11px] font-bold border border-caterpillar/40 transition duration-150 shrink-0">
+                🎁 Condonar
+              </button>
+            </div>
+
             <!-- Client Info Meta Grid -->
-            <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-industrial-border/60 text-[11px] leading-tight">
+            <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-industrial-border/60 text-[11px] leading-tight">
+
               <div>
                 <span class="text-industrial-muted block">Progreso:</span>
                 <span class="text-white font-bold block">
@@ -592,6 +608,59 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
         </div>
       </div>
 
+      <!-- Condonar Mora Modal -->
+      <div *ngIf="showCondonarModal()" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-industrial-dark w-full max-w-sm rounded-2xl border border-industrial-border p-6 shadow-2xl relative overflow-hidden">
+          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
+          
+          <div class="flex justify-between items-center mb-4 mt-2">
+            <div>
+              <h2 class="text-base font-black text-white uppercase tracking-tight">🎁 Condonación de Mora</h2>
+              <span class="text-xs text-industrial-muted block font-mono">{{ selectedLoanForCondonar?.clienteNombre }}</span>
+            </div>
+            <button (click)="showCondonarModal.set(false)" class="text-industrial-muted hover:text-caterpillar">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="mb-4 bg-industrial-surface/50 p-3 rounded-xl border border-industrial-border text-xs space-y-1">
+            <div class="flex justify-between text-industrial-muted">
+              <span>Mora Acumulada:</span>
+              <span class="text-semantic-red font-bold font-mono">
+                {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (selectedLoanForCondonar?.multasAcumuladas || 0) | number:'1.0-0' }}
+              </span>
+            </div>
+          </div>
+
+          <form (submit)="onCondonarSubmit($event)" class="space-y-4">
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="block text-xs text-industrial-muted uppercase font-mono">Monto a Condonar</label>
+                <button type="button" (click)="condonarTodo()" class="text-[10px] text-caterpillar hover:underline font-bold">
+                  Condonar Todo (₡{{ (selectedLoanForCondonar?.multasAcumuladas || 0) | number:'1.0-0' }})
+                </button>
+              </div>
+              <input type="number" [(ngModel)]="condonarMonto" name="condonarMonto" required min="1" [max]="selectedLoanForCondonar?.multasAcumuladas || 0" placeholder="Ej: 5000"
+                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:border-caterpillar outline-none font-mono">
+            </div>
+
+            <div>
+              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Motivo (Opcional)</label>
+              <input type="text" [(ngModel)]="condonarMotivo" name="condonarMotivo" placeholder="Ej: Cliente fiel, arreglo de pago"
+                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-xs focus:border-caterpillar outline-none">
+            </div>
+
+            <button type="submit" [disabled]="loanService.loading()"
+                    class="w-full bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3 rounded-lg font-black uppercase tracking-wider text-xs transition duration-150 shadow-lg">
+              {{ loanService.loading() ? 'Procesando...' : 'Confirmar Condonación' }}
+            </button>
+          </form>
+        </div>
+      </div>
+
+
       <!-- Confirmation Modal -->
       <div *ngIf="confirmModalConfig()" class="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden">
@@ -648,7 +717,44 @@ export class DashboardComponent implements OnInit {
   showAbonoModal = signal<boolean>(false);
   showStatementModal = signal<boolean>(false);
   showCobradoresModal = signal<boolean>(false);
+  showCondonarModal = signal<boolean>(false);
+  selectedLoanForCondonar: Loan | null = null;
+  condonarMonto: number | null = null;
+  condonarMotivo: string = '';
+
   confirmModalConfig = signal<{ title: string; message: string; danger?: boolean; action: () => void } | null>(null);
+
+  openCondonarModal(loan: Loan) {
+    this.selectedLoanForCondonar = loan;
+    this.condonarMonto = loan.multasAcumuladas || 0;
+    this.condonarMotivo = '';
+    this.showCondonarModal.set(true);
+  }
+
+  condonarTodo() {
+    if (this.selectedLoanForCondonar) {
+      this.condonarMonto = this.selectedLoanForCondonar.multasAcumuladas || 0;
+    }
+  }
+
+  async onCondonarSubmit(event: Event) {
+    event.preventDefault();
+    if (!this.selectedLoanForCondonar || !this.condonarMonto || this.condonarMonto <= 0) return;
+
+    try {
+      const res = await this.loanService.condonarMora(
+        this.selectedLoanForCondonar.id,
+        this.condonarMonto,
+        this.condonarMotivo
+      );
+      this.toastService.show(res.message || 'Condonación procesada correctamente');
+      this.showCondonarModal.set(false);
+      this.recalculateCounts();
+    } catch (err: any) {
+      this.toastService.show(err.error?.error || 'Error al condonar la mora', 'error');
+    }
+  }
+
 
   get isImpersonatingLender(): boolean {
     return !!localStorage.getItem('admin_backup_token');

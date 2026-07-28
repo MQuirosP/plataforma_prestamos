@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { getLoans, createLoan, addPayment, deletePayment, updateLoan, deleteLoan } from '../controllers/loanController';
+import { getLoans, createLoan, addPayment, deletePayment, updateLoan, deleteLoan, condonarMora } from '../controllers/loanController';
+
 import { getSettings, updateSettings } from '../controllers/settingsController';
 import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, updateTenantPaymentDate, impersonateTenant, impersonateCobrador, getLogs, getStats, getPlanConfigs, updatePlanConfig } from '../controllers/adminController';
 import { login, changePassword, refresh, logout } from '../controllers/authController';
@@ -28,6 +29,8 @@ router.put('/loans/:id', updateLoan as any);
 router.delete('/loans/:id', deleteLoan as any);
 router.post('/loans/:id/payments', addPayment as any);
 router.delete('/loans/:id/payments/:paymentId', deletePayment as any);
+router.post('/loans/:id/condonar-mora', condonarMora as any);
+
 
 // Settings management
 router.get('/settings', getSettings as any);
