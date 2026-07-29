@@ -652,10 +652,12 @@ export class AdminComponent implements OnInit {
     'CREAR_LOAN',
     'EDITAR_LOAN',
     'ELIMINAR_LOAN',
+    'CONDONAR_MORA',
     'AGREGAR_PAGO',
     'ELIMINAR_PAGO',
     'ACTUALIZAR_SETTINGS'
   ];
+
 
   searchTerm = '';
   loading = signal(false);

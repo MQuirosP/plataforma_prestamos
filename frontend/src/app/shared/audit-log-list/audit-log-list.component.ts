@@ -25,12 +25,13 @@ export interface AuditLogEntry {
       <div *ngFor="let log of logs"
            class="bg-industrial-surface border border-industrial-border rounded-lg p-3 text-xs group hover:border-caterpillar/40 transition-colors duration-150">
         <div class="flex justify-between items-start mb-1 gap-2">
-          <span class="font-bold text-caterpillar uppercase tracking-wide leading-tight">{{ log.tipoEvento }}</span>
+          <span class="font-bold text-caterpillar uppercase tracking-wide leading-tight">{{ formatEventType(log.tipoEvento) }}</span>
           <span class="text-[10px] text-industrial-muted font-mono shrink-0">{{ log.fecha | date:'dd/MM/yy HH:mm' }}</span>
         </div>
         <p class="text-industrial-light leading-relaxed">{{ log.descripcion }}</p>
         <div *ngIf="showMeta && (log.ip || log.prestamistaId)"
              class="mt-1.5 flex gap-3 text-[9px] text-industrial-muted font-mono opacity-60">
+
           <span *ngIf="log.ip">IP: {{ log.ip }}</span>
           <span *ngIf="log.prestamistaId">Tenant: {{ log.prestamistaId }}</span>
         </div>
@@ -80,4 +81,24 @@ export class AuditLogListComponent {
 
   /** Emitted when the user clicks Anterior/Siguiente. Payload is the requested page number. */
   @Output() pageChange = new EventEmitter<number>();
+
+  formatEventType(event: string): string {
+    const map: Record<string, string> = {
+      'CREAR_TENANT': 'Crear Financiera',
+      'SUSPENDER_TENANT': 'Suspender Financiera',
+      'CAMBIO_PLAN': 'Cambio de Plan',
+      'IMPERSONATE': 'Impersonación',
+      'ACTUALIZAR_PLAN': 'Actualizar Config. Plan',
+      'CREAR_COBRADOR': 'Crear Cobrador',
+      'CREAR_LOAN': 'Crear Préstamo',
+      'EDITAR_LOAN': 'Editar Préstamo',
+      'ELIMINAR_LOAN': 'Eliminar Préstamo',
+      'CONDONAR_MORA': 'Condonación de Mora',
+      'AGREGAR_PAGO': 'Registro de Pago',
+      'ELIMINAR_PAGO': 'Eliminación de Pago',
+      'ACTUALIZAR_SETTINGS': 'Actualizar Configuración'
+    };
+    return map[event] || event;
+  }
 }
+
