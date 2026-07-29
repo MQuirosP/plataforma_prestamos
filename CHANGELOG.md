@@ -4,7 +4,22 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 
 ---
 
+## [1.3.0] - 2026-07-28
+### Añadido
+- **Condonación de Mora (Fine Waiver)**: Implementada la funcionalidad de condonación de mora parcial o total exclusiva para el rol `PRESTAMISTA` y `ADMIN` (`POST /api/loans/:id/condonar-mora`), con persisencia acumulada en la columna `montoCondonado` (`waivedAmount`).
+- **Motor Centralizado de Zonas Horarias (`dateUtils.ts`)**: Creado motor multi-tenant para el cómputo de días transcurridos y medianoche (`getDaysDiffInTimezone`, `getMidnightInTimezone`) evaluado estrictamente en la zona horaria IANA del tenant (`BusinessSettings.timezone`), previniendo desfasajes UTC del servidor Render/Neon.
+- **Formateo de Eventos de Auditoría en Español**: Estandarizados todos los eventos de auditoría (ej: `Condonación de Mora`, `Crear Préstamo`, `Registro de Pago`) con etiquetas amigables en español en la Consola Administrador y vista impersonada.
+- **Seguridad y Cabeceras HTTP**: Integrado `helmet` middleware para inyectar cabeceras de protección contra XSS, Clickjacking, MIME-sniffing y eliminación de cabecera `X-Powered-By`.
+
+### Modificado
+- **Reglas de Clasificación de Atrasados**: Préstamos con `multasAcumuladas > 0` se clasifican incondicionalmente bajo la pestaña "ATRASADOS" del Dashboard.
+- **Feedback Táctil Micro-Animado**: Añadido efecto global `:active` (`scale(0.96)`) en todos los botones y elementos interactivos para respuesta al toque.
+- **Seguridad en Cookies JWT**: Configurado `sameSite: 'none'` con `secure: true` en producción para cookies de `refresh_token` cross-domain entre Cloudflare Pages y Render.
+
+---
+
 ## [1.2.0] - 2026-07-24
+
 ### Añadido
 - **Enums de Dominio**: Introducidos enums tipados para `Role`, `PaymentMethod`, `FineFrequency`, `LoanStatus`, y `SubscriptionType` reemplazando cadenas de texto hardcodeadas en toda la aplicación (frontend y backend).
 - **Estadísticas en Panel de Administración**: Implementado el conteo en tiempo real de clientes y cobradores por prestamista en la vista de administración, tanto para base de datos real (Prisma `_count`) como para el fallback en memoria.

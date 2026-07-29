@@ -1,7 +1,8 @@
 {
   "name": "loan-saas-monorepo",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Monorepo for B2B Loan Management and SaaS Subscription platform",
+
   "private": true,
   "scripts": {
     "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
