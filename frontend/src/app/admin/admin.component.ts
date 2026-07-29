@@ -47,9 +47,16 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
 
       <!-- Main Layout -->
       <main class="max-w-4xl mx-auto px-4 mt-6">
-        
+        <!-- Stats Row (Interactive KPIs - Skeleton Loader while loading) -->
+        <section *ngIf="loadingStats()" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 animate-pulse">
+          <div *ngFor="let item of [1, 2, 3, 4]" class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl flex flex-col justify-between h-16">
+            <div class="h-2.5 w-20 bg-industrial-surface rounded"></div>
+            <div class="h-5 w-28 bg-industrial-surface rounded mt-2"></div>
+          </div>
+        </section>
+
         <!-- Stats Row (Interactive KPIs) -->
-        <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" *ngIf="stats()">
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" *ngIf="!loadingStats() && stats()">
           
           <!-- Card 1: Prestamistas -->
           <div (click)="activeTab.set('tenants'); activeSubFilter.set('TODO')"
@@ -177,7 +184,20 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
             </button>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Skeleton Loader List for Tenants -->
+          <div *ngIf="loadingTenants()" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div *ngFor="let item of [1, 2, 3]" class="bg-industrial-dark border border-industrial-border rounded-xl p-4 space-y-3 animate-pulse">
+              <div class="flex items-center justify-between">
+                <div class="h-4 w-28 bg-industrial-surface rounded"></div>
+                <div class="h-3 w-16 bg-industrial-surface/60 rounded"></div>
+              </div>
+              <div class="h-3 w-20 bg-industrial-surface/40 rounded"></div>
+              <div class="h-10 w-full bg-industrial-surface/50 rounded-xl"></div>
+              <div class="h-8 w-full bg-industrial-surface/60 rounded-lg"></div>
+            </div>
+          </div>
+
+          <div *ngIf="!loadingTenants()" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div *ngFor="let tenant of filteredTenants()" class="bg-industrial-dark border border-industrial-border rounded-xl p-4 transition hover:border-caterpillar/30">
 
               <!-- Row 1: Name + Status + Activity Icon -->
@@ -662,6 +682,8 @@ export class AdminComponent implements OnInit {
 
   searchTerm = '';
   loading = signal(false);
+  loadingStats = signal(true);
+  loadingTenants = signal(true);
 
   formatEventType(event: string): string {
     const map: Record<string, string> = {
@@ -718,11 +740,22 @@ export class AdminComponent implements OnInit {
 
   async loadData() {
     // Load independently so a failure in one doesn't block the others
-    try { this.tenants.set(await this.adminService.getTenants()); }
-    catch (err) { this.toastService.error('Error cargando prestamistas'); }
+    this.loadingTenants.set(true);
+    try { 
+      this.tenants.set(await this.adminService.getTenants()); 
+    } catch (err) { 
+      this.toastService.error('Error cargando prestamistas'); 
+    } finally {
+      this.loadingTenants.set(false);
+    }
 
-    try { this.stats.set(await this.adminService.getStats()); }
-    catch (_) { }
+    this.loadingStats.set(true);
+    try { 
+      this.stats.set(await this.adminService.getStats()); 
+    } catch (_) { 
+    } finally {
+      this.loadingStats.set(false);
+    }
 
     await this.loadLogs();
 

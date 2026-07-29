@@ -77,8 +77,15 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
       <!-- Main Layout container -->
       <main class="max-w-md mx-auto px-4 mt-6">
         
-        <!-- KPI Cards Grid -->
-        <section class="grid grid-cols-3 gap-3 mb-6">
+        <!-- KPI Cards Grid (Skeleton during loading) -->
+        <section *ngIf="loanService.loading()" class="grid grid-cols-3 gap-3 mb-6 animate-pulse">
+          <div *ngFor="let item of [1, 2, 3]" class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between h-16">
+            <div class="h-2.5 w-16 bg-industrial-surface rounded"></div>
+            <div class="h-4 w-20 bg-industrial-surface rounded mt-2"></div>
+          </div>
+        </section>
+
+        <section *ngIf="!loanService.loading()" class="grid grid-cols-3 gap-3 mb-6">
           <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between">
             <span class="text-[10px] text-industrial-muted uppercase font-mono">En la Calle</span>
             <span class="text-sm font-black text-white mt-1">
@@ -153,12 +160,33 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
 
         <!-- Cobranza Wall List -->
         <section class="space-y-3">
-          <div *ngIf="filteredLoans().length === 0" class="text-center py-10 bg-industrial-dark/50 border border-dashed border-industrial-border rounded-xl">
+          <!-- Premium Skeleton List while loading loans -->
+          <div *ngIf="loanService.loading()" class="space-y-3">
+            <div *ngFor="let item of [1, 2, 3]" class="bg-industrial-dark border border-industrial-border rounded-xl p-4 space-y-3 animate-pulse">
+              <div class="flex justify-between items-start">
+                <div class="space-y-2">
+                  <div class="h-4 w-32 bg-industrial-surface rounded"></div>
+                  <div class="h-3 w-20 bg-industrial-surface/60 rounded"></div>
+                </div>
+                <div class="space-y-1 text-right">
+                  <div class="h-3 w-16 bg-industrial-surface/60 rounded ml-auto"></div>
+                  <div class="h-4 w-24 bg-industrial-surface rounded ml-auto"></div>
+                </div>
+              </div>
+              <div class="pt-3 border-t border-industrial-border/60 flex justify-between">
+                <div class="h-3 w-24 bg-industrial-surface/40 rounded"></div>
+                <div class="h-7 w-20 bg-industrial-surface rounded-lg"></div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="!loanService.loading() && filteredLoans().length === 0" class="text-center py-10 bg-industrial-dark/50 border border-dashed border-industrial-border rounded-xl">
             <p class="text-xs text-industrial-muted">Sin clientes registrados en esta categoría</p>
           </div>
 
-          <div *ngFor="let loan of filteredLoans()" 
-               class="bg-industrial-dark border border-industrial-border rounded-xl p-4 transition-all duration-200 hover:border-caterpillar/30">
+          <ng-container *ngIf="!loanService.loading()">
+            <div *ngFor="let loan of filteredLoans()" 
+                 class="bg-industrial-dark border border-industrial-border rounded-xl p-4 transition-all duration-200 hover:border-caterpillar/30">
             <div class="flex justify-between items-start mb-2">
               <div>
                 <div class="flex items-center gap-1.5 flex-wrap">
@@ -258,6 +286,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </a>
             </div>
           </div>
+          </ng-container>
         </section>
       </main>
 
@@ -306,7 +335,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </div>
 
               <!-- Tipo de Abono (Solo para ALQUILER) -->
-              <div *ngIf="selectedLoanForAbono?.modalidad === 'ALQUILER'">
+              <div *ngIf="selectedLoanForAbono.modalidad === 'ALQUILER'">
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Concepto de Abono</label>
                 <div class="grid grid-cols-2 gap-2">
                   <button type="button" (click)="abonoTipoPago = 'CUOTA_RENTA'" 
@@ -708,6 +737,7 @@ export class DashboardComponent implements OnInit {
   @Output() openSettings = new EventEmitter<void>();
   @Output() openCreateLoan = new EventEmitter<void>();
   @Output() openEditLoan = new EventEmitter<Loan>();
+  @Output() openTeamManagement = new EventEmitter<void>();
 
 
   // States
@@ -1280,14 +1310,8 @@ export class DashboardComponent implements OnInit {
     this.toastService.success(isReceipt ? 'Recibo exportado como imagen.' : 'Estado de cuenta exportado.');
   }
 
-  async openCobradoresModal() {
-    this.showCobradoresModal.set(true);
-    try {
-      const list = await this.loanService.getCobradores();
-      this.cobradores.set(list);
-    } catch (err) {
-      this.toastService.error('Error al cargar equipo');
-    }
+  openCobradoresModal() {
+    this.openTeamManagement.emit();
   }
 
   async onCreateCobrador(event: Event) {
