@@ -841,13 +841,16 @@ export class DashboardComponent implements OnInit {
       const periodsActive = Math.max(0, Math.floor((Date.now() - new Date(l.fechaInicio).getTime()) / (daysPerPeriod * 24 * 60 * 60 * 1000)));
       let isAtrasado = false;
 
+      const hasMulta = Number(l.multasAcumuladas || 0) > 0;
+
       if (isAlquiler) {
         const rentPaymentsTotal = l.payments.filter(p => p.tipoPago === PaymentTipo.CUOTA_RENTA).reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-        isAtrasado = rentPaymentsTotal < (Number(l.cuotaSemanal) * periodsActive);
+        isAtrasado = hasMulta || (rentPaymentsTotal < (Number(l.cuotaSemanal) * periodsActive));
       } else {
         const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-        isAtrasado = paymentsTotal < (Number(l.cuotaSemanal) * periodsActive);
+        isAtrasado = hasMulta || (paymentsTotal < (Number(l.cuotaSemanal) * periodsActive));
       }
+
 
       if (isAtrasado) {
         atrasados++;
@@ -958,15 +961,18 @@ export class DashboardComponent implements OnInit {
       const daysPerPeriod = freq === LoanFrecuencia.SEMANAL ? 7 : freq === LoanFrecuencia.QUINCENAL ? 15 : 30;
       
       const periodsActive = Math.max(0, Math.floor((Date.now() - new Date(l.fechaInicio).getTime()) / (daysPerPeriod * 24 * 60 * 60 * 1000)));
+      const hasMulta = Number(l.multasAcumuladas || 0) > 0;
       let isAtrasado = false;
 
       if (isAlquiler) {
         const rentPaymentsTotal = l.payments.filter(p => p.tipoPago === PaymentTipo.CUOTA_RENTA).reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-        isAtrasado = rentPaymentsTotal < (Number(l.cuotaSemanal) * periodsActive);
+        isAtrasado = hasMulta || (rentPaymentsTotal < (Number(l.cuotaSemanal) * periodsActive));
       } else {
         const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-        isAtrasado = paymentsTotal < (Number(l.cuotaSemanal) * periodsActive);
+        isAtrasado = hasMulta || (paymentsTotal < (Number(l.cuotaSemanal) * periodsActive));
       }
+
+
 
       const isHoy = l.diaCobro === today;
 

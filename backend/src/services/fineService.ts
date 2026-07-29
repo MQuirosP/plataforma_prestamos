@@ -62,9 +62,9 @@ export async function updatePenaltiesForTenant(prestamistaId: string) {
 
 function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro: number = 3) {
   if (!loan.fineAmount || !loan.fineFrequency || Number(loan.fineAmount) <= 0) {
-    loan.multasAcumuladas = 0;
-    return { multasAcumuladas: 0 };
+    return { multasAcumuladas: Number(loan.multasAcumuladas || 0) };
   }
+
 
   const startDate = new Date(loan.fechaInicio);
   const cuotaAmount = Number(loan.cuotaSemanal);
@@ -121,34 +121,30 @@ function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro
   const N = dueDates.length; // number of installments that have fallen due
   const P = numCuotasAbonadas; // number of installments fully covered by payments
 
-  if (P >= N) {
-    loan.multasAcumuladas = 0;
-    return { multasAcumuladas: 0 };
-  }
-
-  // Oldest unpaid installment was due on:
-  const oldestDueDate = dueDates[P];
-  const diffTime = today.getTime() - oldestDueDate.getTime();
-  const daysLate = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
-
-  if (daysLate <= loan.graceDays) {
-    loan.multasAcumuladas = 0;
-    return { multasAcumuladas: 0 };
-  }
-
   let penalties = 0;
-  const fine = Number(loan.fineAmount);
+  if (P < N) {
 
-  if (loan.fineFrequency === FineFrequency.DAILY) {
-    penalties = (daysLate - loan.graceDays) * fine;
-  } else if (loan.fineFrequency === FineFrequency.WEEKLY) {
-    const weeksLate = Math.floor((daysLate - loan.graceDays) / 7);
-    penalties = weeksLate * fine;
-  } else if (loan.fineFrequency === FineFrequency.MONTHLY) {
-    const monthsLate = Math.floor((daysLate - loan.graceDays) / 30);
-    penalties = monthsLate * fine;
+    const oldestDueDate = dueDates[P];
+    const diffTime = today.getTime() - oldestDueDate.getTime();
+    const daysLate = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+
+    if (daysLate > loan.graceDays) {
+      const fine = Number(loan.fineAmount);
+      if (loan.fineFrequency === FineFrequency.DAILY) {
+        penalties = (daysLate - loan.graceDays) * fine;
+      } else if (loan.fineFrequency === FineFrequency.WEEKLY) {
+        const weeksLate = Math.floor((daysLate - loan.graceDays) / 7);
+        penalties = weeksLate * fine;
+      } else if (loan.fineFrequency === FineFrequency.MONTHLY) {
+        const monthsLate = Math.floor((daysLate - loan.graceDays) / 30);
+        penalties = monthsLate * fine;
+      }
+    }
   }
 
-  loan.multasAcumuladas = penalties;
-  return { multasAcumuladas: penalties };
+  const finalPenalties = Math.max(penalties, Number(loan.multasAcumuladas || 0));
+  loan.multasAcumuladas = finalPenalties;
+  return { multasAcumuladas: finalPenalties };
 }
+
+
