@@ -21,10 +21,10 @@
 <app-login *ngIf="!loanService.isLoggedIn()"></app-login>
 
 <div *ngIf="loanService.isLoggedIn()" 
-     class="min-h-[100dvh] h-[100dvh] overflow-hidden flex flex-col transition-all duration-150">
+     class="min-h-screen bg-industrial-black flex flex-col transition-all duration-150">
   <app-trial-banner></app-trial-banner>
   <!-- Main Viewport Flow (Scrollable Content Area) -->
-  <div class="flex-grow overflow-y-auto flex flex-col"
+  <div class="flex-grow flex flex-col"
        [class.pb-[115px]]="loanService.currentUser()?.isImpersonating"
        [class.md:pb-0]="loanService.currentUser()?.isImpersonating">
     <!-- Admin Panel view -->

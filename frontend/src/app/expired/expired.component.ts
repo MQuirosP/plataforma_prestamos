@@ -56,7 +56,7 @@ export class ExpiredComponent {
   private loanService = inject(LoanService);
 
   // Admin contact phone number prefilled with structured text
-  adminWhatsappUrl = `https://wa.me/${environment.supportWhatsappNumber}?text=${encodeURIComponent(
+  adminWhatsappUrl = `https://wa.me/${(environment as any).supportWhatsappNumber || '50672666369'}?text=${encodeURIComponent(
     'Hola Administrador, mi cuenta de cobrador de Préstamos ha vencido. Solicito la reactivación de mi membresía mensual.'
   )}`;
 

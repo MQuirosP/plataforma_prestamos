@@ -4,3 +4,4 @@ export const environment = {
   supportWhatsappNumber: '50672666369',
   defaultCountryCode: '+506'
 };
+

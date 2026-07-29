@@ -187,7 +187,8 @@ export class DatePickerPresetsHeader {
 
       <!-- Single Date Picker Mode -->
       <ng-container *ngIf="mode === 'single'">
-        <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+        <!-- Standard Input + Icon Container -->
+        <div *ngIf="!iconOnly" class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
           <input
             type="text"
             [matDatepicker]="singlePicker"
@@ -208,6 +209,29 @@ export class DatePickerPresetsHeader {
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Icon Only Discrete Button Variant -->
+        <div *ngIf="iconOnly" class="relative inline-flex items-center">
+          <input
+            type="text"
+            [matDatepicker]="singlePicker"
+            [formControl]="singleControl"
+            class="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
+          />
+          <mat-datepicker #singlePicker [touchUi]="isMobile" [calendarHeaderComponent]="customHeader"></mat-datepicker>
+
+          <button
+            type="button"
+            (click)="singlePicker.open()"
+            [disabled]="disabled"
+            title="Cambiar fecha en calendario"
+            class="p-1.5 text-industrial-muted hover:text-caterpillar transition duration-150 focus:outline-none rounded hover:bg-industrial-surface border border-industrial-border/40 hover:border-caterpillar/40"
+          >
+            <svg class="w-3.5 h-3.5 text-caterpillar" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
           </button>
         </div>
@@ -264,6 +288,7 @@ export class DateFieldComponent implements OnInit, OnDestroy, ControlValueAccess
   @Input() mode: DateFieldMode = 'single';
   @Input() label: string = '';
   @Input() placeholder: string = '';
+  @Input() iconOnly: boolean = false;
 
   /** Emits when value changes for non-reactive forms usage if desired */
   @Output() valueChange = new EventEmitter<any>();

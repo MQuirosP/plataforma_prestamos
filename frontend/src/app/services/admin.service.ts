@@ -115,8 +115,9 @@ export class AdminService {
     return res.paymentDate;
   }
 
-  async extendTrial(id: string, days: number = 7): Promise<string> {
-    const res = await firstValueFrom(this.http.put<{ success: boolean; fechaPruebaFin: string }>(`${this.apiUrl}/admin/tenants/${id}/extend-trial`, { days }, this.getHeaders()));
+  async extendTrial(id: string, options: { days?: number; targetDate?: string } | number = 7): Promise<string> {
+    const payload = typeof options === 'number' ? { days: options } : options;
+    const res = await firstValueFrom(this.http.put<{ success: boolean; fechaPruebaFin: string }>(`${this.apiUrl}/admin/tenants/${id}/extend-trial`, payload, this.getHeaders()));
     return res.fechaPruebaFin;
   }
 

@@ -13,7 +13,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
   standalone: true,
   imports: [CommonModule, FormsModule, NumericStepperComponent],
   template: `
-    <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
+    <div class="min-h-full bg-industrial-black text-industrial-light pb-24 font-sans select-none">
 
       
       <!-- Top Caterpillar Branded Bar -->

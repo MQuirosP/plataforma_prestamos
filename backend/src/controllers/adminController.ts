@@ -219,31 +219,37 @@ export async function updateTenantPaymentDate(req: AuthenticatedRequest, res: Re
   } catch (err: any) { next(err); }
 }
 
-// 4c. Extender Período de Prueba (Trial)
+// 4c. Extender o Modificar Período de Prueba (Trial)
 export async function extendTenantTrial(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
-    const { days } = req.body;
-    const daysToAdd = Number(days) || 7;
-
+    const { days, targetDate } = req.body;
+    
     const userToExtend = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!userToExtend) return res.status(404).json({ error: 'Cliente no encontrado' });
 
-    const baseDate = userToExtend.fechaPruebaFin && new Date(userToExtend.fechaPruebaFin) > new Date()
-      ? new Date(userToExtend.fechaPruebaFin)
-      : new Date();
+    let finalDate: Date;
 
-    baseDate.setDate(baseDate.getDate() + daysToAdd);
+    if (targetDate) {
+      finalDate = new Date(targetDate);
+    } else {
+      const daysToAdd = Number(days) || 7;
+      const baseDate = userToExtend.fechaPruebaFin && new Date(userToExtend.fechaPruebaFin) > new Date()
+        ? new Date(userToExtend.fechaPruebaFin)
+        : new Date();
+      baseDate.setDate(baseDate.getDate() + daysToAdd);
+      finalDate = baseDate;
+    }
 
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: { 
-        fechaPruebaFin: baseDate,
+        fechaPruebaFin: finalDate,
         isTrial: true
       }
     });
 
-    await logAudit('EXTENDER_TRIAL', `Se extendió la prueba de ${user.username} por ${daysToAdd} días`, req, user.id);
+    await logAudit('EXTENDER_TRIAL', `Fecha de prueba de ${user.username} actualizada a ${user.fechaPruebaFin?.toISOString()}`, req, user.id);
     return res.json({ success: true, fechaPruebaFin: user.fechaPruebaFin });
   } catch (err: any) { next(err); }
 }

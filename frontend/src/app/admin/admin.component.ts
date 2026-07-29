@@ -14,7 +14,7 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
   standalone: true,
   imports: [CommonModule, FormsModule, AuditLogListComponent, DateFieldComponent],
   template: `
-    <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
+    <div class="min-h-full flex-grow bg-industrial-black text-industrial-light pb-24 font-sans select-none">
       
       <!-- Header -->
       <header class="border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95" style="background-color: #111111;">
@@ -71,8 +71,9 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
             <div class="flex items-baseline justify-between mt-1">
               <span class="text-xl font-black text-white">{{ stats()?.totalPrestamistas }}</span>
               <div class="flex flex-col items-end text-[10px] font-mono font-bold leading-tight">
-                <span class="text-semantic-emerald">● {{ getTenantCount('ACTIVO') }} Activos</span>
-                <span *ngIf="getTenantCount('SUSPENDIDO') > 0" class="text-semantic-red">● {{ getTenantCount('SUSPENDIDO') }} Suspendidos</span>
+                <span (click)="$event.stopPropagation(); activeTab.set('tenants'); activeSubFilter.set('ACTIVO')" class="text-semantic-emerald hover:underline cursor-pointer">● {{ getTenantCount('ACTIVO') }} Activos</span>
+                <span *ngIf="getTenantCount('TRIAL') > 0" (click)="$event.stopPropagation(); activeTab.set('tenants'); activeSubFilter.set('TRIAL')" class="text-caterpillar hover:underline cursor-pointer">⚡ {{ getTenantCount('TRIAL') }} Demos</span>
+                <span *ngIf="getTenantCount('SUSPENDIDO') > 0" (click)="$event.stopPropagation(); activeTab.set('tenants'); activeSubFilter.set('SUSPENDIDO')" class="text-semantic-red hover:underline cursor-pointer">● {{ getTenantCount('SUSPENDIDO') }} Suspendidos</span>
               </div>
             </div>
           </div>
@@ -280,11 +281,22 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
                       {{ getPaymentDateDisplay(tenant) }}
                     </p>
                   </div>
-                  <div class="flex gap-1">
-                    <button *ngIf="tenant.isTrial && !tenant.paymentDate" (click)="extendTrial(tenant, 7)" title="Extender prueba 7 días" class="bg-amber-950/40 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-2 py-1 rounded hover:bg-caterpillar hover:text-industrial-black transition">
+
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <!-- Subtle Date Picker Trigger Icon for Trial -->
+                    <div *ngIf="tenant.isTrial && !tenant.paymentDate" class="shrink-0">
+                      <app-date-field mode="single"
+                                      [iconOnly]="true"
+                                      [ngModel]="tenant.fechaPruebaFin ? (tenant.fechaPruebaFin | date:'yyyy-MM-dd') : ''"
+                                      (ngModelChange)="onTrialDateChanged(tenant, $event)">
+                      </app-date-field>
+                    </div>
+
+                    <!-- +7 Days Quick Action -->
+                    <button *ngIf="tenant.isTrial && !tenant.paymentDate" (click)="extendTrial(tenant, 7)" title="Atajo: Extender 7 días" class="bg-amber-950/40 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-2 py-1.5 rounded hover:bg-caterpillar hover:text-industrial-black transition">
                       +7 Días
                     </button>
-                    <button *ngIf="canRenew(tenant)" (click)="renewTenant(tenant)" class="bg-caterpillar/10 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-2.5 py-1 rounded hover:bg-caterpillar hover:text-industrial-black transition">
+                    <button *ngIf="canRenew(tenant)" (click)="renewTenant(tenant)" class="bg-caterpillar/10 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-2.5 py-1.5 rounded hover:bg-caterpillar hover:text-industrial-black transition">
                       +1 Mes
                     </button>
                   </div>
@@ -951,6 +963,19 @@ export class AdminComponent implements OnInit {
       await this.loadData();
     } catch (err: any) {
       this.toastService.error('Error al extender prueba');
+    }
+  }
+
+  async onTrialDateChanged(tenant: Tenant, newDate: string) {
+    if (!newDate) return;
+    try {
+      const newFechaFin = await this.adminService.extendTrial(tenant.id, { targetDate: newDate });
+      this.toastService.success(`Fin de prueba de ${tenant.nombre} actualizado al ${newDate}.`);
+      tenant.fechaPruebaFin = newFechaFin;
+      tenant.isTrial = true;
+      await this.loadData();
+    } catch (err: any) {
+      this.toastService.error('Error al actualizar fecha de prueba');
     }
   }
 
