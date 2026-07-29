@@ -61,11 +61,11 @@ npx prisma db seed
 ## 🛡️ Credenciales de Prueba por Defecto
 
 ### Administrador del SaaS (Acceso al Panel General)
-- **Correo**: `mario.quiros.admin@gmail.com`
+- **Correo**: `admin@catloan.app`
 - **Contraseña**: CUALQUIERA (Entorno de desarrollo acepta contraseña de prueba)
 
 ### Prestamista de Pruebas (Acceso al Dashboard de Préstamos)
-- **Correo**: `mario.quiros.prestamista@gmail.com`
+- **Correo**: `demo.prestamista@catloan.app`
 - **Contraseña**: CUALQUIERA
 
 ---
@@ -89,4 +89,5 @@ npx prisma db seed
 ---
 
 ## 📞 Soporte e Información
-Para cualquier soporte técnico o comercial, por favor contactar al administrador del sistema en [mquirosp78@gmail.com](mailto:mquirosp78@gmail.com).
+Para cualquier soporte técnico o comercial, por favor contactar al administrador del sistema en [support@catloan.app](mailto:support@catloan.app).
+

@@ -71,8 +71,9 @@ import { LoanService } from '../services/loan.service';
           <p>© 2026 Mi Negocio Crediticio. Todos los derechos reservados.</p>
           <p class="mt-1.5">
             ¿Necesitas ayuda? 
-            <a href="mailto:mquirosp78@gmail.com" class="text-caterpillar hover:underline font-extrabold">Contactar al administrador</a>
+            <a href="mailto:support@catloan.app" class="text-caterpillar hover:underline font-extrabold">Contactar al administrador</a>
           </p>
+
         </div>
 
       </div>
