@@ -86,7 +86,14 @@ export async function createTenant(req: AuthenticatedRequest, res: Response, nex
 
   try {
     const hash = await bcrypt.hash(password, 10);
-    const trialDays = Number(process.env.DEFAULT_TRIAL_DAYS) || 14;
+    
+    // Consultar configuración global de SaaS para obtener días de trial por defecto
+    let trialDays = Number(process.env.DEFAULT_TRIAL_DAYS) || 14;
+    try {
+      const globalConfig = await prisma.saasGlobalConfig.findUnique({ where: { id: 'global' } });
+      if (globalConfig?.defaultTrialDays) trialDays = globalConfig.defaultTrialDays;
+    } catch (_) {}
+
     const defaultCountryCode = process.env.DEFAULT_COUNTRY_CODE || '+506';
 
     const fechaPruebaFin = new Date();
@@ -117,8 +124,51 @@ export async function createTenant(req: AuthenticatedRequest, res: Response, nex
       }
     });
 
-    await logAudit('CREAR_TENANT', `Se creó el prestamista ${cleanUsername} (Trial de 14 días)`, req, newTenant.id);
+    await logAudit('CREAR_TENANT', `Se creó el prestamista ${cleanUsername} (Trial de ${trialDays} días)`, req, newTenant.id);
     return res.json({ success: true, tenant: newTenant });
+  } catch (err: any) { next(err); }
+}
+
+// 2b. Obtener Configuración Global de SaaS
+export async function getSaasGlobalConfig(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
+  try {
+    let config = await prisma.saasGlobalConfig.findUnique({ where: { id: 'global' } });
+    if (!config) {
+      config = await prisma.saasGlobalConfig.create({
+        data: {
+          id: 'global',
+          defaultTrialDays: Number(process.env.DEFAULT_TRIAL_DAYS) || 14,
+          supportWhatsappNumber: process.env.SUPPORT_WHATSAPP_NUMBER || '50672666369',
+          graceDays: 0
+        }
+      });
+    }
+    return res.json(config);
+  } catch (err: any) { next(err); }
+}
+
+// 2c. Actualizar Configuración Global de SaaS
+export async function updateSaasGlobalConfig(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
+  try {
+    const { defaultTrialDays, supportWhatsappNumber, graceDays } = req.body;
+    const config = await prisma.saasGlobalConfig.upsert({
+      where: { id: 'global' },
+      update: {
+        defaultTrialDays: Number(defaultTrialDays) || 14,
+        supportWhatsappNumber: String(supportWhatsappNumber || '50672666369'),
+        graceDays: Number(graceDays) || 0
+      },
+      create: {
+        id: 'global',
+        defaultTrialDays: Number(defaultTrialDays) || 14,
+        supportWhatsappNumber: String(supportWhatsappNumber || '50672666369'),
+        graceDays: Number(graceDays) || 0
+      }
+    });
+    await logAudit('UPDATE_SAAS_CONFIG', 'Se actualizó la configuración global del SaaS', req);
+    return res.json({ success: true, config });
   } catch (err: any) { next(err); }
 }
 

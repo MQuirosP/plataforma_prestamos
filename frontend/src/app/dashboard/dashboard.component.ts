@@ -86,20 +86,20 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
         </section>
 
         <section *ngIf="!loanService.loading()" class="grid grid-cols-3 gap-3 mb-6">
-          <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between">
-            <span class="text-[10px] text-industrial-muted uppercase font-mono">En la Calle</span>
+          <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between hover:border-caterpillar transition duration-150 group cursor-default">
+            <span class="text-[10px] text-industrial-muted uppercase font-mono group-hover:text-caterpillar transition">En la Calle</span>
             <span class="text-sm font-black text-white mt-1">
               {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ capitalEnCalle() | number:'1.0-0' }}
             </span>
           </div>
-          <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between">
-            <span class="text-[10px] text-industrial-muted uppercase font-mono">Esta Semana</span>
+          <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between hover:border-caterpillar transition duration-150 group cursor-default">
+            <span class="text-[10px] text-industrial-muted uppercase font-mono group-hover:text-caterpillar transition">Esta Semana</span>
             <span class="text-sm font-black text-caterpillar mt-1">
               {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ porCobrarEstaSemana() | number:'1.0-0' }}
             </span>
           </div>
-          <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between">
-            <span class="text-[10px] text-industrial-muted uppercase font-mono">Rendimiento</span>
+          <div class="bg-industrial-dark border border-industrial-border p-3 rounded-xl flex flex-col justify-between hover:border-caterpillar transition duration-150 group cursor-default">
+            <span class="text-[10px] text-industrial-muted uppercase font-mono group-hover:text-caterpillar transition">Rendimiento</span>
             <span class="text-sm font-black text-semantic-emerald mt-1">
               {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ rendimientoEstimado() | number:'1.0-0' }}
             </span>

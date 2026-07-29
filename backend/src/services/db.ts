@@ -41,6 +41,13 @@ export interface MemorySubscription {
   createdAt: Date;
 }
 
+export interface MemorySaasGlobalConfig {
+  id: string;
+  defaultTrialDays: number;
+  supportWhatsappNumber: string;
+  graceDays: number;
+}
+
 export interface MemoryLoan {
   id: string;
   prestamistaId: string;

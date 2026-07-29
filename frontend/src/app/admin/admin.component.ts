@@ -1,18 +1,19 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdminService, Tenant, SaaSStats, SaaSLog, SaaSPlanConfig } from '../services/admin.service';
+import { AdminService, Tenant, SaaSStats, SaaSLog, SaaSPlanConfig, SaasGlobalConfig } from '../services/admin.service';
 import { ToastService } from '../services/toast.service';
 import { LoanService } from '../services/loan.service';
 import { AuditLogListComponent, AuditLogEntry } from '../shared/audit-log-list/audit-log-list.component';
 import html2canvas from 'html2canvas';
 
 import { DateFieldComponent } from '../shared/date-field/date-field.component';
+import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepper.component';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, AuditLogListComponent, DateFieldComponent],
+  imports: [CommonModule, FormsModule, AuditLogListComponent, DateFieldComponent, NumericStepperComponent],
   template: `
     <div class="min-h-full flex-grow bg-industrial-black text-industrial-light pb-24 font-sans select-none">
       
@@ -61,7 +62,7 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
           <!-- Card 1: Prestamistas -->
           <div (click)="activeTab.set('tenants'); activeSubFilter.set('TODO')"
                title="Ver todos los prestamistas"
-               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar hover:scale-[1.02] transition duration-150 group">
+               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar transition duration-150 group">
             <div class="flex items-center justify-between">
               <span class="text-[9px] text-industrial-muted uppercase font-mono group-hover:text-caterpillar transition">Prestamistas</span>
               <svg class="w-3.5 h-3.5 text-industrial-muted group-hover:text-caterpillar transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,7 +82,7 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
           <!-- Card 2: Alertas de Cobro SaaS (Reemplaza Volumen) -->
           <div (click)="activeTab.set('tenants'); activeSubFilter.set('POR_VENCER')"
                title="Ver clientes por vencer / vencidos"
-               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar hover:scale-[1.02] transition duration-150 group">
+               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar transition duration-150 group">
             <div class="flex items-center justify-between">
               <span class="text-[9px] text-industrial-muted uppercase font-mono group-hover:text-caterpillar transition">Alertas Cobro</span>
               <svg class="w-3.5 h-3.5 text-caterpillar" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +98,7 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
           <!-- Card 3: Ingreso Recurrente SaaS (MRR) -->
           <div (click)="showSettingsPanel.set(true)"
                title="Ver Precios e Ingresos Recurrentes"
-               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar hover:scale-[1.02] transition duration-150 group">
+               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar transition duration-150 group">
             <div class="flex items-center justify-between">
               <span class="text-[9px] text-industrial-muted uppercase font-mono group-hover:text-caterpillar transition">MRR Est. SaaS</span>
               <svg class="w-3.5 h-3.5 text-semantic-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,7 +115,7 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
           <!-- Card 4: Distribución de Planes -->
           <div (click)="activeTab.set('tenants'); activeSubFilter.set('TODO')"
                title="Ver prestamistas por plan"
-               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar hover:scale-[1.02] transition duration-150 group">
+               class="bg-industrial-dark border border-industrial-border p-3.5 rounded-xl cursor-pointer hover:border-caterpillar transition duration-150 group">
             <span class="text-[9px] text-industrial-muted uppercase font-mono block mb-1 group-hover:text-caterpillar transition">Planes SaaS</span>
             <div class="flex items-center gap-1 text-[10px] font-mono flex-wrap">
               <span class="px-1.5 py-0.5 rounded bg-amber-950/40 text-amber-400 border border-amber-500/20">BR:{{ stats()?.planes?.bronce }}</span>
@@ -492,6 +493,43 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
             </button>
           </div>
 
+          <!-- Section: Configuración de Sistema -->
+          <div class="px-6 py-4 border-b border-industrial-border/60">
+            <div class="flex items-center justify-between py-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] text-caterpillar uppercase font-mono tracking-widest font-black">Configuración de Sistema</span>
+              </div>
+              <button (click)="toggleSettingsSection('saasGlobal')" 
+                      title="Desplegar configuración de sistema"
+                      class="p-1 text-industrial-muted hover:text-caterpillar focus:outline-none transition rounded-md hover:bg-industrial-surface">
+                <svg xmlns="http://www.w3.org/2000/svg" [class.rotate-180]="expandedSaasGlobalConfigs()" class="h-4 w-4 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+
+            <div *ngIf="expandedSaasGlobalConfigs()" class="space-y-4 bg-industrial-surface border border-industrial-border p-4 rounded-lg mt-4">
+              <div>
+                <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Días de Prueba por Defecto</label>
+                <app-numeric-stepper [(ngModel)]="saasGlobalConfig.defaultTrialDays" [min]="1" [max]="90" [step]="1"></app-numeric-stepper>
+                <span class="text-[8px] text-industrial-muted block mt-1">Días de prueba iniciales asignados a nuevos registros de demostración</span>
+              </div>
+              <div>
+                <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">WhatsApp de Soporte Oficial</label>
+                <input type="text" [(ngModel)]="saasGlobalConfig.supportWhatsappNumber" placeholder="Ej: 50672666369" class="w-full bg-industrial-dark border border-industrial-border rounded p-2 text-white text-xs focus:border-caterpillar outline-none">
+                <span class="text-[8px] text-industrial-muted block mt-1">Número internacional al que serán dirigidos los enlaces de soporte</span>
+              </div>
+              <div>
+                <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Días de Gracia Post-Vencimiento</label>
+                <app-numeric-stepper [(ngModel)]="saasGlobalConfig.graceDays" [min]="0" [max]="30" [step]="1"></app-numeric-stepper>
+                <span class="text-[8px] text-industrial-muted block mt-1">Días adicionales permitidos antes del bloqueo definitivo</span>
+              </div>
+              <button (click)="saveSaasGlobalConfig()" [disabled]="savingSaasConfig()" class="w-full bg-caterpillar text-industrial-black font-black py-2 rounded text-xs uppercase hover:bg-caterpillar-dark transition mt-2">
+                {{ savingSaasConfig() ? 'Guardando...' : 'Guardar Configuración' }}
+              </button>
+            </div>
+          </div>
+
           <!-- Section: Planes y Límites -->
           <div class="px-6 py-4 border-b border-industrial-border/60">
             <div class="flex items-center justify-between py-1">
@@ -622,25 +660,6 @@ export class AdminComponent implements OnInit {
   confirmPassword = '';
   changingPassword = signal(false);
 
-  expandedPlansConfigs = signal(false);
-  expandedChangePassword = signal(false);
-
-  toggleSettingsSection(section: 'plans' | 'password') {
-    if (section === 'plans') {
-      const next = !this.expandedPlansConfigs();
-      this.expandedPlansConfigs.set(next);
-      if (next) {
-        this.expandedChangePassword.set(false);
-      }
-    } else {
-      const next = !this.expandedChangePassword();
-      this.expandedChangePassword.set(next);
-      if (next) {
-        this.expandedPlansConfigs.set(false);
-      }
-    }
-  }
-
   async changeAdminPassword() {
     if (!this.oldPassword || !this.newPassword || !this.confirmPassword) {
       this.toastService.error('Todos los campos son requeridos');
@@ -672,6 +691,20 @@ export class AdminComponent implements OnInit {
   stats = signal<SaaSStats | null>(null);
   logs = signal<SaaSLog[]>([]);
   planConfigs = signal<SaaSPlanConfig[]>([]);
+
+  // Section collapse state
+  expandedPlansConfigs = signal<boolean>(false);
+  expandedSaasGlobalConfigs = signal<boolean>(false);
+  expandedChangePassword = signal<boolean>(false);
+
+  // SaaS Global Config State
+  saasGlobalConfig: SaasGlobalConfig = {
+    id: 'global',
+    defaultTrialDays: 14,
+    supportWhatsappNumber: '50672666369',
+    graceDays: 0
+  };
+  savingSaasConfig = signal<boolean>(false);
 
   /** Maps SaaSLog[] to AuditLogEntry[] for the shared component. */
   logsForDisplay = computed<AuditLogEntry[]>(() =>
@@ -790,6 +823,11 @@ export class AdminComponent implements OnInit {
     }
 
     await this.loadLogs();
+
+    try {
+      const config = await this.adminService.getSaasConfig();
+      if (config) this.saasGlobalConfig = config;
+    } catch (_) {}
 
     const FALLBACK_PLANS: SaaSPlanConfig[] = [
       { plan: 'BRONCE', maxClientes: 10, maxCobradores: 0, precioMensual: 5000 },
@@ -1200,6 +1238,25 @@ export class AdminComponent implements OnInit {
       this.toastService.success(`Plan actualizado a ${newPlan}`);
     } catch (err) {
       this.toastService.error('Error al cambiar plan');
+    }
+  }
+
+  toggleSettingsSection(section: 'plans' | 'saasGlobal' | 'password') {
+    if (section === 'plans') this.expandedPlansConfigs.update(v => !v);
+    if (section === 'saasGlobal') this.expandedSaasGlobalConfigs.update(v => !v);
+    if (section === 'password') this.expandedChangePassword.update(v => !v);
+  }
+
+  async saveSaasGlobalConfig() {
+    this.savingSaasConfig.set(true);
+    try {
+      const updated = await this.adminService.updateSaasConfig(this.saasGlobalConfig);
+      this.saasGlobalConfig = updated;
+      this.toastService.success('Ajustes globales SaaS guardados exitosamente');
+    } catch (err: any) {
+      this.toastService.error('Error al guardar ajustes globales SaaS');
+    } finally {
+      this.savingSaasConfig.set(false);
     }
   }
 

@@ -115,6 +115,14 @@ model BusinessSettings {
   modalidadPredeterminada LoanModalidad @default(TRADICIONAL)
 }
 
+model SaasGlobalConfig {
+  id                    String @id @default("global")
+  defaultTrialDays      Int    @default(14)
+  supportWhatsappNumber String @default("50672666369")
+  graceDays             Int    @default(0)
+  updatedAt             DateTime @updatedAt
+}
+
 model Subscription {
   id         String           @id @default(uuid())
   userId     String

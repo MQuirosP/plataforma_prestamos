@@ -35,6 +35,13 @@ export interface SaaSPlanConfig {
   precioMensual: number;
 }
 
+export interface SaasGlobalConfig {
+  id: string;
+  defaultTrialDays: number;
+  supportWhatsappNumber: string;
+  graceDays: number;
+}
+
 export interface SaaSStats {
   totalPrestamistas: number;
   totalCobradores: number;
@@ -119,6 +126,15 @@ export class AdminService {
     const payload = typeof options === 'number' ? { days: options } : options;
     const res = await firstValueFrom(this.http.put<{ success: boolean; fechaPruebaFin: string }>(`${this.apiUrl}/admin/tenants/${id}/extend-trial`, payload, this.getHeaders()));
     return res.fechaPruebaFin;
+  }
+
+  async getSaasConfig(): Promise<SaasGlobalConfig> {
+    return firstValueFrom(this.http.get<SaasGlobalConfig>(`${this.apiUrl}/admin/saas-config`, this.getHeaders()));
+  }
+
+  async updateSaasConfig(config: Partial<SaasGlobalConfig>): Promise<SaasGlobalConfig> {
+    const res = await firstValueFrom(this.http.put<{ success: boolean; config: SaasGlobalConfig }>(`${this.apiUrl}/admin/saas-config`, config, this.getHeaders()));
+    return res.config;
   }
 
   async getStats(): Promise<SaaSStats> {

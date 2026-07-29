@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getLoans, createLoan, addPayment, deletePayment, updateLoan, deleteLoan, condonarMora } from '../controllers/loanController';
 
 import { getSettings, updateSettings } from '../controllers/settingsController';
-import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, updateTenantPaymentDate, extendTenantTrial, impersonateTenant, impersonateCobrador, getLogs, getStats, getPlanConfigs, updatePlanConfig } from '../controllers/adminController';
+import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, updateTenantPaymentDate, extendTenantTrial, impersonateTenant, impersonateCobrador, getLogs, getStats, getPlanConfigs, updatePlanConfig, getSaasGlobalConfig, updateSaasGlobalConfig } from '../controllers/adminController';
 import { login, changePassword, refresh, logout } from '../controllers/authController';
 import { getCajaCobrador, procesarLiquidacion } from '../controllers/cobradorController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
@@ -43,6 +43,8 @@ router.put('/admin/tenants/:id/suspender', toggleSuspendTenant as any);
 router.put('/admin/tenants/:id/plan', changeTenantPlan as any);
 router.put('/admin/tenants/:id/payment-date', updateTenantPaymentDate as any);
 router.put('/admin/tenants/:id/extend-trial', extendTenantTrial as any);
+router.get('/admin/saas-config', getSaasGlobalConfig as any);
+router.put('/admin/saas-config', updateSaasGlobalConfig as any);
 router.post('/admin/impersonate/:prestamistaId', impersonateTenant as any);
 router.post('/admin/impersonate-cobrador/:cobradorId', impersonateCobrador as any);
 router.get('/admin/logs', getLogs as any);
