@@ -124,9 +124,15 @@ function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro
   let penalties = 0;
   if (P < N) {
 
-    const oldestDueDate = dueDates[P];
-    const diffTime = today.getTime() - oldestDueDate.getTime();
+    const oldestDueDate = new Date(dueDates[P]);
+    oldestDueDate.setHours(0, 0, 0, 0);
+
+    const todayClean = new Date(today);
+    todayClean.setHours(0, 0, 0, 0);
+
+    const diffTime = todayClean.getTime() - oldestDueDate.getTime();
     const daysLate = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+
 
     if (daysLate > loan.graceDays) {
       const fine = Number(loan.fineAmount);
