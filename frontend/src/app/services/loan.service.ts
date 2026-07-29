@@ -37,6 +37,13 @@ export enum PaymentTipo {
   ABONO_CAPITAL = 'ABONO_CAPITAL'
 }
 
+export enum TipoIdentificacion {
+  CEDULA_NACIONAL = 'CEDULA_NACIONAL',
+  PASAPORTE = 'PASAPORTE',
+  RESIDENCIA_DIMEX = 'RESIDENCIA_DIMEX',
+  OTRO = 'OTRO'
+}
+
 export interface Payment {
   id: string;
   loanId: string;
@@ -73,7 +80,7 @@ export interface Loan {
   fineAmount?: number | null;
   fineFrequency?: FineFrequency | null;
   graceDays?: number;
-  tipoIdentificacion?: string | null;
+  tipoIdentificacion?: TipoIdentificacion | null;
   numeroIdentificacion?: string | null;
 
   multasAcumuladas?: number;
@@ -345,6 +352,8 @@ export class LoanService {
   async createLoan(loanData: {
     clienteNombre: string;
     clienteTelefono: string;
+    tipoIdentificacion?: TipoIdentificacion | null;
+    numeroIdentificacion?: string | null;
     montoOriginal: number;
     cuotaSemanal: number;
     diaCobro: number;

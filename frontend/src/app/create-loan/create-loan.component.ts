@@ -1,14 +1,23 @@
 import { Component, OnInit, inject, signal, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LoanService, Role, FineFrequency } from '../services/loan.service';
+import { LoanService, Role, FineFrequency, TipoIdentificacion } from '../services/loan.service';
 import { ToastService } from '../services/toast.service';
 import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepper.component';
+import { trigger, state, style, animate, transition } from '@angular/animations';
 
 @Component({
   selector: 'app-create-loan',
   standalone: true,
   imports: [CommonModule, FormsModule, NumericStepperComponent],
+  animations: [
+    trigger('expandCollapse', [
+      state('void', style({ maxHeight: '0', opacity: '0', overflow: 'hidden', transform: 'translateY(-6px)' })),
+      state('*',    style({ maxHeight: '500px', opacity: '1', overflow: 'hidden', transform: 'translateY(0)' })),
+      transition('void => *', animate('220ms cubic-bezier(0.4, 0, 0.2, 1)')),
+      transition('* => void', animate('180ms cubic-bezier(0.4, 0, 0.6, 1)'))
+    ])
+  ],
   template: `
     <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
       
@@ -49,6 +58,34 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Teléfono (WhatsApp)</label>
               <input type="text" [(ngModel)]="newLoanData.clienteTelefono" name="clienteTelefono" required 
                      class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+            </div>
+
+            <!-- Tipo de Identificación & Número -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Tipo de Documento</label>
+                <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                  <select [(ngModel)]="newLoanData.tipoIdentificacion" name="tipoIdentificacion"
+                          class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                    <option value="CEDULA_NACIONAL">Cédula Nacional</option>
+                    <option value="PASAPORTE">Pasaporte</option>
+                    <option value="RESIDENCIA_DIMEX">DIMEX</option>
+                    <option value="OTRO">Otro</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nº Identificación</label>
+                <input type="text" [(ngModel)]="newLoanData.numeroIdentificacion" name="numeroIdentificacion"
+                       [placeholder]="getIdPlaceholder(newLoanData.tipoIdentificacion)"
+                       [maxlength]="getIdMaxLength(newLoanData.tipoIdentificacion)"
+                       (input)="onIdInput($event, newLoanData, 'numeroIdentificacion')"
+                       [attr.inputmode]="newLoanData.tipoIdentificacion === 'PASAPORTE' || newLoanData.tipoIdentificacion === 'OTRO' ? 'text' : 'numeric'"
+                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar font-mono tracking-wide">
+              </div>
             </div>
 
             <!-- Modalidad del Préstamo -->
@@ -155,12 +192,20 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             <!-- Fine Settings section -->
             <div class="border border-industrial-border rounded-xl p-4 bg-industrial-dark/40 space-y-3">
               <div class="flex items-center justify-between">
-                <label class="text-sm font-bold text-white">¿Aplicar multas por mora?</label>
-                <input type="checkbox" [(ngModel)]="newLoanData.hasFine" name="hasFine"
-                       class="rounded border-industrial-border text-caterpillar focus:ring-0 bg-industrial-surface h-5 w-5">
+                <span class="text-sm font-bold text-white">¿Aplicar multas por mora?</span>
+                <!-- Custom checkbox -->
+                <label for="hasFine-create" class="relative cursor-pointer">
+                  <input type="checkbox" id="hasFine-create" [(ngModel)]="newLoanData.hasFine" name="hasFine" class="sr-only peer">
+                  <div class="w-5 h-5 rounded flex items-center justify-center border border-industrial-border bg-industrial-surface
+                               peer-checked:bg-caterpillar peer-checked:border-caterpillar transition-colors duration-150">
+                    <svg *ngIf="newLoanData.hasFine" class="w-3 h-3 text-industrial-black" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </label>
               </div>
 
-              <div *ngIf="newLoanData.hasFine" class="space-y-4 pt-2 border-t border-industrial-border/30">
+              <div *ngIf="newLoanData.hasFine" @expandCollapse class="space-y-4 pt-2 border-t border-industrial-border/30">
                 <div>
                   <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto de Multa</label>
                   <app-numeric-stepper [(ngModel)]="newLoanData.fineAmount" name="fineAmount" [min]="0" [step]="100"></app-numeric-stepper>
@@ -229,6 +274,8 @@ export class CreateLoanComponent implements OnInit {
   newLoanData = {
     clienteNombre: '',
     clienteTelefono: '',
+    tipoIdentificacion: TipoIdentificacion.CEDULA_NACIONAL as TipoIdentificacion,
+    numeroIdentificacion: '',
     montoOriginal: null as number | null,
     cuotaSemanal: null as number | null,
     diaCobro: 1,
@@ -243,6 +290,8 @@ export class CreateLoanComponent implements OnInit {
     frecuenciaPago: 'SEMANAL' as any
   };
 
+  readonly TipoIdentificacion = TipoIdentificacion;
+
   ngOnInit() {
     const settings = this.loanService.settings();
     const currency = settings?.monedaCodigo || 'CRC';
@@ -251,6 +300,8 @@ export class CreateLoanComponent implements OnInit {
     this.newLoanData = {
       clienteNombre: '',
       clienteTelefono: prefix,
+      tipoIdentificacion: TipoIdentificacion.CEDULA_NACIONAL,
+      numeroIdentificacion: '',
       montoOriginal: null,
       cuotaSemanal: null,
       diaCobro: 1,
@@ -302,6 +353,8 @@ export class CreateLoanComponent implements OnInit {
       await this.loanService.createLoan({
         clienteNombre: this.newLoanData.clienteNombre,
         clienteTelefono: this.newLoanData.clienteTelefono,
+        tipoIdentificacion: this.newLoanData.tipoIdentificacion || null,
+        numeroIdentificacion: this.newLoanData.numeroIdentificacion || null,
         montoOriginal: Number(this.newLoanData.montoOriginal),
         cuotaSemanal: Number(this.newLoanData.cuotaSemanal),
         diaCobro: Number(this.newLoanData.diaCobro),
@@ -323,5 +376,62 @@ export class CreateLoanComponent implements OnInit {
         this.toastService.error('Error al registrar el préstamo');
       }
     }
+  }
+
+  /** Placeholder contextual según el tipo de identificación. */
+  getIdPlaceholder(tipo: string): string {
+    switch (tipo) {
+      case 'CEDULA_NACIONAL':  return '1-1234-5678';
+      case 'RESIDENCIA_DIMEX': return '12345678901';
+      case 'PASAPORTE':        return 'ABC123456';
+      default:                 return 'Núm. de documento';
+    }
+  }
+
+  /** Longitud máxima de caracteres según tipo. */
+  getIdMaxLength(tipo: string): number {
+    switch (tipo) {
+      case 'CEDULA_NACIONAL':  return 11; // X-XXXX-XXXX con guiones
+      case 'RESIDENCIA_DIMEX': return 12; // 11 o 12 dígitos
+      case 'PASAPORTE':        return 20;
+      default:                 return 30;
+    }
+  }
+
+  /** Texto de ayuda bajo el campo. */
+  getIdHint(tipo: string): string {
+    switch (tipo) {
+      case 'CEDULA_NACIONAL':  return 'Formato: #-####-#### (9 dígitos)';
+      case 'RESIDENCIA_DIMEX': return 'Solo números — 11 o 12 dígitos';
+      case 'PASAPORTE':        return 'Letras y números, sin espacios';
+      default:                 return '';
+    }
+  }
+
+  /** Auto-formatea cédula (X-XXXX-XXXX) y filtra caracteres inválidos. */
+  onIdInput(event: Event, dataObj: any, field: string): void {
+    const input = event.target as HTMLInputElement;
+    const tipo: string = dataObj.tipoIdentificacion;
+
+    if (tipo === 'CEDULA_NACIONAL') {
+      let raw = input.value.replace(/\D/g, '').slice(0, 9);
+      let formatted = raw;
+      if (raw.length > 5) {
+        formatted = raw[0] + '-' + raw.slice(1, 5) + '-' + raw.slice(5);
+      } else if (raw.length > 1) {
+        formatted = raw[0] + '-' + raw.slice(1);
+      }
+      dataObj[field] = formatted;
+      input.value = formatted;
+    } else if (tipo === 'RESIDENCIA_DIMEX') {
+      const raw = input.value.replace(/\D/g, '').slice(0, 12);
+      dataObj[field] = raw;
+      input.value = raw;
+    } else if (tipo === 'PASAPORTE') {
+      const raw = input.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 20);
+      dataObj[field] = raw;
+      input.value = raw;
+    }
+    // Para OTRO: sin restricción
   }
 }
