@@ -18,13 +18,14 @@ app.use(helmet({
   contentSecurityPolicy: false // CSP managed by frontend / Cloudflare edge
 }));
 
-const allowedOrigins = [
-
+const rawOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) : [];
+const allowedOrigins = Array.from(new Set([
   'http://localhost:4200',
-  'https://loans-cat.mquirosp78.workers.dev',
   'https://loans-cat.pages.dev',
-  'https://plataforma-prestamos.pages.dev'
-];
+  'https://loans-cat.mquirosp78.workers.dev',
+  'https://plataforma-prestamos.pages.dev',
+  ...rawOrigins
+].filter(Boolean)));
 
 // HTTP request logger — one compact line per request
 app.use(pinoHttp({

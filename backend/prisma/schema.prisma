@@ -81,6 +81,7 @@ model User {
   rol             Role              @default(PRESTAMISTA)
   plan            PlanSaaS          @default(BRONCE)
   suspendido      Boolean           @default(false)
+  isTrial         Boolean           @default(false)
   fechaPruebaFin  DateTime?
   paymentDate     DateTime?
   /// Solo aplica cuando rol = COBRADOR — apunta al prestamista dueño

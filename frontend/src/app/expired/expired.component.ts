@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { LoanService } from '../services/loan.service';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-expired',
@@ -55,7 +56,7 @@ export class ExpiredComponent {
   private loanService = inject(LoanService);
 
   // Admin contact phone number prefilled with structured text
-  adminWhatsappUrl = `https://wa.me/50672666369?text=${encodeURIComponent(
+  adminWhatsappUrl = `https://wa.me/${environment.supportWhatsappNumber}?text=${encodeURIComponent(
     'Hola Administrador, mi cuenta de cobrador de Préstamos ha vencido. Solicito la reactivación de mi membresía mensual.'
   )}`;
 

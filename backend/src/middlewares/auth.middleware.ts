@@ -55,9 +55,18 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
       return res.status(401).json({ error: 'Usuario no encontrado' });
     }
 
-    if (userDb.rol === Role.PRESTAMISTA && userDb.suspendido) {
-      logger.warn({ userId: userDb.id, username: userDb.username }, 'Auth rejected: lender account suspended');
-      return res.status(403).json({ error: 'Su suscripción se encuentra suspendida. Contacte al administrador.' });
+    if (userDb.rol === Role.PRESTAMISTA) {
+      if (userDb.suspendido) {
+        logger.warn({ userId: userDb.id, username: userDb.username }, 'Auth rejected: lender account suspended');
+        return res.status(403).json({ error: 'Su suscripción se encuentra suspendida. Contacte al administrador.' });
+      }
+      if (userDb.isTrial && !userDb.paymentDate && userDb.fechaPruebaFin && new Date() > new Date(userDb.fechaPruebaFin)) {
+        logger.warn({ userId: userDb.id, username: userDb.username }, 'Auth rejected: trial period expired');
+        return res.status(403).json({ 
+          code: 'TRIAL_EXPIRED',
+          error: 'Su período de prueba (Demo) ha finalizado. Contacte al administrador para activar su plan oficial.' 
+        });
+      }
     }
 
     if (userDb.rol === Role.COBRADOR && userDb.prestamistaId) {
@@ -67,6 +76,13 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
       if (prestamistaDb?.suspendido) {
         logger.warn({ userId: userDb.id, prestamistaId: userDb.prestamistaId }, 'Auth rejected: cobrador parent lender suspended');
         return res.status(403).json({ error: 'La suscripción de su administrador se encuentra suspendida.' });
+      }
+      if (prestamistaDb?.isTrial && !prestamistaDb.paymentDate && prestamistaDb.fechaPruebaFin && new Date() > new Date(prestamistaDb.fechaPruebaFin)) {
+        logger.warn({ userId: userDb.id, prestamistaId: userDb.prestamistaId }, 'Auth rejected: cobrador parent lender trial expired');
+        return res.status(403).json({ 
+          code: 'TRIAL_EXPIRED',
+          error: 'El período de prueba de su administrador ha finalizado.' 
+        });
       }
     }
 

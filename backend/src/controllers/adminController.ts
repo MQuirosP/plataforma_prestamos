@@ -86,8 +86,11 @@ export async function createTenant(req: AuthenticatedRequest, res: Response, nex
 
   try {
     const hash = await bcrypt.hash(password, 10);
+    const trialDays = Number(process.env.DEFAULT_TRIAL_DAYS) || 14;
+    const defaultCountryCode = process.env.DEFAULT_COUNTRY_CODE || '+506';
+
     const fechaPruebaFin = new Date();
-    fechaPruebaFin.setDate(fechaPruebaFin.getDate() + 30);
+    fechaPruebaFin.setDate(fechaPruebaFin.getDate() + trialDays);
 
     const newTenant = await prisma.user.create({
       data: {
@@ -95,9 +98,10 @@ export async function createTenant(req: AuthenticatedRequest, res: Response, nex
         username: cleanUsername,
         password: hash,
         email: email || null,
-        telefono: cleanTelefono || '+50600000000',
+        telefono: cleanTelefono || `${defaultCountryCode}00000000`,
         rol: Role.PRESTAMISTA,
         plan: plan || PlanSaaS.BRONCE,
+        isTrial: true,
         fechaPruebaFin
       }
     });
@@ -113,7 +117,7 @@ export async function createTenant(req: AuthenticatedRequest, res: Response, nex
       }
     });
 
-    await logAudit('CREAR_TENANT', `Se creó el prestamista ${cleanUsername}`, req, newTenant.id);
+    await logAudit('CREAR_TENANT', `Se creó el prestamista ${cleanUsername} (Trial de 14 días)`, req, newTenant.id);
     return res.json({ success: true, tenant: newTenant });
   } catch (err: any) { next(err); }
 }
@@ -193,20 +197,54 @@ export async function updateTenantPaymentDate(req: AuthenticatedRequest, res: Re
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
     const { paymentDate } = req.body;
+    const isPaying = !!paymentDate;
     if (isUsingMemoryStore()) {
       const user = inMemoryStore.users.find(u => u.id === req.params.id);
       if (user) {
         (user as any).paymentDate = paymentDate ? new Date(paymentDate) : null;
+        if (isPaying) (user as any).isTrial = false;
       }
-      return res.json({ success: true, paymentDate });
+      return res.json({ success: true, paymentDate, isTrial: !isPaying });
     }
 
     const user = await prisma.user.update({
       where: { id: req.params.id },
-      data: { paymentDate: paymentDate ? new Date(paymentDate) : null }
+      data: { 
+        paymentDate: paymentDate ? new Date(paymentDate) : null,
+        isTrial: isPaying ? false : undefined
+      }
     });
     await logAudit('ACTUALIZAR_VENCIMIENTO', `Fecha de vencimiento de ${user.username} actualizada`, req, user.id);
-    return res.json({ success: true, paymentDate: user.paymentDate });
+    return res.json({ success: true, paymentDate: user.paymentDate, isTrial: user.isTrial });
+  } catch (err: any) { next(err); }
+}
+
+// 4c. Extender Período de Prueba (Trial)
+export async function extendTenantTrial(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
+  try {
+    const { days } = req.body;
+    const daysToAdd = Number(days) || 7;
+
+    const userToExtend = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!userToExtend) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+    const baseDate = userToExtend.fechaPruebaFin && new Date(userToExtend.fechaPruebaFin) > new Date()
+      ? new Date(userToExtend.fechaPruebaFin)
+      : new Date();
+
+    baseDate.setDate(baseDate.getDate() + daysToAdd);
+
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { 
+        fechaPruebaFin: baseDate,
+        isTrial: true
+      }
+    });
+
+    await logAudit('EXTENDER_TRIAL', `Se extendió la prueba de ${user.username} por ${daysToAdd} días`, req, user.id);
+    return res.json({ success: true, fechaPruebaFin: user.fechaPruebaFin });
   } catch (err: any) { next(err); }
 }
 

@@ -220,10 +220,12 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
                     </button>
                   </div>
                 </div>
-                <span [class]="tenant.suspendido ? 'bg-semantic-red/10 text-semantic-red border-semantic-red/30' : 'bg-semantic-emerald/10 text-semantic-emerald border-semantic-emerald/30'"
-                      class="shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border mt-0.5">
-                  {{ tenant.suspendido ? 'SUSPENDIDO' : 'ACTIVO' }}
-                </span>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <span [class]="tenant.suspendido ? 'bg-semantic-red/10 text-semantic-red border-semantic-red/30' : (tenant.isTrial && !tenant.paymentDate ? 'bg-amber-950/40 text-caterpillar border-caterpillar/40' : 'bg-semantic-emerald/10 text-semantic-emerald border-semantic-emerald/30')"
+                        class="shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border">
+                    {{ tenant.suspendido ? 'SUSPENDIDO' : (tenant.isTrial && !tenant.paymentDate ? 'TRIAL ⚡' : 'ACTIVO') }}
+                  </span>
+                </div>
               </div>
 
 
@@ -271,14 +273,21 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
                 <!-- Vencimiento row -->
                 <div class="flex items-center justify-between bg-industrial-surface/40 rounded-lg px-3 py-2 border border-industrial-border/30">
                   <div>
-                    <p class="text-[9px] text-industrial-muted uppercase font-mono">Vencimiento</p>
+                    <p class="text-[9px] text-industrial-muted uppercase font-mono">
+                      {{ tenant.isTrial && !tenant.paymentDate ? 'Fin de Trial' : 'Vencimiento' }}
+                    </p>
                     <p class="text-xs font-bold" [class]="isPaymentOverdue(tenant) ? 'text-semantic-red' : 'text-white'">
                       {{ getPaymentDateDisplay(tenant) }}
                     </p>
                   </div>
-                  <button *ngIf="canRenew(tenant)" (click)="renewTenant(tenant)" class="bg-caterpillar/10 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-3 py-1.5 rounded hover:bg-caterpillar hover:text-industrial-black transition">
-                    + 1 Mes
-                  </button>
+                  <div class="flex gap-1">
+                    <button *ngIf="tenant.isTrial && !tenant.paymentDate" (click)="extendTrial(tenant, 7)" title="Extender prueba 7 días" class="bg-amber-950/40 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-2 py-1 rounded hover:bg-caterpillar hover:text-industrial-black transition">
+                      +7 Días
+                    </button>
+                    <button *ngIf="canRenew(tenant)" (click)="renewTenant(tenant)" class="bg-caterpillar/10 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-2.5 py-1 rounded hover:bg-caterpillar hover:text-industrial-black transition">
+                      +1 Mes
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Plan + Suspend + Impersonate -->
@@ -897,12 +906,12 @@ export class AdminComponent implements OnInit {
   getTenantCount(filterKey: string): number {
     const list = this.tenants();
     if (filterKey === 'TODO') return list.length;
-    if (filterKey === 'ACTIVO') return list.filter(t => !t.suspendido && !this.isPaymentOverdue(t)).length;
+    if (filterKey === 'ACTIVO') return list.filter(t => !t.suspendido && !this.isPaymentOverdue(t) && (!t.isTrial || !!t.paymentDate)).length;
     if (filterKey === 'POR_VENCER') return list.filter(t => !t.suspendido && this.isExpiringSoon(t)).length;
     if (filterKey === 'VENCIDO') return list.filter(t => !t.suspendido && this.isPaymentOverdue(t)).length;
     if (filterKey === 'SUSPENDIDO') return list.filter(t => t.suspendido).length;
     if (filterKey === 'TRIAL') {
-      return list.filter(t => !t.paymentDate || t.plan === 'BRONCE').length;
+      return list.filter(t => !t.suspendido && !!t.isTrial && !t.paymentDate).length;
     }
     return 0;
   }
@@ -913,7 +922,7 @@ export class AdminComponent implements OnInit {
 
     const sf = this.activeSubFilter();
     if (sf === 'ACTIVO') {
-      list = list.filter(t => !t.suspendido && !this.isPaymentOverdue(t));
+      list = list.filter(t => !t.suspendido && !this.isPaymentOverdue(t) && (!t.isTrial || !!t.paymentDate));
     } else if (sf === 'POR_VENCER') {
       list = list.filter(t => !t.suspendido && this.isExpiringSoon(t));
     } else if (sf === 'VENCIDO') {
@@ -921,7 +930,7 @@ export class AdminComponent implements OnInit {
     } else if (sf === 'SUSPENDIDO') {
       list = list.filter(t => t.suspendido);
     } else if (sf === 'TRIAL') {
-      list = list.filter(t => !t.paymentDate || t.plan === 'BRONCE');
+      list = list.filter(t => !t.suspendido && !!t.isTrial && !t.paymentDate);
     }
 
     if (!term) return list;
@@ -931,6 +940,18 @@ export class AdminComponent implements OnInit {
       (t.email && t.email.toLowerCase().includes(term)) ||
       t.telefono.includes(term)
     );
+  }
+
+  async extendTrial(tenant: Tenant, days: number = 7) {
+    try {
+      const newFechaFin = await this.adminService.extendTrial(tenant.id, days);
+      this.toastService.success(`Período de prueba de ${tenant.nombre} extendido por ${days} días.`);
+      tenant.fechaPruebaFin = newFechaFin;
+      tenant.isTrial = true;
+      await this.loadData();
+    } catch (err: any) {
+      this.toastService.error('Error al extender prueba');
+    }
   }
 
   onWheelScroll(event: WheelEvent) {

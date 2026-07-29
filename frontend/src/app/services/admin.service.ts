@@ -12,6 +12,7 @@ export interface Tenant {
   telefono: string;
   plan: 'BRONCE' | 'PLATA' | 'ORO' | 'PLATINO' | 'DIAMANTE';
   suspendido: boolean;
+  isTrial?: boolean;
   fechaPruebaFin?: string;
   paymentDate?: string;
   createdAt: string;
@@ -112,6 +113,11 @@ export class AdminService {
   async updatePaymentDate(id: string, paymentDate: string | null): Promise<string | null> {
     const res = await firstValueFrom(this.http.put<{ success: boolean; paymentDate: string | null }>(`${this.apiUrl}/admin/tenants/${id}/payment-date`, { paymentDate }, this.getHeaders()));
     return res.paymentDate;
+  }
+
+  async extendTrial(id: string, days: number = 7): Promise<string> {
+    const res = await firstValueFrom(this.http.put<{ success: boolean; fechaPruebaFin: string }>(`${this.apiUrl}/admin/tenants/${id}/extend-trial`, { days }, this.getHeaders()));
+    return res.fechaPruebaFin;
   }
 
   async getStats(): Promise<SaaSStats> {

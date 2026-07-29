@@ -26,6 +26,10 @@ export interface MemoryUser {
   rol: 'ADMIN' | 'PRESTAMISTA' | 'COBRADOR';
   prestamistaId?: string; // Solo para COBRADOR
   plan?: string;
+  suspendido?: boolean;
+  isTrial?: boolean;
+  fechaPruebaFin?: Date;
+  paymentDate?: Date;
   createdAt: Date;
 }
 

@@ -12,12 +12,13 @@ import { ToastComponent } from './toast/toast.component';
 import { CreateLoanComponent } from './create-loan/create-loan.component';
 import { EditLoanComponent } from './edit-loan/edit-loan.component';
 import { TeamManagementComponent } from './team-management/team-management.component';
+import { TrialBannerComponent } from './shared/trial-banner/trial-banner.component';
 import { Loan } from './services/loan.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent, ToastComponent, CreateLoanComponent, EditLoanComponent, TeamManagementComponent],
+  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent, ToastComponent, CreateLoanComponent, EditLoanComponent, TeamManagementComponent, TrialBannerComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
