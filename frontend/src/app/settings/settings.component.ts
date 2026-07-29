@@ -274,11 +274,13 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
                     <option value="CREAR_LOAN">Crear Préstamo</option>
                     <option value="EDITAR_LOAN">Editar Préstamo</option>
                     <option value="ELIMINAR_LOAN">Eliminar Préstamo</option>
+                    <option value="CONDONAR_MORA">Condonación de Mora</option>
                     <option value="AGREGAR_PAGO">Agregar Pago</option>
                     <option value="ELIMINAR_PAGO">Eliminar Pago</option>
                     <option value="CREAR_COBRADOR">Crear Cobrador</option>
                     <option value="ACTUALIZAR_SETTINGS">Actualizar Configuración</option>
                   </select>
+
                   <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
                   </div>

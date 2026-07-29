@@ -349,8 +349,9 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
                 <select [ngModel]="filterTipoEvento()" (ngModelChange)="onFilterTipoEventoChange($event)"
                         class="w-full bg-transparent text-white text-xs px-3 py-2.5 pr-12 focus:outline-none appearance-none cursor-pointer">
                   <option value="">Todos los eventos</option>
-                  <option *ngFor="let ev of eventTypes" [value]="ev">{{ ev }}</option>
+                  <option *ngFor="let ev of eventTypes" [value]="ev">{{ formatEventType(ev) }}</option>
                 </select>
+
                 <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
@@ -661,6 +662,26 @@ export class AdminComponent implements OnInit {
 
   searchTerm = '';
   loading = signal(false);
+
+  formatEventType(event: string): string {
+    const map: Record<string, string> = {
+      'CREAR_TENANT': 'Crear Financiera',
+      'SUSPENDER_TENANT': 'Suspender Financiera',
+      'CAMBIO_PLAN': 'Cambio de Plan',
+      'IMPERSONATE': 'Impersonación',
+      'ACTUALIZAR_PLAN': 'Actualizar Config. Plan',
+      'CREAR_COBRADOR': 'Crear Cobrador',
+      'CREAR_LOAN': 'Crear Préstamo',
+      'EDITAR_LOAN': 'Editar Préstamo',
+      'ELIMINAR_LOAN': 'Eliminar Préstamo',
+      'CONDONAR_MORA': 'Condonación de Mora',
+      'AGREGAR_PAGO': 'Registro de Pago',
+      'ELIMINAR_PAGO': 'Eliminación de Pago',
+      'ACTUALIZAR_SETTINGS': 'Actualizar Configuración'
+    };
+    return map[event] || event;
+  }
+
 
   showSettingsPanel = signal(false);
   activePhoneDropdown = signal<string | null>(null);
