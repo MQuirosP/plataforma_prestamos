@@ -149,14 +149,14 @@ class InMemoryStore {
     {
       id: 'loan-mora-demo-1',
       prestamistaId: 'mock-admin-id-999',
-      clienteNombre: 'Juan Pérez (Préstamo con Mora)',
-      clienteTelefono: '+50687654321',
+      clienteNombre: 'Patito Cagón',
+      clienteTelefono: '+50672666369',
       tipoIdentificacion: 'CEDULA_NACIONAL',
       numeroIdentificacion: '1-1234-0567',
-      montoOriginal: 100000,
-      totalAPagar: 120000,
+      montoOriginal: 160000,
+      totalAPagar: 200000,
       cuotaSemanal: 10000,
-      diaCobro: 1,
+      diaCobro: 6,
       estado: 'ACTIVE',
       fechaInicio: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
       fineAmount: 1000,
@@ -166,6 +166,7 @@ class InMemoryStore {
       modalidad: 'TRADICIONAL',
       frecuenciaPago: 'SEMANAL'
     }
+
   ];
 
   payments: MemoryPayment[] = [];
