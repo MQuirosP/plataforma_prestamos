@@ -23,6 +23,10 @@ function parseCookies(req: Request): Record<string, string> {
   return list;
 }
 
+function hashToken(rawToken: string): string {
+  return crypto.createHash('sha256').update(rawToken).digest('hex');
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY || '15m';
 const REFRESH_TOKEN_EXPIRY_DAYS = Number(process.env.REFRESH_TOKEN_EXPIRY_DAYS || '7');
@@ -81,12 +85,13 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     );
 
     const refreshRaw = crypto.randomBytes(40).toString('hex');
+    const tokenHashed = hashToken(refreshRaw);
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
     if (isUsingMemoryStore()) {
       inMemoryStore.refreshTokens.push({
         id: Math.random().toString(),
-        token: refreshRaw,
+        token: tokenHashed,
         userId: user.id,
         expiresAt,
         createdAt: new Date()
@@ -94,7 +99,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     } else {
       await prisma.refreshToken.create({
         data: {
-          token: refreshRaw,
+          token: tokenHashed,
           userId: user.id,
           expiresAt
         }
@@ -108,7 +113,6 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       sameSite: isProd ? 'none' : 'lax',
       expires: expiresAt
     });
-
 
     const activeSub = user.subscriptions[user.subscriptions.length - 1];
 
@@ -174,20 +178,23 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Refresh token missing' });
   }
 
+  const incomingHash = hashToken(refreshToken);
+
   try {
     let tokenDb: any = null;
 
     if (isUsingMemoryStore()) {
-      tokenDb = inMemoryStore.refreshTokens.find(t => t.token === refreshToken);
+      tokenDb = inMemoryStore.refreshTokens.find(t => t.token === incomingHash);
     } else {
       tokenDb = await prisma.refreshToken.findUnique({
-        where: { token: refreshToken },
+        where: { token: incomingHash },
         include: { user: { include: { subscriptions: true } } }
       });
     }
 
     if (!tokenDb || new Date() > new Date(tokenDb.expiresAt)) {
       if (tokenDb) {
+        // Token expirado: revocar únicamente este token
         if (isUsingMemoryStore()) {
           inMemoryStore.refreshTokens = inMemoryStore.refreshTokens.filter(t => t.id !== tokenDb.id);
         } else {
@@ -197,7 +204,7 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
       return res.status(401).json({ error: 'Refresh token expired or invalid' });
     }
 
-    // Rotate Refresh Token
+    // Rotate Refresh Token: Eliminar token usado inmediatamente
     if (isUsingMemoryStore()) {
       inMemoryStore.refreshTokens = inMemoryStore.refreshTokens.filter(t => t.id !== tokenDb.id);
     } else {
@@ -244,12 +251,13 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
     );
 
     const newRefreshRaw = crypto.randomBytes(40).toString('hex');
+    const newRefreshHash = hashToken(newRefreshRaw);
     const newExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
     if (isUsingMemoryStore()) {
       inMemoryStore.refreshTokens.push({
         id: Math.random().toString(),
-        token: newRefreshRaw,
+        token: newRefreshHash,
         userId: user.id,
         expiresAt: newExpiresAt,
         createdAt: new Date()
@@ -257,7 +265,7 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
     } else {
       await prisma.refreshToken.create({
         data: {
-          token: newRefreshRaw,
+          token: newRefreshHash,
           userId: user.id,
           expiresAt: newExpiresAt
         }
@@ -271,8 +279,6 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
       sameSite: isProd ? 'none' : 'lax',
       expires: newExpiresAt
     });
-
-
 
     const activeSub = user.subscriptions ? user.subscriptions[user.subscriptions.length - 1] : null;
 
@@ -289,12 +295,13 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
   const refreshToken = cookies['refresh_token'];
 
   if (refreshToken) {
+    const incomingHash = hashToken(refreshToken);
     if (isUsingMemoryStore()) {
-      inMemoryStore.refreshTokens = inMemoryStore.refreshTokens.filter(t => t.token !== refreshToken);
+      inMemoryStore.refreshTokens = inMemoryStore.refreshTokens.filter(t => t.token !== incomingHash);
     } else {
       try {
         await prisma.refreshToken.deleteMany({
-          where: { token: refreshToken }
+          where: { token: incomingHash }
         });
       } catch (err) {
         logger.warn({ err }, 'Failed to revoke refresh token from DB');
