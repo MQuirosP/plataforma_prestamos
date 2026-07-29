@@ -145,7 +145,29 @@ class InMemoryStore {
     }
   ];
 
-  loans: MemoryLoan[] = [];
+  loans: MemoryLoan[] = [
+    {
+      id: 'loan-mora-demo-1',
+      prestamistaId: 'mock-admin-id-999',
+      clienteNombre: 'Juan Pérez (Préstamo con Mora)',
+      clienteTelefono: '+50687654321',
+      tipoIdentificacion: 'CEDULA_NACIONAL',
+      numeroIdentificacion: '1-1234-0567',
+      montoOriginal: 100000,
+      totalAPagar: 120000,
+      cuotaSemanal: 10000,
+      diaCobro: 1,
+      estado: 'ACTIVE',
+      fechaInicio: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+      fineAmount: 1000,
+      fineFrequency: 'DAILY',
+      graceDays: 0,
+      multasAcumuladas: 14000,
+      modalidad: 'TRADICIONAL',
+      frecuenciaPago: 'SEMANAL'
+    }
+  ];
+
   payments: MemoryPayment[] = [];
 
   settings: MemoryBusinessSettings[] = [
