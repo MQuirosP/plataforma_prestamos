@@ -98,7 +98,9 @@ export interface MemoryBusinessSettings {
   userId: string;
   monedaSimbolo: string;
   monedaCodigo: string;
+  timezone?: string;
   nombreNegocio: string;
+
   plantillaWhatsapp: string;
   gananciaPorcentaje: number;
   diasMinimosPrimerCobro: number;

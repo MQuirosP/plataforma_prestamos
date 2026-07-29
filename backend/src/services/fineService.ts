@@ -1,14 +1,19 @@
 import { prisma, isUsingMemoryStore, inMemoryStore } from './db';
 import { Loan, LoanStatus, FineFrequency } from '@prisma/client';
+import { getDaysDiffInTimezone } from './dateUtils';
+
 
 export async function updatePenaltiesForTenant(prestamistaId: string) {
   const today = new Date();
 
   let diasMinimosPrimerCobro = 3;
+  let timezone = 'America/Costa_Rica';
+
   if (isUsingMemoryStore()) {
     const settings = inMemoryStore.settings.find(s => s.userId === prestamistaId);
     if (settings) {
       diasMinimosPrimerCobro = settings.diasMinimosPrimerCobro;
+      timezone = settings.timezone || timezone;
     }
   } else {
     try {
@@ -17,9 +22,10 @@ export async function updatePenaltiesForTenant(prestamistaId: string) {
       });
       if (settings) {
         diasMinimosPrimerCobro = settings.diasMinimosPrimerCobro;
+        timezone = settings.timezone || timezone;
       }
     } catch (err) {
-      // Keep default of 3
+      // Keep defaults
     }
   }
 
@@ -29,10 +35,11 @@ export async function updatePenaltiesForTenant(prestamistaId: string) {
     );
 
     for (const loan of activeLoans) {
-      calculateAndSetPenalties(loan, today, diasMinimosPrimerCobro);
+      calculateAndSetPenalties(loan, today, diasMinimosPrimerCobro, timezone);
     }
     return;
   }
+
 
   try {
     const activeLoans = await prisma.loan.findMany({
@@ -47,7 +54,7 @@ export async function updatePenaltiesForTenant(prestamistaId: string) {
 
     for (const loan of activeLoans) {
       const originalMultas = Number(loan.multasAcumuladas || 0);
-      const { multasAcumuladas } = calculateAndSetPenalties(loan, today, diasMinimosPrimerCobro);
+      const { multasAcumuladas } = calculateAndSetPenalties(loan, today, diasMinimosPrimerCobro, timezone);
       if (originalMultas !== multasAcumuladas) {
         await prisma.loan.update({
           where: { id: loan.id },
@@ -60,7 +67,8 @@ export async function updatePenaltiesForTenant(prestamistaId: string) {
   }
 }
 
-function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro: number = 3) {
+function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro: number = 3, timezone: string = 'America/Costa_Rica') {
+
   if (!loan.fineAmount || !loan.fineFrequency || Number(loan.fineAmount) <= 0) {
     return { multasAcumuladas: Number(loan.multasAcumuladas || 0) };
   }
@@ -124,14 +132,9 @@ function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro
   let penalties = 0;
   if (P < N) {
 
-    const oldestDueDate = new Date(dueDates[P]);
-    oldestDueDate.setHours(0, 0, 0, 0);
+    const oldestDueDate = dueDates[P];
+    const daysLate = getDaysDiffInTimezone(oldestDueDate, today, timezone);
 
-    const todayClean = new Date(today);
-    todayClean.setHours(0, 0, 0, 0);
-
-    const diffTime = todayClean.getTime() - oldestDueDate.getTime();
-    const daysLate = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
 
 
     if (daysLate > loan.graceDays) {
