@@ -70,7 +70,10 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
             </div>
             <div class="flex items-baseline justify-between mt-1">
               <span class="text-xl font-black text-white">{{ stats()?.totalPrestamistas }}</span>
-              <span class="text-[10px] text-semantic-emerald font-mono font-bold">● {{ getTenantCount('ACTIVO') }} Activos</span>
+              <div class="flex flex-col items-end text-[10px] font-mono font-bold leading-tight">
+                <span class="text-semantic-emerald">● {{ getTenantCount('ACTIVO') }} Activos</span>
+                <span *ngIf="getTenantCount('SUSPENDIDO') > 0" class="text-semantic-red">● {{ getTenantCount('SUSPENDIDO') }} Suspendidos</span>
+              </div>
             </div>
           </div>
 
@@ -470,14 +473,18 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
 
           <!-- Section: Planes y Límites -->
           <div class="px-6 py-4 border-b border-industrial-border/60">
-            <button (click)="toggleSettingsSection('plans')" class="w-full flex items-center justify-between focus:outline-none py-1">
+            <div class="flex items-center justify-between py-1">
               <div class="flex items-center gap-2">
                 <span class="text-[10px] text-caterpillar uppercase font-mono tracking-widest font-black">Planes y Límites</span>
               </div>
-              <svg xmlns="http://www.w3.org/2000/svg" [class.rotate-180]="expandedPlansConfigs()" class="h-4 w-4 text-industrial-muted transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+              <button (click)="toggleSettingsSection('plans')" 
+                      title="Desplegar planes y límites"
+                      class="p-1 text-industrial-muted hover:text-caterpillar focus:outline-none transition rounded-md hover:bg-industrial-surface">
+                <svg xmlns="http://www.w3.org/2000/svg" [class.rotate-180]="expandedPlansConfigs()" class="h-4 w-4 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
 
             <div *ngIf="expandedPlansConfigs()" class="space-y-4 mt-4">
               <div *ngFor="let config of planConfigs()" class="bg-industrial-surface border border-industrial-border p-4 rounded-lg">
@@ -508,14 +515,18 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
 
           <!-- Section: Cambiar Contraseña -->
           <div class="px-6 py-4 border-b border-industrial-border/60">
-            <button (click)="toggleSettingsSection('password')" class="w-full flex items-center justify-between focus:outline-none py-1">
+            <div class="flex items-center justify-between py-1">
               <div class="flex items-center gap-2">
                 <span class="text-[10px] text-caterpillar uppercase font-mono tracking-widest font-black">Cambiar Contraseña</span>
               </div>
-              <svg xmlns="http://www.w3.org/2000/svg" [class.rotate-180]="expandedChangePassword()" class="h-4 w-4 text-industrial-muted transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+              <button (click)="toggleSettingsSection('password')" 
+                      title="Desplegar cambiar contraseña"
+                      class="p-1 text-industrial-muted hover:text-caterpillar focus:outline-none transition rounded-md hover:bg-industrial-surface">
+                <svg xmlns="http://www.w3.org/2000/svg" [class.rotate-180]="expandedChangePassword()" class="h-4 w-4 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
             
             <div *ngIf="expandedChangePassword()" class="space-y-3 bg-industrial-surface border border-industrial-border p-4 rounded-lg mt-4">
               <div>

@@ -226,18 +226,22 @@ app-date-picker-presets-header {
   }
 }
 
-/* Global Subtle Click & Active Micro-Interactions */
+/* Global Subtle Click & Active Micro-Interactions (excluding form selects) */
 button,
 [role="button"],
-.cursor-pointer {
+.cursor-pointer:not(select):not(option) {
   transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease !important;
 }
 
 button:active:not(:disabled),
 [role="button"]:active:not(:disabled),
-.cursor-pointer:active:not(:disabled) {
+.cursor-pointer:not(select):not(option):active:not(:disabled) {
   transform: scale(0.96) !important;
   opacity: 0.9 !important;
+}
+
+select, option {
+  transform: none !important;
 }
 
 button:disabled,
