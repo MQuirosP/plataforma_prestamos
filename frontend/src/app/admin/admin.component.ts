@@ -509,22 +509,28 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
             </div>
 
             <div *ngIf="expandedSaasGlobalConfigs()" class="space-y-4 bg-industrial-surface border border-industrial-border p-4 rounded-lg mt-4">
-              <div>
-                <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Días de Prueba por Defecto</label>
-                <app-numeric-stepper [(ngModel)]="saasGlobalConfig.defaultTrialDays" [min]="1" [max]="90" [step]="1"></app-numeric-stepper>
-                <span class="text-[8px] text-industrial-muted block mt-1">Días de prueba iniciales asignados a nuevos registros de demostración</span>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Días de Prueba por Defecto</label>
+                  <app-numeric-stepper [(ngModel)]="saasGlobalConfig.defaultTrialDays" [min]="1" [max]="90" [step]="1"></app-numeric-stepper>
+                  <span class="text-[8px] text-industrial-muted block mt-1">Días de prueba iniciales asignados a nuevos registros de demostración</span>
+                </div>
+                <div>
+                  <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Días de Gracia Post-Vencimiento</label>
+                  <app-numeric-stepper [(ngModel)]="saasGlobalConfig.graceDays" [min]="0" [max]="30" [step]="1"></app-numeric-stepper>
+                  <span class="text-[8px] text-industrial-muted block mt-1">Días adicionales permitidos antes del bloqueo definitivo</span>
+                </div>
               </div>
+
               <div>
                 <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">WhatsApp de Soporte Oficial</label>
                 <input type="text" [(ngModel)]="saasGlobalConfig.supportWhatsappNumber" placeholder="Ej: 50672666369" class="w-full bg-industrial-dark border border-industrial-border rounded p-2 text-white text-xs focus:border-caterpillar outline-none">
                 <span class="text-[8px] text-industrial-muted block mt-1">Número internacional al que serán dirigidos los enlaces de soporte</span>
               </div>
-              <div>
-                <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Días de Gracia Post-Vencimiento</label>
-                <app-numeric-stepper [(ngModel)]="saasGlobalConfig.graceDays" [min]="0" [max]="30" [step]="1"></app-numeric-stepper>
-                <span class="text-[8px] text-industrial-muted block mt-1">Días adicionales permitidos antes del bloqueo definitivo</span>
-              </div>
-              <button (click)="saveSaasGlobalConfig()" [disabled]="savingSaasConfig()" class="w-full bg-caterpillar text-industrial-black font-black py-2 rounded text-xs uppercase hover:bg-caterpillar-dark transition mt-2">
+
+              <button (click)="saveSaasGlobalConfig()" 
+                      [disabled]="!isSaasConfigChanged() || savingSaasConfig()" 
+                      class="w-full bg-caterpillar text-industrial-black font-black py-2 rounded text-xs uppercase hover:bg-caterpillar-dark transition mt-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-caterpillar">
                 {{ savingSaasConfig() ? 'Guardando...' : 'Guardar Configuración' }}
               </button>
             </div>
@@ -549,23 +555,26 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               <div *ngFor="let config of planConfigs()" class="bg-industrial-surface border border-industrial-border p-4 rounded-lg">
                 <div class="flex justify-between items-center mb-3 pb-2 border-b border-industrial-border/50">
                   <h4 class="text-caterpillar font-black text-sm">{{ config.plan }}</h4>
-                  <button (click)="savePlanConfig(config)" class="bg-caterpillar text-industrial-black px-3 py-1 rounded text-[9px] uppercase font-bold hover:bg-caterpillar-dark transition">
-                    Guardar
+                  <button (click)="savePlanConfig(config)" 
+                          [disabled]="!isPlanConfigChanged(config) || savingPlan(config.plan)" 
+                          class="bg-caterpillar text-industrial-black px-3 py-1 rounded text-[9px] uppercase font-bold hover:bg-caterpillar-dark transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-caterpillar">
+                    {{ savingPlan(config.plan) ? 'Guardando...' : 'Guardar' }}
                   </button>
                 </div>
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Máx Clientes</label>
-                    <input type="number" [(ngModel)]="config.maxClientes" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
-                    <span class="text-[8px] text-industrial-muted block mt-0.5">-1 = ilimitado</span>
+                    <app-numeric-stepper [(ngModel)]="config.maxClientes" [min]="-1" [step]="1"></app-numeric-stepper>
+                    <span class="text-[8px] text-industrial-muted block mt-1">-1 = ilimitado</span>
                   </div>
                   <div>
-                    <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Máx Cob.</label>
-                    <input type="number" [(ngModel)]="config.maxCobradores" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
+                    <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Máx Cobradores</label>
+                    <app-numeric-stepper [(ngModel)]="config.maxCobradores" [min]="-1" [step]="1"></app-numeric-stepper>
+                    <span class="text-[8px] text-industrial-muted block mt-1">-1 = ilimitado</span>
                   </div>
                   <div>
                     <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Precio (₡)</label>
-                    <input type="number" [(ngModel)]="config.precioMensual" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
+                    <app-numeric-stepper [(ngModel)]="config.precioMensual" [min]="0" [step]="500"></app-numeric-stepper>
                   </div>
                 </div>
               </div>
@@ -704,7 +713,12 @@ export class AdminComponent implements OnInit {
     supportWhatsappNumber: '50672666369',
     graceDays: 0
   };
+  originalSaasGlobalConfig: SaasGlobalConfig = { ...this.saasGlobalConfig };
   savingSaasConfig = signal<boolean>(false);
+
+  // Original Plan Configs State for pristine comparison
+  originalPlanConfigs = signal<Record<string, SaaSPlanConfig>>({});
+  savingPlanState = signal<Record<string, boolean>>({});
 
   /** Maps SaaSLog[] to AuditLogEntry[] for the shared component. */
   logsForDisplay = computed<AuditLogEntry[]>(() =>
@@ -826,7 +840,10 @@ export class AdminComponent implements OnInit {
 
     try {
       const config = await this.adminService.getSaasConfig();
-      if (config) this.saasGlobalConfig = config;
+      if (config) {
+        this.saasGlobalConfig = { ...config };
+        this.originalSaasGlobalConfig = { ...config };
+      }
     } catch (_) {}
 
     const FALLBACK_PLANS: SaaSPlanConfig[] = [
@@ -839,9 +856,12 @@ export class AdminComponent implements OnInit {
 
     try {
       const p = await this.adminService.getPlanConfigs();
-      this.planConfigs.set(p && p.length > 0 ? p : FALLBACK_PLANS);
+      const loadedPlans = p && p.length > 0 ? p : FALLBACK_PLANS;
+      this.planConfigs.set(JSON.parse(JSON.stringify(loadedPlans)));
+      this.setOriginalPlans(loadedPlans);
     } catch (_) {
-      this.planConfigs.set(FALLBACK_PLANS);
+      this.planConfigs.set(JSON.parse(JSON.stringify(FALLBACK_PLANS)));
+      this.setOriginalPlans(FALLBACK_PLANS);
     }
   }
 
@@ -1247,26 +1267,61 @@ export class AdminComponent implements OnInit {
     if (section === 'password') this.expandedChangePassword.update(v => !v);
   }
 
+  setOriginalPlans(plans: SaaSPlanConfig[]) {
+    const map: Record<string, SaaSPlanConfig> = {};
+    plans.forEach(p => {
+      map[p.plan] = { ...p };
+    });
+    this.originalPlanConfigs.set(map);
+  }
+
+  isSaasConfigChanged(): boolean {
+    return (
+      this.saasGlobalConfig.defaultTrialDays !== this.originalSaasGlobalConfig.defaultTrialDays ||
+      this.saasGlobalConfig.supportWhatsappNumber !== this.originalSaasGlobalConfig.supportWhatsappNumber ||
+      this.saasGlobalConfig.graceDays !== this.originalSaasGlobalConfig.graceDays
+    );
+  }
+
+  isPlanConfigChanged(config: SaaSPlanConfig): boolean {
+    const original = this.originalPlanConfigs()[config.plan];
+    if (!original) return false;
+    return (
+      config.maxClientes !== original.maxClientes ||
+      config.maxCobradores !== original.maxCobradores ||
+      config.precioMensual !== original.precioMensual
+    );
+  }
+
+  savingPlan(plan: string): boolean {
+    return !!this.savingPlanState()[plan];
+  }
+
   async saveSaasGlobalConfig() {
     this.savingSaasConfig.set(true);
     try {
       const updated = await this.adminService.updateSaasConfig(this.saasGlobalConfig);
-      this.saasGlobalConfig = updated;
-      this.toastService.success('Ajustes globales SaaS guardados exitosamente');
+      this.saasGlobalConfig = { ...updated };
+      this.originalSaasGlobalConfig = { ...updated };
+      this.toastService.success('Configuración guardada exitosamente');
     } catch (err: any) {
-      this.toastService.error('Error al guardar ajustes globales SaaS');
+      this.toastService.error('Error al guardar configuración');
     } finally {
       this.savingSaasConfig.set(false);
     }
   }
 
   async savePlanConfig(config: SaaSPlanConfig) {
+    this.savingPlanState.update(curr => ({ ...curr, [config.plan]: true }));
     try {
       const updated = await this.adminService.updatePlanConfig(config);
       this.toastService.success(`Plan ${config.plan} actualizado`);
-      this.planConfigs.update(curr => curr.map(c => c.plan === config.plan ? updated : c));
+      this.planConfigs.update(curr => curr.map(c => c.plan === config.plan ? { ...updated } : c));
+      this.originalPlanConfigs.update(curr => ({ ...curr, [config.plan]: { ...updated } }));
     } catch (err) {
       this.toastService.error(`Error actualizando plan ${config.plan}`);
+    } finally {
+      this.savingPlanState.update(curr => ({ ...curr, [config.plan]: false }));
     }
   }
 
