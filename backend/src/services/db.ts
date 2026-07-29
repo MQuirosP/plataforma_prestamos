@@ -52,7 +52,9 @@ export interface MemoryLoan {
   fineFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null;
   graceDays?: number;
   multasAcumuladas?: number;
+  montoCondonado?: number;
   tipoIdentificacion?: string | null;
+
   numeroIdentificacion?: string | null;
   modalidad?: 'TRADICIONAL' | 'ALQUILER';
   frecuenciaPago?: 'SEMANAL' | 'QUINCENAL' | 'MENSUAL';

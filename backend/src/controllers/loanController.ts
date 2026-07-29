@@ -1002,11 +1002,11 @@ export async function condonarMora(req: AuthenticatedRequest, res: Response, nex
     if (!loan) {
       return res.status(404).json({ error: 'Préstamo no encontrado' });
     }
+    const currentCondonado = Number(loan.montoCondonado || 0);
+    const newCondonado = currentCondonado + parsedMonto;
     const currentMultas = Number(loan.multasAcumuladas || 0);
-    if (currentMultas <= 0) {
-      return res.status(400).json({ error: 'El préstamo no tiene mora acumulada para condonar.' });
-    }
     const newMultas = Math.max(0, currentMultas - parsedMonto);
+    loan.montoCondonado = newCondonado;
     loan.multasAcumuladas = newMultas;
 
     await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${loan.clienteNombre}. Motivo: ${cleanMotivo}`);
@@ -1022,19 +1022,22 @@ export async function condonarMora(req: AuthenticatedRequest, res: Response, nex
       return res.status(404).json({ error: 'Préstamo no encontrado' });
     }
 
+    const currentCondonado = Number(loan.montoCondonado || 0);
+    const newCondonado = currentCondonado + parsedMonto;
     const currentMultas = Number(loan.multasAcumuladas || 0);
-    if (currentMultas <= 0) {
-      return res.status(400).json({ error: 'El préstamo no tiene mora acumulada para condonar.' });
-    }
-
     const newMultas = Math.max(0, currentMultas - parsedMonto);
+
     const updatedLoan = await prisma.loan.update({
       where: { id },
-      data: { multasAcumuladas: newMultas }
+      data: {
+        montoCondonado: newCondonado,
+        multasAcumuladas: newMultas
+      }
     });
 
     await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${loan.clienteNombre}. Motivo: ${cleanMotivo}`);
     return res.json({ success: true, message: `Se condonaron ₡${parsedMonto} de mora correctamente`, loan: updatedLoan });
+
   } catch (err: any) { next(err); }
 }
 

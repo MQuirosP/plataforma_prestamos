@@ -156,7 +156,9 @@ model Loan {
   fineFrequency       FineFrequency?
   graceDays           Int        @default(0)
   multasAcumuladas    Decimal    @default(0)
+  montoCondonado      Decimal    @default(0)
   modalidad           LoanModalidad @default(TRADICIONAL)
+
   frecuenciaPago      LoanFrecuencia @default(SEMANAL)
   payments            Payment[]
 

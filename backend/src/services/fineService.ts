@@ -142,9 +142,11 @@ function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro
     }
   }
 
-  const finalPenalties = Math.max(penalties, Number(loan.multasAcumuladas || 0));
+  const condonado = Number(loan.montoCondonado || 0);
+  const finalPenalties = Math.max(0, penalties - condonado);
   loan.multasAcumuladas = finalPenalties;
   return { multasAcumuladas: finalPenalties };
 }
+
 
 
