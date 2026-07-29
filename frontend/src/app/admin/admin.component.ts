@@ -9,11 +9,20 @@ import html2canvas from 'html2canvas';
 
 import { DateFieldComponent } from '../shared/date-field/date-field.component';
 import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepper.component';
+import { trigger, state, style, animate, transition } from '@angular/animations';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
   imports: [CommonModule, FormsModule, AuditLogListComponent, DateFieldComponent, NumericStepperComponent],
+  animations: [
+    trigger('expandCollapse', [
+      state('void', style({ maxHeight: '0', opacity: '0', overflow: 'hidden', transform: 'translateY(-6px)' })),
+      state('*',    style({ maxHeight: '2000px', opacity: '1', overflow: 'hidden', transform: 'translateY(0)' })),
+      transition('void => *', animate('220ms cubic-bezier(0.4, 0, 0.2, 1)')),
+      transition('* => void', animate('180ms cubic-bezier(0.4, 0, 0.6, 1)'))
+    ])
+  ],
   template: `
     <div class="min-h-full flex-grow bg-industrial-black text-industrial-light pb-24 font-sans select-none">
       
@@ -508,7 +517,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </button>
             </div>
 
-            <div *ngIf="expandedSaasGlobalConfigs()" class="space-y-4 bg-industrial-surface border border-industrial-border p-4 rounded-lg mt-4">
+            <div *ngIf="expandedSaasGlobalConfigs()" @expandCollapse class="space-y-4 bg-industrial-surface border border-industrial-border p-4 rounded-lg mt-4">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Días de Prueba por Defecto</label>
@@ -551,7 +560,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </button>
             </div>
 
-            <div *ngIf="expandedPlansConfigs()" class="space-y-4 mt-4">
+            <div *ngIf="expandedPlansConfigs()" @expandCollapse class="space-y-4 mt-4">
               <div *ngFor="let config of planConfigs()" class="bg-industrial-surface border border-industrial-border p-4 rounded-lg">
                 <div class="flex justify-between items-center mb-3 pb-2 border-b border-industrial-border/50">
                   <h4 class="text-caterpillar font-black text-sm">{{ config.plan }}</h4>
@@ -596,7 +605,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </button>
             </div>
             
-            <div *ngIf="expandedChangePassword()" class="space-y-3 bg-industrial-surface border border-industrial-border p-4 rounded-lg mt-4">
+            <div *ngIf="expandedChangePassword()" @expandCollapse class="space-y-3 bg-industrial-surface border border-industrial-border p-4 rounded-lg mt-4">
               <div>
                 <label class="block text-[9px] text-industrial-muted uppercase font-mono mb-1">Contraseña Actual</label>
                 <input type="password" [(ngModel)]="oldPassword" class="w-full bg-industrial-dark border border-industrial-border rounded p-1.5 text-white text-xs focus:border-caterpillar outline-none">
