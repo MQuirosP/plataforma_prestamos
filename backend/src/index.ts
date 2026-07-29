@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import apiRouter from './routes/api';
@@ -11,7 +12,14 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
+// Security HTTP headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false // CSP managed by frontend / Cloudflare edge
+}));
+
 const allowedOrigins = [
+
   'http://localhost:4200',
   'https://loans-cat.mquirosp78.workers.dev',
   'https://loans-cat.pages.dev',

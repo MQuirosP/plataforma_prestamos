@@ -101,12 +101,14 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       });
     }
 
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('refresh_token', refreshRaw, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       expires: expiresAt
     });
+
 
     const activeSub = user.subscriptions[user.subscriptions.length - 1];
 
@@ -262,12 +264,15 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
       });
     }
 
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('refresh_token', newRefreshRaw, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       expires: newExpiresAt
     });
+
+
 
     const activeSub = user.subscriptions ? user.subscriptions[user.subscriptions.length - 1] : null;
 

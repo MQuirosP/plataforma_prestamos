@@ -4,7 +4,12 @@ import * as jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { logger } from '../services/logger';
 
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET.includes('change_me'))) {
+  throw new Error('FATAL SECURITY ERROR: JWT_SECRET must be explicitly set in production environment.');
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
+
 
 export interface AuthenticatedRequest extends Request {
   user?: {
