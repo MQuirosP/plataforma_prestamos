@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminService, Tenant, SaaSStats, SaaSLog, SaaSPlanConfig, SaasGlobalConfig } from '../services/admin.service';
@@ -18,7 +18,7 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
   animations: [
     trigger('expandCollapse', [
       state('void', style({ maxHeight: '0', opacity: '0', overflow: 'hidden', transform: 'translateY(-6px)' })),
-      state('*',    style({ maxHeight: '2000px', opacity: '1', overflow: 'hidden', transform: 'translateY(0)' })),
+      state('*', style({ maxHeight: '2000px', opacity: '1', overflow: 'hidden', transform: 'translateY(0)' })),
       transition('void => *', animate('220ms cubic-bezier(0.4, 0, 0.2, 1)')),
       transition('* => void', animate('180ms cubic-bezier(0.4, 0, 0.6, 1)'))
     ])
@@ -242,7 +242,7 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
 
               <!-- Row 2: Phone + Email -->
               <div class="flex items-center gap-2 flex-wrap mb-3 relative">
-                <button (click)="togglePhoneDropdown(tenant.id)" class="hover:text-semantic-emerald flex items-center gap-1 text-[11px] text-industrial-muted font-mono transition focus:outline-none">
+                <button (click)="togglePhoneDropdown(tenant.id, $event)" class="hover:text-semantic-emerald flex items-center gap-1 text-[11px] text-industrial-muted font-mono transition focus:outline-none">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                   {{ tenant.telefono }}
                 </button>
@@ -255,12 +255,20 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
                 <div *ngIf="activePhoneDropdown() === tenant.id" class="absolute top-full left-0 mt-1 w-56 bg-industrial-surface border border-industrial-border rounded shadow-lg z-50 py-1 flex flex-col">
                   <button (click)="sharePaymentReminder(tenant)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-caterpillar shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    Enviar Recordatorio (Imagen)
+                    Enviar Recordatorio 
                   </button>
                   <a [href]="getWhatsappLink(tenant)" target="_blank" (click)="activePhoneDropdown.set(null)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-industrial-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                     Mensaje Personalizado
                   </a>
+                  <button (click)="openEditPhoneModal(tenant, $event)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2 border-t border-industrial-border/60">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-semantic-emerald shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Cambiar número
+                  </button>
+
                 </div>
               </div>
 
@@ -661,10 +669,98 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
         </div>
       </div>
 
+    
+  <!-- EDIT PHONE MODAL -->
+  <div *ngIf="showEditPhoneModal()" class="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden">
+      <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
+      
+      <h3 class="text-white font-black uppercase tracking-tight text-lg mt-2 mb-2">
+        Cambiar Número de Teléfono
+      </h3>
+      <p class="text-industrial-muted text-sm mb-4">
+        Modifica el teléfono asociado a este prestamista.
+      </p>
+
+      <div class="mb-6" *ngIf="editPhoneData()">
+        <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Teléfono (WhatsApp)</label>
+        <div class="relative flex items-center">
+          <span class="absolute left-3 text-industrial-muted text-sm">+506</span>
+          <input type="tel" 
+                 [ngModel]="editPhoneData()?.telefono?.replace('+506', '')?.trim()"
+                 (ngModelChange)="editPhoneData.set({id: editPhoneData()!.id, telefono: '+506 ' + $event})"
+                 placeholder="88888888"
+                 class="w-full bg-industrial-surface border border-industrial-border rounded-lg py-3 pl-12 pr-3 text-white text-sm focus:outline-none focus:border-caterpillar transition-colors">
+        </div>
+      </div>
+      
+      <div class="flex gap-3">
+        <button (click)="closeEditPhoneModal()" [disabled]="isSavingPhone()" class="flex-1 bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar text-xs font-bold py-3 rounded-lg transition duration-150 uppercase tracking-wider">
+          Cerrar
+        </button>
+        <button (click)="submitEditPhone()" [disabled]="isSavingPhone()" class="flex-1 bg-caterpillar hover:bg-caterpillar-dark text-industrial-black font-black uppercase text-xs tracking-wider py-3 rounded-lg transition duration-150">
+          {{ isSavingPhone() ? 'Guardando...' : 'Guardar Cambios' }}
+        </button>
+      </div>
     </div>
+  </div>
+
+</div>
   `
 })
 export class AdminComponent implements OnInit {
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    if (this.activePhoneDropdown()) {
+      this.activePhoneDropdown.set(null);
+    }
+  }
+
+  showEditPhoneModal = signal<boolean>(false);
+  editPhoneData = signal<{ id: string, telefono: string } | null>(null);
+
+  openEditPhoneModal(tenant: any, event: Event) {
+    event.stopPropagation();
+    this.activePhoneDropdown.set(null);
+    this.editPhoneData.set({ id: tenant.id, telefono: tenant.telefono });
+    this.showEditPhoneModal.set(true);
+  }
+
+  closeEditPhoneModal() {
+    this.showEditPhoneModal.set(false);
+    this.editPhoneData.set(null);
+  }
+
+  isSavingPhone = signal<boolean>(false);
+
+  submitEditPhone() {
+    const data = this.editPhoneData();
+    if (!data || !data.telefono || data.telefono.trim().length < 8) {
+      this.toastService.error('Ingrese un número válido');
+      return;
+    }
+
+    this.isSavingPhone.set(true);
+    this.adminService.updateTenantPhone(data.id, data.telefono).subscribe({
+      next: (res: any) => {
+        this.toastService.success('Teléfono actualizado correctamente');
+        const updatedList = this.tenants().map(t => {
+          if (t.id === data.id) {
+            return { ...t, telefono: res.telefono };
+          }
+          return t;
+        });
+        this.tenants.set(updatedList);
+        this.closeEditPhoneModal();
+        this.isSavingPhone.set(false);
+      },
+      error: (err: any) => {
+        this.toastService.error(err.error?.error || 'Error al actualizar el teléfono');
+        this.isSavingPhone.set(false);
+      }
+    });
+  }
+
   adminService = inject(AdminService);
   loanService = inject(LoanService);
   toastService = inject(ToastService);
@@ -816,18 +912,18 @@ export class AdminComponent implements OnInit {
   async loadData() {
     // Load independently so a failure in one doesn't block the others
     this.loadingTenants.set(true);
-    try { 
-      this.tenants.set(await this.adminService.getTenants()); 
-    } catch (err) { 
-      this.toastService.error('Error cargando prestamistas'); 
+    try {
+      this.tenants.set(await this.adminService.getTenants());
+    } catch (err) {
+      this.toastService.error('Error cargando prestamistas');
     } finally {
       this.loadingTenants.set(false);
     }
 
     this.loadingStats.set(true);
-    try { 
-      this.stats.set(await this.adminService.getStats()); 
-    } catch (_) { 
+    try {
+      this.stats.set(await this.adminService.getStats());
+    } catch (_) {
     } finally {
       this.loadingStats.set(false);
     }
@@ -840,7 +936,7 @@ export class AdminComponent implements OnInit {
         this.saasGlobalConfig = { ...config };
         this.originalSaasGlobalConfig = { ...config };
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const FALLBACK_PLANS: SaaSPlanConfig[] = [
       { plan: 'BRONCE', maxClientes: 10, maxCobradores: 0, precioMensual: 5000 },
@@ -1120,7 +1216,8 @@ export class AdminComponent implements OnInit {
     return clean;
   }
 
-  togglePhoneDropdown(id: string) {
+  togglePhoneDropdown(id: string, event: Event) {
+    event.stopPropagation();
     this.activePhoneDropdown.set(this.activePhoneDropdown() === id ? null : id);
   }
 

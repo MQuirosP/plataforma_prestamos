@@ -122,6 +122,10 @@ export class AdminService {
     return res.paymentDate;
   }
 
+updateTenantPhone(id: string, telefono: string): import('rxjs').Observable<any> {
+    return this.http.put(`${this.apiUrl}/admin/tenants/${id}/phone`, { telefono }, this.getHeaders());
+  }
+
   async extendTrial(id: string, options: { days?: number; targetDate?: string } | number = 7): Promise<string> {
     const payload = typeof options === 'number' ? { days: options } : options;
     const res = await firstValueFrom(this.http.put<{ success: boolean; fechaPruebaFin: string }>(`${this.apiUrl}/admin/tenants/${id}/extend-trial`, payload, this.getHeaders()));

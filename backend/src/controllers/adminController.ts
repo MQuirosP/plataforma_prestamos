@@ -305,6 +305,35 @@ export async function extendTenantTrial(req: AuthenticatedRequest, res: Response
 }
 
 // 5. Suplantación (Impersonate)
+
+// 4d. Modificar Teléfono de Prestamista
+export async function updateTenantPhone(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
+  try {
+    const { telefono } = req.body;
+    const cleanTelefono = sanitizePhone(telefono);
+    if (!cleanTelefono || cleanTelefono.length < 8) {
+      return res.status(400).json({ error: 'El número de teléfono proporcionado no es válido.' });
+    }
+
+    if (isUsingMemoryStore()) {
+      const user = inMemoryStore.users.find(u => u.id === req.params.id);
+      if (user) {
+        (user as any).telefono = cleanTelefono;
+      }
+      return res.json({ success: true, telefono: cleanTelefono });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { telefono: cleanTelefono }
+    });
+
+    await logAudit('ACTUALIZAR_TELEFONO', `Se actualizó el teléfono de ${user.username} a ${cleanTelefono}`, req, user.id);
+    return res.json({ success: true, telefono: user.telefono });
+  } catch (err: any) { next(err); }
+}
+
 export async function impersonateTenant(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.user?.rol !== Role.ADMIN) return res.status(403).json({ error: 'Denegado' });
   try {
