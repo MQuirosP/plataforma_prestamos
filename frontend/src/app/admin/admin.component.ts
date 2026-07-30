@@ -302,12 +302,8 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
                       </app-date-field>
                     </div>
 
-                    <!-- +7 Days Quick Action -->
                     <button *ngIf="tenant.isTrial && !tenant.paymentDate" (click)="extendTrial(tenant, 7)" title="Atajo: Extender 7 días" class="bg-amber-950/40 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-2 py-1.5 rounded hover:bg-caterpillar hover:text-industrial-black transition">
                       +7 Días
-                    </button>
-                    <button *ngIf="canRenew(tenant)" (click)="renewTenant(tenant)" class="bg-caterpillar/10 border border-caterpillar/40 text-caterpillar text-[9px] font-black uppercase px-2.5 py-1.5 rounded hover:bg-caterpillar hover:text-industrial-black transition">
-                      +1 Mes
                     </button>
                   </div>
                 </div>
