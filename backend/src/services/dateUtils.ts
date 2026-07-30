@@ -98,12 +98,47 @@ export function getDueDateList(
       current.setUTCDate(current.getUTCDate() + 7);
     }
   } else if (freq === 'QUINCENAL') {
-    current.setUTCDate(current.getUTCDate() + 15);
+    const isBiweekly = diaCobro === 2 || diaCobro === 5;
+    
+    if (isBiweekly) {
+      const targetWeekday = diaCobro;
+      const currentWeekday = getWeekdayInTimezone(startStr, timezone);
+      let dayOffset = targetWeekday - currentWeekday;
+      if (dayOffset < 0) dayOffset += 7;
+      if (dayOffset < diasMinimosPrimerCobro) dayOffset += 7;
+      current.setUTCDate(current.getUTCDate() + dayOffset);
+    } else {
+      current.setUTCDate(current.getUTCDate() + diasMinimosPrimerCobro);
+      while (true) {
+        const d = current.getUTCDate();
+        const daysInMonth = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)).getUTCDate();
+        if (diaCobro === 1) {
+          if (d === 1 || d === 16) break;
+        } else {
+          if (d === 15 || d === daysInMonth) break;
+        }
+        current.setUTCDate(current.getUTCDate() + 1);
+      }
+    }
+
     const totalCuotasEstimadas = isAlquiler ? 999999 : Math.ceil(Number(totalAPagar) / cuotaAmount);
 
     while (getDateStringInTimezone(current, timezone) <= todayStr && dueDates.length < totalCuotasEstimadas) {
       dueDates.push(getDateStringInTimezone(current, timezone));
-      current.setUTCDate(current.getUTCDate() + 15);
+      if (isBiweekly) {
+        current.setUTCDate(current.getUTCDate() + 14);
+      } else {
+        do {
+          current.setUTCDate(current.getUTCDate() + 1);
+          const d = current.getUTCDate();
+          const daysInMonth = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)).getUTCDate();
+          if (diaCobro === 1) {
+            if (d === 1 || d === 16) break;
+          } else {
+            if (d === 15 || d === daysInMonth) break;
+          }
+        } while (true);
+      }
     }
   } else {
     const targetDay = diaCobro && diaCobro >= 1 && diaCobro <= 31 ? diaCobro : current.getUTCDate();

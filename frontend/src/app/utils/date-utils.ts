@@ -63,11 +63,46 @@ export function getDueDateListFrontend(
       current.setUTCDate(current.getUTCDate() + 7);
     }
   } else if (frecuenciaPago === 'QUINCENAL') {
-    current.setUTCDate(current.getUTCDate() + 15);
+    const isBiweekly = diaCobro === 2 || diaCobro === 5;
+    
+    if (isBiweekly) {
+      const targetWeekday = diaCobro;
+      const currentWeekday = current.getUTCDay() === 0 ? 7 : current.getUTCDay();
+      let dayOffset = targetWeekday - currentWeekday;
+      if (dayOffset < 0) dayOffset += 7;
+      if (dayOffset < diasMinimos) dayOffset += 7;
+      current.setUTCDate(current.getUTCDate() + dayOffset);
+    } else {
+      current.setUTCDate(current.getUTCDate() + diasMinimos);
+      while (true) {
+        const d = current.getUTCDate();
+        const daysInMonth = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)).getUTCDate();
+        if (diaCobro === 1) {
+          if (d === 1 || d === 16) break;
+        } else {
+          if (d === 15 || d === daysInMonth) break;
+        }
+        current.setUTCDate(current.getUTCDate() + 1);
+      }
+    }
+
     const limit = new Date(`${cutoffStr}T12:00:00.000Z`);
     while (current.getTime() <= limit.getTime()) {
       dueDates.push(current.toISOString().split('T')[0]);
-      current.setUTCDate(current.getUTCDate() + 15);
+      if (isBiweekly) {
+        current.setUTCDate(current.getUTCDate() + 14);
+      } else {
+        do {
+          current.setUTCDate(current.getUTCDate() + 1);
+          const d = current.getUTCDate();
+          const daysInMonth = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)).getUTCDate();
+          if (diaCobro === 1) {
+            if (d === 1 || d === 16) break;
+          } else {
+            if (d === 15 || d === daysInMonth) break;
+          }
+        } while (true);
+      }
     }
   } else {
     const targetDay = diaCobro && diaCobro >= 1 && diaCobro <= 31 ? diaCobro : current.getUTCDate();
@@ -133,7 +168,41 @@ export function formatNextPaymentDate(
     current.setUTCDate(current.getUTCDate() + dayOffset);
     current.setUTCDate(current.getUTCDate() + targetIdx * 7);
   } else if (freq === 'QUINCENAL') {
-    current.setUTCDate(current.getUTCDate() + 15 + targetIdx * 15);
+    const isBiweekly = loan.diaCobro === 2 || loan.diaCobro === 5;
+    
+    if (isBiweekly) {
+      const targetWeekday = loan.diaCobro;
+      const startWeekday = getWeekdayInTimezone(startStr, timezone);
+      let dayOffset = targetWeekday - startWeekday;
+      if (dayOffset < 0) dayOffset += 7;
+      if (dayOffset < diasMinimos) dayOffset += 7;
+      current.setUTCDate(current.getUTCDate() + dayOffset + targetIdx * 14);
+    } else {
+      current.setUTCDate(current.getUTCDate() + diasMinimos);
+      while (true) {
+        const d = current.getUTCDate();
+        const daysInMonth = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)).getUTCDate();
+        if (loan.diaCobro === 1) {
+          if (d === 1 || d === 16) break;
+        } else {
+          if (d === 15 || d === daysInMonth) break;
+        }
+        current.setUTCDate(current.getUTCDate() + 1);
+      }
+      
+      for (let i = 0; i < targetIdx; i++) {
+        do {
+          current.setUTCDate(current.getUTCDate() + 1);
+          const d = current.getUTCDate();
+          const daysInMonth = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)).getUTCDate();
+          if (loan.diaCobro === 1) {
+            if (d === 1 || d === 16) break;
+          } else {
+            if (d === 15 || d === daysInMonth) break;
+          }
+        } while (true);
+      }
+    }
   } else {
     const targetDay = loan.diaCobro && loan.diaCobro >= 1 && loan.diaCobro <= 31 ? loan.diaCobro : current.getUTCDate();
     current.setUTCMonth(current.getUTCMonth() + 1 + targetIdx);
