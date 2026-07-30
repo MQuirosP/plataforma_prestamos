@@ -353,15 +353,15 @@ import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, g
                   <div class="flex flex-wrap gap-1.5">
                     <button *ngFor="let preset of getAbonoPresets(selectedLoanForAbono)"
                             type="button"
-                            (click)="abonoMonto = preset.amount"
+                            (click)="applyPreset(preset)"
                             [class]="'text-[11px] px-2.5 py-1.5 rounded-lg font-mono font-bold border transition-all duration-150 flex items-center gap-1.5 ' + 
-                                     (abonoMonto === preset.amount 
+                                     (abonoMonto === preset.amount && (!preset.tipoPago || abonoTipoPago === preset.tipoPago)
                                         ? 'bg-caterpillar text-industrial-black border-caterpillar shadow-md font-black' 
                                         : (preset.highlight 
                                             ? 'bg-amber-950/50 border-amber-500/60 text-amber-400 hover:border-caterpillar hover:text-white' 
                                             : 'bg-industrial-surface border-industrial-border text-industrial-muted hover:border-caterpillar/50 hover:text-white'))">
                       <span>{{ preset.label }}</span>
-                      <span [class]="abonoMonto === preset.amount ? 'text-industrial-black font-black' : 'text-semantic-emerald font-black'">
+                      <span [class]="(abonoMonto === preset.amount && (!preset.tipoPago || abonoTipoPago === preset.tipoPago)) ? 'text-industrial-black font-black' : 'text-semantic-emerald font-black'">
                         ({{ loanService.settings()?.monedaSimbolo || '₡' }}{{ preset.amount | number:'1.0-0' }})
                       </span>
                     </button>
@@ -369,8 +369,8 @@ import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, g
                 </div>
               </div>
 
-              <!-- Tipo de Abono (Solo para ALQUILER) -->
-              <div *ngIf="selectedLoanForAbono.modalidad === 'ALQUILER'">
+              <!-- Tipo de Abono manual (ALQUILER sin chips / fallback) -->
+              <div *ngIf="selectedLoanForAbono.modalidad === 'ALQUILER' && getAbonoPresets(selectedLoanForAbono).length === 0">
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Concepto de Abono</label>
                 <div class="grid grid-cols-2 gap-2">
                   <button type="button" (click)="abonoTipoPago = 'CUOTA_RENTA'" 
@@ -466,10 +466,29 @@ import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, g
 
               <!-- Payment highlight -->
               <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl text-center mb-4">
-                <span class="text-[10px] text-industrial-muted uppercase font-mono block mb-1">Monto Abonado</span>
-                <span class="text-2xl text-caterpillar font-black">
-                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ lastPayment()?.montoAbonado | number:'1.0-0' }}
-                </span>
+                <ng-container *ngIf="lastReceiptMoraAmount() > 0; else singleAmount">
+                  <span class="text-[10px] text-industrial-muted uppercase font-mono block mb-2">Desglose del Pago</span>
+                  <div class="space-y-1.5 text-left mb-3">
+                    <div class="flex justify-between text-xs">
+                      <span class="text-industrial-muted">Cuotas abonadas:</span>
+                      <span class="text-white font-bold">{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ lastPayment()?.montoAbonado | number:'1.0-0' }}</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                      <span class="text-amber-400 font-bold">🎁 Mora condonada:</span>
+                      <span class="text-amber-400 font-bold">{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ lastReceiptMoraAmount() | number:'1.0-0' }}</span>
+                    </div>
+                    <div class="flex justify-between text-xs pt-1.5 border-t border-industrial-border/60">
+                      <span class="text-industrial-muted font-bold uppercase">Total operación:</span>
+                      <span class="text-caterpillar font-black text-sm">{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ ((lastPayment()?.montoAbonado || 0) + lastReceiptMoraAmount()) | number:'1.0-0' }}</span>
+                    </div>
+                  </div>
+                </ng-container>
+                <ng-template #singleAmount>
+                  <span class="text-[10px] text-industrial-muted uppercase font-mono block mb-1">Monto Abonado</span>
+                  <span class="text-2xl text-caterpillar font-black">
+                    {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ lastPayment()?.montoAbonado | number:'1.0-0' }}
+                  </span>
+                </ng-template>
               </div>
 
               <!-- Remaining Balance -->
@@ -615,16 +634,16 @@ import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, g
 
           <!-- Statement Modal Actions -->
           <div class="w-full flex gap-3 mt-4">
+            <button (click)="showStatementModal.set(false)" 
+                    class="flex-1 bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar text-xs font-bold py-3 rounded-lg transition duration-150 uppercase tracking-wider">
+              Cerrar y volver
+            </button>
             <button (click)="exportAndShare()" 
-                    class="flex-1 bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3 rounded-lg font-black uppercase text-xs tracking-wider flex items-center justify-center gap-2 transition duration-150">
+                    class="flex-1 bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3 rounded-lg font-black uppercase text-xs tracking-wider flex items-center justify-center gap-2 transition duration-150 shadow-lg">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.63-2.315a1.5 1.5 0 11.536.536l-4.63 2.315a1.5 1.5 0 11-.536-.536zm0 2.516l4.63 2.315a1.5 1.5 0 11-.536.536l-4.63-2.315a1.5 1.5 0 11.536-.536z" />
               </svg>
-              Compartir Comprobante
-            </button>
-            <button (click)="showStatementModal.set(false)" 
-                    class="bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-white text-xs font-bold px-4 py-3 rounded-lg transition duration-150">
-              Cerrar
+              Compartir
             </button>
           </div>
         </div>
@@ -871,6 +890,8 @@ export class DashboardComponent implements OnInit {
   // Receipt and Account Statement toggles
   showAsReceipt = signal<boolean>(false);
   lastPayment = signal<Payment | null>(null);
+  /** Mora amount handled via condonarMora in the last Poner al Día operation, for receipt display */
+  lastReceiptMoraAmount = signal<number>(0);
 
   cobradores = signal<any[]>([]);
   loadingCobrador = signal<boolean>(false);
@@ -899,6 +920,8 @@ export class DashboardComponent implements OnInit {
   abonoNotas: string = '';
   abonoMetodoPago: PaymentMethod = PaymentMethod.EFECTIVO;
   abonoTipoPago: 'CUOTA_RENTA' | 'ABONO_CAPITAL' = 'CUOTA_RENTA';
+  /** Mora portion of the active preset — used to split into condonarMora + addPayment */
+  activePresetMoraAmount: number = 0;
 
   // Get current weekday mapped to 1-7 based on tenant's timezone
   get currentWeekday(): number {
@@ -1175,72 +1198,134 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  getAbonoPresets(loan: Loan): { label: string; amount: number; badge?: string; highlight?: boolean }[] {
+  /** Applies a preset chip: sets amount, tipoPago, and tracks mora split for onSubmitAbono */
+  applyPreset(preset: { label: string; amount: number; tipoPago?: 'CUOTA_RENTA' | 'ABONO_CAPITAL'; moraAmount?: number; badge?: string; highlight?: boolean }) {
+    this.abonoMonto = preset.amount;
+    this.activePresetMoraAmount = preset.moraAmount ?? 0;
+    if (preset.tipoPago) {
+      this.abonoTipoPago = preset.tipoPago;
+    }
+  }
+
+  getAbonoPresets(loan: Loan): { label: string; amount: number; tipoPago?: 'CUOTA_RENTA' | 'ABONO_CAPITAL'; moraAmount?: number; badge?: string; highlight?: boolean }[] {
     if (!loan) return [];
 
-    const presets: { label: string; amount: number; badge?: string; highlight?: boolean }[] = [];
     const cuota = Number(loan.cuotaSemanal || 0);
     const multas = Number(loan.multasAcumuladas || 0);
     const balance = Number(loan.balancePendiente || 0);
+    const isAlquiler = loan.modalidad === 'ALQUILER';
+    const tz = this.loanService.settings()?.timezone || 'America/Costa_Rica';
+    const payments = loan.payments || [];
+    const presets: { label: string; amount: number; tipoPago?: 'CUOTA_RENTA' | 'ABONO_CAPITAL'; moraAmount?: number; badge?: string; highlight?: boolean }[] = [];
 
-    // 1. Single Cuota
-    if (cuota > 0) {
-      presets.push({
-        label: '1 Cuota',
-        amount: Math.min(cuota, balance)
-      });
-    }
+    if (isAlquiler) {
+      // ── ALQUILER ──────────────────────────────────────────────────────────
 
-    // Compute overdue count from fechaInicio & payments
-    let cuotasAtrasadas = 0;
-    if (loan.fechaInicio) {
-      const tz = this.loanService.settings()?.timezone || 'America/Costa_Rica';
-      const todayStr = getDateStringInTimezone(new Date(), tz);
-      const startStr = getDateStringInTimezone(loan.fechaInicio, tz);
-      const isAlquiler = loan.modalidad === 'ALQUILER';
-      const payments = loan.payments || [];
-      const totalPaid = isAlquiler
-        ? payments.filter((p: any) => p.tipoPago === 'CUOTA_RENTA').reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0)
-        : payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA').reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
-      
-      const numAbonadas = cuota > 0 ? Math.floor(totalPaid / cuota) : 0;
-      const dueDates = getDueDateListFrontend(startStr, todayStr, loan.frecuenciaPago || 'SEMANAL', Number(loan.diaCobro || 1));
-      const expected = dueDates.length;
-      if (expected > numAbonadas) {
-        cuotasAtrasadas = expected - numAbonadas;
+      // 1. Una Renta
+      if (cuota > 0) {
+        presets.push({ label: '1 Renta', amount: cuota, tipoPago: 'CUOTA_RENTA' });
       }
-    }
 
-    // 2. Overdue payments (Poner al Día)
-    if (cuotasAtrasadas > 1) {
-      const amountCuotas = Math.min(cuotasAtrasadas * cuota, balance);
-      presets.push({
-        label: `${cuotasAtrasadas} Cuotas (Poner al día)`,
-        amount: amountCuotas,
-        highlight: multas === 0
-      });
-    }
+      // Compute overdue rents
+      let rentasAtrasadas = 0;
+      if (loan.fechaInicio) {
+        const todayStr = getDateStringInTimezone(new Date(), tz);
+        const startStr = getDateStringInTimezone(loan.fechaInicio, tz);
+        const totalRentaPaid = payments
+          .filter((p: any) => p.tipoPago === 'CUOTA_RENTA')
+          .reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+        const numPagadas = cuota > 0 ? Math.floor(totalRentaPaid / cuota) : 0;
+        const dueDates = getDueDateListFrontend(startStr, todayStr, loan.frecuenciaPago || 'SEMANAL', Number(loan.diaCobro || 1));
+        if (dueDates.length > numPagadas) rentasAtrasadas = dueDates.length - numPagadas;
+      }
 
-    // 3. Mora + Cuotas Atrasadas
-    if (multas > 0) {
-      const cuotasMonto = cuotasAtrasadas > 0 ? cuotasAtrasadas * cuota : cuota;
-      const totalMoraYCuotas = multas + Math.min(cuotasMonto, balance);
-      const cuotasLabel = cuotasAtrasadas > 1 ? `${cuotasAtrasadas} Cuotas` : '1 Cuota';
-      presets.push({
-        label: `Mora + ${cuotasLabel}`,
-        amount: totalMoraYCuotas,
-        badge: 'INCLUYE MORA',
-        highlight: true
-      });
-    }
+      // 2. Rentas al Día / Saldar Mora
+      const hasOverdueRents = rentasAtrasadas > 0;
+      const hasMora = multas > 0;
+      if (hasOverdueRents || hasMora) {
+        const rentasMonto = hasOverdueRents ? rentasAtrasadas * cuota : 0;
+        const totalAlDia = rentasMonto + multas;
+        const label = hasOverdueRents
+          ? (multas > 0
+              ? `Rentas al Día (${rentasAtrasadas}x + mora)`
+              : (rentasAtrasadas === 1 ? '1 Renta al Día' : `${rentasAtrasadas} Rentas al Día`))
+          : 'Saldar Mora';
+        presets.push({
+          label,
+          amount: totalAlDia,
+          tipoPago: 'CUOTA_RENTA',
+          moraAmount: hasMora ? multas : 0,
+          ...(hasMora ? { badge: 'INCLUYE MORA' } : {}),
+          highlight: true
+        });
+      }
 
-    // 4. Liquidación Total
-    const totalLiquidacion = balance + multas;
-    if (totalLiquidacion > cuota) {
-      presets.push({
-        label: 'Liquidación Total',
-        amount: totalLiquidacion
-      });
+      // 3. Liquidar Capital (buy-out the equipment)
+      const totalAbonadoCapital = payments
+        .filter((p: any) => p.tipoPago === 'ABONO_CAPITAL')
+        .reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+      const capitalRestante = Number(loan.montoOriginal || 0) - totalAbonadoCapital;
+      if (capitalRestante > 0) {
+        presets.push({ label: 'Liquidar Capital', amount: capitalRestante, tipoPago: 'ABONO_CAPITAL' });
+      }
+
+    } else {
+      // ── TRADICIONAL ───────────────────────────────────────────────────────
+
+      // 1. Una Cuota
+      if (cuota > 0) {
+        presets.push({ label: '1 Cuota', amount: Math.min(cuota, balance) });
+      }
+
+      // Compute overdue installments
+      let cuotasAtrasadas = 0;
+      if (loan.fechaInicio) {
+        const todayStr = getDateStringInTimezone(new Date(), tz);
+        const startStr = getDateStringInTimezone(loan.fechaInicio, tz);
+        const totalPaid = payments
+          .filter((p: any) => p.tipoPago !== 'CONDONACION_MORA')
+          .reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+        const numAbonadas = cuota > 0 ? Math.floor(totalPaid / cuota) : 0;
+        const dueDates = getDueDateListFrontend(startStr, todayStr, loan.frecuenciaPago || 'SEMANAL', Number(loan.diaCobro || 1));
+        if (dueDates.length > numAbonadas) cuotasAtrasadas = dueDates.length - numAbonadas;
+      }
+
+      // 2. Poner al Día — true "current" means overdue installments + mora settled together
+      const hasOverdue = cuotasAtrasadas > 0;
+      const hasMora = multas > 0;
+      if (hasOverdue || hasMora) {
+        const cuotasMonto = hasOverdue ? Math.min(cuotasAtrasadas * cuota, balance) : 0;
+        const totalAlDia = cuotasMonto + multas;
+
+        // Skip if same amount as "1 Cuota" (only 1 overdue, no mora)
+        const isDuplicate = totalAlDia === Math.min(cuota, balance) && !hasMora;
+
+        if (!isDuplicate) {
+          let label: string;
+          if (hasOverdue && hasMora) {
+            label = cuotasAtrasadas > 1
+              ? `Poner al Día (${cuotasAtrasadas} cuotas + mora)`
+              : 'Poner al Día (1 cuota + mora)';
+          } else if (hasOverdue) {
+            label = `${cuotasAtrasadas} Cuotas al Día`;
+          } else {
+            label = 'Saldar Mora';
+          }
+
+          presets.push({
+            label,
+            amount: Math.min(totalAlDia, balance),
+            moraAmount: hasMora ? multas : 0,
+            ...(hasMora ? { badge: 'INCLUYE MORA' } : {}),
+            highlight: true
+          });
+        }
+      }
+
+      // 3. Liquidación Total — balance already includes mora (backend formula)
+      if (balance > cuota) {
+        presets.push({ label: 'Liquidación Total', amount: balance });
+      }
     }
 
     return presets;
@@ -1263,18 +1348,45 @@ export class DashboardComponent implements OnInit {
     }
 
     try {
-      const newPayment = await this.loanService.addPayment(
-        this.selectedLoanForAbono.id,
-        this.abonoMonto,
-        this.abonoNotas,
-        this.abonoMetodoPago,
-        this.selectedLoanForAbono.modalidad === 'ALQUILER' ? (this.abonoTipoPago as any) : undefined
-      );
-      this.showAbonoModal.set(false);
-      this.recalculateCounts();
-      this.toastService.success('Abono registrado correctamente');
+      const loan = this.selectedLoanForAbono;
+      const moraAmount = this.activePresetMoraAmount;
+      // Amount going to installments only (excludes the mora portion)
+      const cuotasAmount = this.abonoMonto - moraAmount;
 
-      const updated = this.loans().find(l => l.id === this.selectedLoanForAbono?.id);
+      // Step 1: If preset includes mora, condonar it first so multasAcumuladas is cleared
+      // and the mora is NOT counted toward cuota progress.
+      if (moraAmount > 0) {
+        await this.loanService.condonarMora(
+          loan.id,
+          moraAmount,
+          'Mora saldada junto con cuotas al día'
+        );
+      }
+
+      // Step 2: Register the installment payment (cuotas only)
+      const paymentAmount = moraAmount > 0 ? cuotasAmount : this.abonoMonto;
+      let newPayment = null;
+      if (paymentAmount > 0) {
+        newPayment = await this.loanService.addPayment(
+          loan.id,
+          paymentAmount,
+          this.abonoNotas,
+          this.abonoMetodoPago,
+          loan.modalidad === 'ALQUILER' ? (this.abonoTipoPago as any) : undefined
+        );
+      }
+
+      this.showAbonoModal.set(false);
+      this.activePresetMoraAmount = 0;
+      this.lastReceiptMoraAmount.set(moraAmount);
+      this.recalculateCounts();
+      this.toastService.success(
+        moraAmount > 0
+          ? 'Cuotas y mora registradas correctamente'
+          : 'Abono registrado correctamente'
+      );
+
+      const updated = this.loans().find(l => l.id === loan.id);
       if (updated) {
         this.selectedStatementLoan = updated;
         this.lastPayment.set(newPayment);

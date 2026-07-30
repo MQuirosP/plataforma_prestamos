@@ -556,6 +556,9 @@ export class LoanService {
           return loan;
         });
       });
+
+      // Sync server-side recalculated multasAcumuladas (fineService recalculates after deletion)
+      await this.loadLoans();
     } catch (err: any) {
       throw err;
     } finally {
