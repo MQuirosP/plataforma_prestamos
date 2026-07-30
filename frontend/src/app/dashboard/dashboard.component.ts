@@ -474,8 +474,8 @@ import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, g
                       <span class="text-white font-bold">{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ lastPayment()?.montoAbonado | number:'1.0-0' }}</span>
                     </div>
                     <div class="flex justify-between text-xs">
-                      <span class="text-amber-400 font-bold">🎁 Mora condonada:</span>
-                      <span class="text-amber-400 font-bold">{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ lastReceiptMoraAmount() | number:'1.0-0' }}</span>
+                      <span class="text-semantic-emerald font-bold">Pago de mora:</span>
+                      <span class="text-semantic-emerald font-bold">{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ lastReceiptMoraAmount() | number:'1.0-0' }}</span>
                     </div>
                     <div class="flex justify-between text-xs pt-1.5 border-t border-industrial-border/60">
                       <span class="text-industrial-muted font-bold uppercase">Total operación:</span>
@@ -595,7 +595,7 @@ import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, g
                     No se han registrado abonos aún
                   </div>
                   <div *ngFor="let pay of loan.payments" 
-                       [class]="'text-xs flex justify-between p-2 border rounded-lg ' + (pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'bg-amber-950/30 border-amber-500/30' : 'bg-industrial-dark border-industrial-border')">
+                       [class]="'text-xs flex justify-between p-2 border rounded-lg ' + (pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'bg-amber-950/30 border-amber-500/30' : pay.tipoPago === PaymentTipo.PAGO_MORA ? 'bg-rose-950/30 border-rose-500/30' : 'bg-industrial-dark border-industrial-border')">
                     <div>
                       <span class="text-[9px] text-industrial-muted font-mono block">{{ pay.numeroRecibo }}</span>
                       <span class="text-[9px] text-white block">{{ pay.fechaPago | date:'dd/MM HH:mm' }}</span>
@@ -610,8 +610,8 @@ import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, g
                     </div>
                     <div class="flex flex-col items-end justify-between">
                       <div class="flex items-center gap-1.5">
-                        <span [class]="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'text-amber-400 font-black' : 'text-white font-black'">
-                          {{ pay.tipoPago === PaymentTipo.CONDONACION_MORA ? '-' : '' }}{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
+                        <span [class]="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'text-amber-400 font-black' : pay.tipoPago === PaymentTipo.PAGO_MORA ? 'text-rose-400 font-black' : 'text-white font-black'">
+                          {{ pay.tipoPago === PaymentTipo.CONDONACION_MORA || pay.tipoPago === PaymentTipo.PAGO_MORA ? '' : '' }}{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
                         </span>
                         <!-- Trash / Revert Icon (Visible only if current user is not COBRADOR) -->
                         <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR" 
@@ -1293,6 +1293,18 @@ export class DashboardComponent implements OnInit {
       // 2. Poner al Día — true "current" means overdue installments + mora settled together
       const hasOverdue = cuotasAtrasadas > 0;
       const hasMora = multas > 0;
+
+      // Si hay mora y cuotas atrasadas a la vez, agregar un chip exclusivo para pagar SOLO la mora
+      if (hasMora && hasOverdue) {
+        presets.push({
+          label: 'Pagar solo Mora',
+          amount: multas,
+          moraAmount: multas,
+          badge: 'MORA',
+          highlight: false
+        });
+      }
+
       if (hasOverdue || hasMora) {
         const cuotasMonto = hasOverdue ? Math.min(cuotasAtrasadas * cuota, balance) : 0;
         const totalAlDia = cuotasMonto + multas;
@@ -1353,13 +1365,15 @@ export class DashboardComponent implements OnInit {
       // Amount going to installments only (excludes the mora portion)
       const cuotasAmount = this.abonoMonto - moraAmount;
 
-      // Step 1: If preset includes mora, condonar it first so multasAcumuladas is cleared
+      // Step 1: If preset includes mora, pay it using PAGO_MORA so it counts for caja and clears multasAcumuladas
       // and the mora is NOT counted toward cuota progress.
       if (moraAmount > 0) {
-        await this.loanService.condonarMora(
+        await this.loanService.addPayment(
           loan.id,
           moraAmount,
-          'Mora saldada junto con cuotas al día'
+          this.abonoNotas || 'Pago de mora atrasada',
+          this.abonoMetodoPago,
+          PaymentTipo.PAGO_MORA
         );
       }
 

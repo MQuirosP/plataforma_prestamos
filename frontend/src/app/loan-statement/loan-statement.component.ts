@@ -198,7 +198,7 @@ import html2canvas from 'html2canvas';
 
               <div *ngIf="loan.payments && loan.payments.length > 0" class="divide-y divide-industrial-border/60">
                 <div *ngFor="let pay of loan.payments" 
-                     [class]="'p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs transition ' + (pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'bg-amber-950/30' : 'hover:bg-industrial-surface/80')">
+                     [class]="'p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs transition ' + (pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'bg-amber-950/30' : pay.tipoPago === PaymentTipo.PAGO_MORA ? 'bg-rose-950/30' : 'hover:bg-industrial-surface/80')">
                   
                   <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -208,7 +208,7 @@ import html2canvas from 'html2canvas';
                         🎁 Condonación de Mora
                       </span>
                       <span *ngIf="pay.metodoPago && pay.tipoPago !== PaymentTipo.CONDONACION_MORA" 
-                            [class]="'text-[9px] font-bold uppercase rounded px-1.5 py-0.5 ' + (pay.metodoPago === 'EFECTIVO' ? 'bg-amber-900/50 text-amber-400' : pay.metodoPago === 'SINPE' ? 'bg-blue-900/50 text-blue-400' : 'bg-purple-900/50 text-purple-400')">
+                        [class]="'text-[9px] font-bold uppercase rounded px-1.5 py-0.5 mt-0.5 inline-block ' + (pay.metodoPago === 'EFECTIVO' ? 'bg-amber-900/50 text-amber-400' : pay.metodoPago === 'SINPE' ? 'bg-blue-900/50 text-blue-400' : 'bg-purple-900/50 text-purple-400')">
                         {{ pay.metodoPago }}
                       </span>
                     </div>
@@ -217,12 +217,22 @@ import html2canvas from 'html2canvas';
                   </div>
 
                   <div class="flex items-center gap-4">
-                    <span [class]="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'text-amber-400 font-black text-sm font-mono' : 'text-semantic-emerald font-black text-sm font-mono'">
-                      {{ pay.tipoPago === PaymentTipo.CONDONACION_MORA ? '-' : '+' }}{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
+                    <span [class]="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'text-amber-400 font-black text-sm font-mono' : pay.tipoPago === PaymentTipo.PAGO_MORA ? 'text-rose-400 font-black text-sm font-mono' : 'text-semantic-emerald font-black text-sm font-mono'">
+                      {{ pay.tipoPago === PaymentTipo.CONDONACION_MORA ? '-' : pay.tipoPago === PaymentTipo.PAGO_MORA ? '' : '+' }}{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
                     </span>
 
-                    <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR" 
-                            (click)="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? confirmReversarCondonacion(pay.id) : onDeletePayment(pay.id)"
+                    <div class="flex items-center gap-1.5">
+                      <button (click)="viewReceipt(pay)"
+                              class="text-caterpillar hover:text-caterpillar-dark p-1.5 rounded-lg hover:bg-industrial-dark transition"
+                              title="Ver Recibo Individual">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+
+                      <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR" 
+                              (click)="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? confirmReversarCondonacion(pay.id) : onDeletePayment(pay.id)"
                             class="text-industrial-muted hover:text-semantic-red p-1.5 rounded-lg hover:bg-industrial-dark transition"
                             [title]="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'Reversar Condonación' : 'Anular Abono'">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,9 +260,53 @@ import html2canvas from 'html2canvas';
                 class="flex-1 md:flex-initial bg-caterpillar hover:bg-caterpillar-dark text-industrial-black font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider transition shadow-xl flex items-center justify-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.63-2.315a1.5 1.5 0 11.536.536l-4.63 2.315a1.5 1.5 0 11-.536-.536zm0 2.516l4.63 2.315a1.5 1.5 0 11-.536.536l-4.63-2.315a1.5 1.5 0 11.536-.536z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.63-2.315a1.5 1.5 0 11.536.536l-4.63 2.315a1.5 1.5 0 11-.536-.536zm0 2.516l4.63 2.315a1.5 1.5 0 11.536.536l-4.63-2.315a1.5 1.5 0 11.536-.536z" />
           </svg>
           Compartir
         </button>
+      </div>
+
+      <!-- RECEIPT OVERLAY MODAL -->
+      <div *ngIf="viewingReceipt" class="fixed inset-0 z-[150] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div id="receipt-card" class="bg-industrial-dark border border-industrial-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden">
+          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
+          
+          <div class="text-center mb-6">
+            <img src="/assets/images/logo-header.webp" class="h-10 mx-auto mb-2 opacity-80" alt="Logo">
+            <h3 class="text-white font-black uppercase tracking-tight text-lg">Recibo de Abono</h3>
+            <p class="text-industrial-muted text-[10px] uppercase font-mono">
+              {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN' }}
+            </p>
+          </div>
+
+          <div class="space-y-3 mb-6">
+            <div class="flex justify-between border-b border-industrial-border/30 pb-2">
+              <span class="text-industrial-muted text-xs">Recibo:</span>
+              <span class="text-white font-mono text-xs">{{ viewingReceipt.numeroRecibo }}</span>
+            </div>
+            <div class="flex justify-between border-b border-industrial-border/30 pb-2">
+              <span class="text-industrial-muted text-xs">Fecha:</span>
+              <span class="text-white font-mono text-xs">{{ viewingReceipt.fechaPago | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="flex justify-between border-b border-industrial-border/30 pb-2">
+              <span class="text-industrial-muted text-xs">Cliente:</span>
+              <span class="text-white font-mono text-xs truncate max-w-[150px]">{{ loan.clienteNombre }}</span>
+            </div>
+            <div class="flex justify-between pt-2">
+              <span class="text-industrial-muted font-bold text-xs uppercase">Monto Recibido:</span>
+              <span class="text-caterpillar font-black text-sm">
+                {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ viewingReceipt.montoAbonado | number:'1.0-0' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button (click)="closeReceipt()" class="flex-1 bg-industrial-surface border border-industrial-border text-white text-xs font-bold py-2.5 rounded-lg uppercase">Cerrar</button>
+            <button (click)="shareReceipt()" [disabled]="isExporting" class="flex-1 bg-caterpillar text-industrial-black text-xs font-black py-2.5 rounded-lg uppercase">
+              {{ isExporting ? 'Generando...' : 'Compartir' }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- CONFIRMATION MODAL -->
@@ -282,6 +336,64 @@ import html2canvas from 'html2canvas';
   `
 })
 export class LoanStatementComponent {
+  viewingReceipt: any = null;
+  isExporting = false;
+
+  viewReceipt(pay: any) {
+    this.viewingReceipt = pay;
+  }
+
+  closeReceipt() {
+    this.viewingReceipt = null;
+  }
+
+  async shareReceipt() {
+    if (!this.viewingReceipt) return;
+    try {
+      this.isExporting = true;
+      const element = document.getElementById('receipt-card');
+      if (!element) return;
+      
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        backgroundColor: '#1E1E1E',
+        logging: false
+      });
+      
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+      if (!blob) throw new Error('Failed to create blob');
+
+      const formData = new FormData();
+      formData.append('file', blob, 'recibo.jpg');
+      formData.append('upload_preset', 'ml_default');
+
+      const uploadRes = await fetch('https://api.cloudinary.com/v1_1/dv74qevjc/image/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!uploadRes.ok) throw new Error('Cloudinary upload failed');
+      const data = await uploadRes.json();
+      const imageUrl = data.secure_url;
+      
+      let message = `*RECIBO DE ABONO OFICIAL*\n`;
+      message += `Cliente: ${this.loan?.clienteNombre}\n`;
+      message += `Monto: ${this.loanService.settings()?.monedaSimbolo || '₡'}${this.viewingReceipt.montoAbonado}\n`;
+      message += `Ver recibo aquí: ${imageUrl}`;
+      
+      const whatsappUrl = `https://wa.me/${this.loan?.clienteTelefono}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      
+    } catch (error) {
+      console.error('Error sharing receipt:', error);
+      this.toastService.error('Error al generar la imagen para compartir');
+    } finally {
+      this.isExporting = false;
+    }
+  }
+
+
   @Input({ required: true }) loan!: Loan;
   @Input() lastPayment: Payment | null = null;
   @Output() goBack = new EventEmitter<void>();

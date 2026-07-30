@@ -99,7 +99,7 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         cuotaActual = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
         cuotasTotales = getDuePeriodsCount(loan, new Date(), diasMinimos);
       } else {
-        const totalAbonado = payments.filter(p => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        const totalAbonado = payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA' && p.tipoPago !== 'PAGO_MORA').reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
         balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
         const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
         cuotaActual = Math.min(Math.floor(totalAbonado / Number(loan.cuotaSemanal)), totalCuotasEstimadas);
@@ -144,7 +144,7 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         cuotaActual = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
         cuotasTotales = getDuePeriodsCount(loan, new Date(), diasMinimos);
       } else {
-        const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA' && p.tipoPago !== 'PAGO_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
         balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
         const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
         cuotaActual = Math.min(Math.floor(totalAbonado / Number(loan.cuotaSemanal)), totalCuotasEstimadas);
@@ -435,23 +435,34 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
     }
 
     const isAlquiler = loan.modalidad === 'ALQUILER';
-    const cleanTipoPago = isAlquiler
-      ? (tipoPago === 'ABONO_CAPITAL' ? 'ABONO_CAPITAL' : 'CUOTA_RENTA')
-      : 'ABONO_CAPITAL';
+    let cleanTipoPago = tipoPago as any;
+    if (cleanTipoPago !== 'PAGO_MORA' && cleanTipoPago !== 'CONDONACION_MORA') {
+      cleanTipoPago = isAlquiler ? (tipoPago === 'ABONO_CAPITAL' ? 'ABONO_CAPITAL' : 'CUOTA_RENTA') : 'ABONO_CAPITAL';
+    }
 
     const payments = inMemoryStore.payments.filter(p => p.loanId === loanId);
     
-    if (isAlquiler && cleanTipoPago === 'ABONO_CAPITAL') {
-      const totalAbonadoCapital = payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + p.montoAbonado, 0);
-      const balanceCapital = Number(loan.montoOriginal) - totalAbonadoCapital;
-      if (parsedMonto > balanceCapital) {
-        return res.status(400).json({ error: `El abono a capital supera el balance de capital pendiente de ${balanceCapital}` });
+    if (cleanTipoPago === 'PAGO_MORA') {
+      const balanceMora = Number(loan.multasAcumuladas || 0);
+      if (parsedMonto > balanceMora) {
+        return res.status(400).json({ error: `El abono de mora supera el balance pendiente de ${balanceMora}` });
       }
-    } else if (!isAlquiler) {
-      const totalAbonado = payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p: any) => sum + Number(p.montoAbonado), 0);
-      const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
-      if (parsedMonto > balancePendiente) {
-        return res.status(400).json({ error: `El abono supera el balance pendiente de ${balancePendiente}` });
+      loan.multasAcumuladas = Math.max(0, balanceMora - parsedMonto);
+    } else if (cleanTipoPago === 'CONDONACION_MORA') {
+      loan.multasAcumuladas = 0;
+    } else {
+      if (isAlquiler && cleanTipoPago === 'ABONO_CAPITAL') {
+        const totalAbonadoCapital = payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + p.montoAbonado, 0);
+        const balanceCapital = Number(loan.montoOriginal) - totalAbonadoCapital;
+        if (parsedMonto > balanceCapital) {
+          return res.status(400).json({ error: `El abono a capital supera el balance de capital pendiente de ${balanceCapital}` });
+        }
+      } else if (!isAlquiler) {
+        const totalAbonado = payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA' && p.tipoPago !== 'PAGO_MORA').reduce((sum, p: any) => sum + Number(p.montoAbonado), 0);
+        const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
+        if (parsedMonto > balancePendiente) {
+          return res.status(400).json({ error: `El abono supera el balance pendiente de ${balancePendiente}` });
+        }
       }
     }
 
@@ -468,8 +479,8 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
     };
     inMemoryStore.payments.push(newPayment as any);
 
-    // Actualizar CajaCobrador si es COBRADOR
-    if (userRole === Role.COBRADOR && creadoPorId) {
+    // Actualizar CajaCobrador si es COBRADOR (y no es condonacion)
+    if (userRole === Role.COBRADOR && creadoPorId && cleanTipoPago !== 'CONDONACION_MORA') {
       let caja = inMemoryStore.cajas.find(c => c.cobradorId === creadoPorId);
       if (!caja) {
         caja = { id: `caja-${Date.now()}`, cobradorId: creadoPorId, saldoEfectivo: 0, saldoSinpe: 0, saldoTransferencia: 0 };
@@ -485,8 +496,8 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       if (totalAbonadoCapital >= Number(loan.montoOriginal)) {
         loan.estado = LoanStatus.PAID;
       }
-    } else if (!isAlquiler) {
-      const totalAbonado = payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p: any) => sum + Number(p.montoAbonado), 0) + parsedMonto;
+    } else if (!isAlquiler && cleanTipoPago !== 'CONDONACION_MORA' && cleanTipoPago !== 'PAGO_MORA') {
+      const totalAbonado = payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA' && p.tipoPago !== 'PAGO_MORA').reduce((sum, p: any) => sum + Number(p.montoAbonado), 0) + parsedMonto;
       if (totalAbonado >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
         loan.estado = LoanStatus.PAID;
       }
@@ -508,21 +519,38 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       clienteNombre = loan.clienteNombre;
 
       const isAlquiler = loan.modalidad === 'ALQUILER';
-      const cleanTipoPago = isAlquiler
-        ? (tipoPago === 'ABONO_CAPITAL' ? PaymentTipo.ABONO_CAPITAL : PaymentTipo.CUOTA_RENTA)
-        : PaymentTipo.ABONO_CAPITAL;
+      let cleanTipoPago = tipoPago as any;
+      if (cleanTipoPago !== PaymentTipo.PAGO_MORA && cleanTipoPago !== PaymentTipo.CONDONACION_MORA) {
+        cleanTipoPago = isAlquiler ? (tipoPago === 'ABONO_CAPITAL' ? PaymentTipo.ABONO_CAPITAL : PaymentTipo.CUOTA_RENTA) : PaymentTipo.ABONO_CAPITAL;
+      }
 
-      if (isAlquiler && cleanTipoPago === PaymentTipo.ABONO_CAPITAL) {
-        const totalAbonadoCapital = loan.payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-        const balanceCapital = Number(loan.montoOriginal) - totalAbonadoCapital;
-        if (parsedMonto > balanceCapital) {
-          throw new Error(`El abono a capital supera el balance de capital pendiente de ${balanceCapital}`);
+      if (cleanTipoPago === PaymentTipo.PAGO_MORA) {
+        const balanceMora = Number(loan.multasAcumuladas || 0);
+        if (parsedMonto > balanceMora) {
+          throw new Error(`El abono de mora supera el balance pendiente de ${balanceMora}`);
         }
-      } else if (!isAlquiler) {
-        const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-        const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
-        if (parsedMonto > balancePendiente) {
-          throw new Error(`El abono supera el balance pendiente de ${balancePendiente}`);
+        await tx.loan.update({
+          where: { id: loanId },
+          data: { multasAcumuladas: { decrement: parsedMonto } }
+        });
+      } else if (cleanTipoPago === PaymentTipo.CONDONACION_MORA) {
+        await tx.loan.update({
+          where: { id: loanId },
+          data: { multasAcumuladas: 0 }
+        });
+      } else {
+        if (isAlquiler && cleanTipoPago === PaymentTipo.ABONO_CAPITAL) {
+          const totalAbonadoCapital = loan.payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+          const balanceCapital = Number(loan.montoOriginal) - totalAbonadoCapital;
+          if (parsedMonto > balanceCapital) {
+            throw new Error(`El abono a capital supera el balance de capital pendiente de ${balanceCapital}`);
+          }
+        } else if (!isAlquiler) {
+          const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA' && p.tipoPago !== 'PAGO_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+          const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
+          if (parsedMonto > balancePendiente) {
+            throw new Error(`El abono supera el balance pendiente de ${balancePendiente}`);
+          }
         }
       }
 
@@ -546,8 +574,8 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
             data: { estado: LoanStatus.PAID }
           });
         }
-      } else if (!isAlquiler) {
-        const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0) + parsedMonto;
+      } else if (!isAlquiler && cleanTipoPago !== PaymentTipo.CONDONACION_MORA && cleanTipoPago !== PaymentTipo.PAGO_MORA) {
+        const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA' && p.tipoPago !== 'PAGO_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0) + parsedMonto;
         if (totalAbonado >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
           await tx.loan.update({
             where: { id: loanId },
@@ -619,8 +647,12 @@ export async function deletePayment(req: AuthenticatedRequest, res: Response, ne
     const payment = inMemoryStore.payments[payIdx];
     inMemoryStore.payments.splice(payIdx, 1);
 
+    if (payment.tipoPago === 'PAGO_MORA') {
+      loan.multasAcumuladas = Number(loan.multasAcumuladas || 0) + Number(payment.montoAbonado);
+    }
+
     // Ajustar CajaCobrador si el creador es COBRADOR
-    if (payment.creadoPorId) {
+    if (payment.creadoPorId && payment.tipoPago !== 'CONDONACION_MORA') {
       const creator = inMemoryStore.users.find(u => u.id === payment.creadoPorId);
       if (creator && creator.rol === Role.COBRADOR) {
         const caja = inMemoryStore.cajas.find(c => c.cobradorId === payment.creadoPorId);
@@ -652,6 +684,13 @@ export async function deletePayment(req: AuthenticatedRequest, res: Response, ne
         where: { id: paymentId }
       });
 
+      if (payment.tipoPago === PaymentTipo.PAGO_MORA) {
+        await tx.loan.update({
+          where: { id: loanId },
+          data: { multasAcumuladas: { increment: payment.montoAbonado } }
+        });
+      }
+
       // Poner el préstamo en ACTIVE
       await tx.loan.update({
         where: { id: loanId },
@@ -659,7 +698,7 @@ export async function deletePayment(req: AuthenticatedRequest, res: Response, ne
       });
 
       // Si fue creado por un cobrador, restar de su CajaCobrador
-      if (payment.creadoPorId) {
+      if (payment.creadoPorId && payment.tipoPago !== PaymentTipo.CONDONACION_MORA) {
         const creator = await tx.user.findUnique({
           where: { id: payment.creadoPorId },
           select: { rol: true }

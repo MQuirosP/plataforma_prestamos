@@ -79,7 +79,7 @@ export interface MemoryPayment {
   notas?: string;
   metodoPago: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
   creadoPorId?: string;
-  tipoPago?: 'CUOTA_RENTA' | 'ABONO_CAPITAL' | 'CONDONACION_MORA';
+  tipoPago?: 'CUOTA_RENTA' | 'ABONO_CAPITAL' | 'CONDONACION_MORA' | 'PAGO_MORA';
   fechaPago: Date;
 }
 

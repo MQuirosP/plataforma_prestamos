@@ -36,7 +36,8 @@ export enum LoanFrecuencia {
 export enum PaymentTipo {
   CUOTA_RENTA = 'CUOTA_RENTA',
   ABONO_CAPITAL = 'ABONO_CAPITAL',
-  CONDONACION_MORA = 'CONDONACION_MORA'
+  CONDONACION_MORA = 'CONDONACION_MORA',
+  PAGO_MORA = 'PAGO_MORA'
 }
 
 export enum TipoIdentificacion {
@@ -476,18 +477,25 @@ export class LoanService {
             let balancePendiente = 0;
             let cuotaActual = 0;
             let estado = loan.estado;
+            
+            let multas = Number(loan.multasAcumuladas || 0);
+            if (newPayment.tipoPago === PaymentTipo.PAGO_MORA) {
+              multas = Math.max(0, multas - Number(newPayment.montoAbonado));
+            } else if (newPayment.tipoPago === PaymentTipo.CONDONACION_MORA) {
+              multas = 0;
+            }
 
             if (isAlquiler) {
               const totalAbonadoCapital = updatedPayments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
               const totalAbonadoRenta = updatedPayments.filter(p => p.tipoPago === 'CUOTA_RENTA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-              balancePendiente = Math.max(0, Number(loan.montoOriginal) + Number(loan.multasAcumuladas || 0) - totalAbonadoCapital);
+              balancePendiente = Math.max(0, Number(loan.montoOriginal) + multas - totalAbonadoCapital);
               cuotaActual = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
               if (totalAbonadoCapital >= Number(loan.montoOriginal)) {
                 estado = LoanStatus.PAID;
               }
             } else {
-              const totalAbonado = updatedPayments.filter(p => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
-              balancePendiente = Math.max(0, Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado);
+              const totalAbonado = updatedPayments.filter(p => p.tipoPago !== 'CONDONACION_MORA' && p.tipoPago !== 'PAGO_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+              balancePendiente = Math.max(0, Number(loan.totalAPagar) + multas - totalAbonado);
               const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
               const numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
               cuotaActual = Math.min(numCuotasAbonadas, totalCuotasEstimadas);
@@ -495,9 +503,13 @@ export class LoanService {
                 estado = LoanStatus.PAID;
               }
             }
+            
+            // Llama a re-obtener la data real en background para asegurar sincronía perfecta
+            setTimeout(() => this.loadLoans(), 100);
 
             return {
               ...loan,
+              multasAcumuladas: multas,
               balancePendiente,
               cuotaActual,
               estado,
