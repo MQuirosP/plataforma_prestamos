@@ -37,6 +37,7 @@ enum LoanModalidad {
 }
 
 enum LoanFrecuencia {
+  DIARIO
   SEMANAL
   QUINCENAL
   MENSUAL
@@ -45,6 +46,7 @@ enum LoanFrecuencia {
 enum PaymentTipo {
   CUOTA_RENTA
   ABONO_CAPITAL
+  CONDONACION_MORA
 }
 
 enum FineFrequency {

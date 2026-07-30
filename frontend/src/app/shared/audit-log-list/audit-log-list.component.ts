@@ -83,22 +83,47 @@ export class AuditLogListComponent {
   @Output() pageChange = new EventEmitter<number>();
 
   formatEventType(event: string): string {
-    const map: Record<string, string> = {
-      'CREAR_TENANT': 'Crear Financiera',
-      'SUSPENDER_TENANT': 'Suspender Financiera',
-      'CAMBIO_PLAN': 'Cambio de Plan',
-      'IMPERSONATE': 'Impersonación',
-      'ACTUALIZAR_PLAN': 'Actualizar Config. Plan',
-      'CREAR_COBRADOR': 'Crear Cobrador',
-      'CREAR_LOAN': 'Crear Préstamo',
-      'EDITAR_LOAN': 'Editar Préstamo',
-      'ELIMINAR_LOAN': 'Eliminar Préstamo',
-      'CONDONAR_MORA': 'Condonación de Mora',
-      'AGREGAR_PAGO': 'Registro de Pago',
-      'ELIMINAR_PAGO': 'Eliminación de Pago',
-      'ACTUALIZAR_SETTINGS': 'Actualizar Configuración'
-    };
-    return map[event] || event;
+    return formatEventType(event);
   }
+}
+
+export function formatEventType(event: string): string {
+  if (!event) return '';
+  const map: Record<string, string> = {
+    'CREAR_TENANT': 'Crear Financiera',
+    'SUSPENDER_TENANT': 'Suspender Financiera',
+    'ACTIVAR_TENANT': 'Activar Financiera',
+    'CAMBIO_PLAN': 'Cambio de Plan',
+    'ACTUALIZAR_VENCIMIENTO': 'Actualizar Vencimiento',
+    'EXTENDER_TRIAL': 'Extender Prueba',
+    'IMPERSONATE': 'Impersonación Admin',
+    'IMPERSONATE_COBRADOR': 'Acceso a Cobrador',
+    'UPDATE_SAAS_CONFIG': 'Configuración SaaS',
+    'ACTUALIZAR_PLAN': 'Actualizar Config. Plan',
+    'CREAR_COBRADOR': 'Crear Cobrador',
+    'CREAR_LOAN': 'Crear Préstamo',
+    'EDITAR_LOAN': 'Editar Préstamo',
+    'ELIMINAR_LOAN': 'Eliminar Préstamo',
+    'CONDONAR_MORA': 'Condonación de Mora',
+    'CONDONACIÓN DE MORA': 'Condonación de Mora',
+    'CONDONACION DE MORA': 'Condonación de Mora',
+    'CREAR_PAGO': 'Registro de Pago',
+    'AGREGAR_PAGO': 'Registro de Pago',
+    'ELIMINAR_PAGO': 'Eliminación de Pago',
+    'ACTUALIZAR_SETTINGS': 'Actualizar Configuración'
+  };
+
+  const cleanKey = event.trim().toUpperCase();
+  if (map[cleanKey]) {
+    return map[cleanKey];
+  }
+  if (map[event]) {
+    return map[event];
+  }
+
+  return event
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, char => char.toUpperCase());
 }
 

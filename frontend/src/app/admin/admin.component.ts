@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AdminService, Tenant, SaaSStats, SaaSLog, SaaSPlanConfig, SaasGlobalConfig } from '../services/admin.service';
 import { ToastService } from '../services/toast.service';
 import { LoanService } from '../services/loan.service';
-import { AuditLogListComponent, AuditLogEntry } from '../shared/audit-log-list/audit-log-list.component';
+import { AuditLogListComponent, AuditLogEntry, formatEventType } from '../shared/audit-log-list/audit-log-list.component';
 import html2canvas from 'html2canvas';
 
 import { DateFieldComponent } from '../shared/date-field/date-field.component';
@@ -750,14 +750,20 @@ export class AdminComponent implements OnInit {
   eventTypes = [
     'CREAR_TENANT',
     'SUSPENDER_TENANT',
+    'ACTIVAR_TENANT',
     'CAMBIO_PLAN',
+    'ACTUALIZAR_VENCIMIENTO',
+    'EXTENDER_TRIAL',
     'IMPERSONATE',
+    'IMPERSONATE_COBRADOR',
+    'UPDATE_SAAS_CONFIG',
     'ACTUALIZAR_PLAN',
     'CREAR_COBRADOR',
     'CREAR_LOAN',
     'EDITAR_LOAN',
     'ELIMINAR_LOAN',
     'CONDONAR_MORA',
+    'CREAR_PAGO',
     'AGREGAR_PAGO',
     'ELIMINAR_PAGO',
     'ACTUALIZAR_SETTINGS'
@@ -770,22 +776,7 @@ export class AdminComponent implements OnInit {
   loadingTenants = signal(true);
 
   formatEventType(event: string): string {
-    const map: Record<string, string> = {
-      'CREAR_TENANT': 'Crear Financiera',
-      'SUSPENDER_TENANT': 'Suspender Financiera',
-      'CAMBIO_PLAN': 'Cambio de Plan',
-      'IMPERSONATE': 'Impersonación',
-      'ACTUALIZAR_PLAN': 'Actualizar Config. Plan',
-      'CREAR_COBRADOR': 'Crear Cobrador',
-      'CREAR_LOAN': 'Crear Préstamo',
-      'EDITAR_LOAN': 'Editar Préstamo',
-      'ELIMINAR_LOAN': 'Eliminar Préstamo',
-      'CONDONAR_MORA': 'Condonación de Mora',
-      'AGREGAR_PAGO': 'Registro de Pago',
-      'ELIMINAR_PAGO': 'Eliminación de Pago',
-      'ACTUALIZAR_SETTINGS': 'Actualizar Configuración'
-    };
-    return map[event] || event;
+    return formatEventType(event);
   }
 
 

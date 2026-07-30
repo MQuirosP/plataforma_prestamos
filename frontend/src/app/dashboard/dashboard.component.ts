@@ -7,6 +7,7 @@ import { ToastService } from '../services/toast.service';
 
 import { AdminService } from '../services/admin.service';
 import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepper.component';
+import { formatNextPaymentDate, getWeekdayInTimezone } from '../utils/date-utils';
 
 @Component({
   selector: 'app-dashboard',
@@ -219,6 +220,19 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               </button>
             </div>
 
+            <!-- Mora Condonada Badge & Reversar Button -->
+            <div *ngIf="loan.montoCondonado && loan.montoCondonado > 0" class="mt-2 px-3 py-1.5 rounded-lg bg-amber-950/40 border border-amber-500/40 flex items-center justify-between gap-2 text-xs">
+              <div class="flex items-center gap-1.5 text-amber-400 font-semibold">
+                <span>🎁 Mora condonada: <strong>{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.montoCondonado | number:'1.0-0' }}</strong></span>
+              </div>
+              <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR"
+                      (click)="confirmReversarCondonacion(loan)"
+                      title="Reversar / Anular condonación de mora"
+                      class="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-industrial-black text-[10px] font-bold border border-amber-500/40 transition duration-150 shrink-0">
+                Reversar
+              </button>
+            </div>
+
             <!-- Client Info Meta Grid -->
             <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-industrial-border/60 text-[11px] leading-tight">
 
@@ -364,7 +378,7 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
               
               <button type="submit" 
                       class="w-full bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3 rounded-lg font-black uppercase tracking-wider text-sm transition duration-150 mt-4 shadow-lg">
-                Registrar Abono e Imprimir
+                Registrar Abono
               </button>
             </form>
           </div>
@@ -491,6 +505,22 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
                     +{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.multasAcumuladas | number:'1.0-0' }}
                   </span>
                 </div>
+                <div *ngIf="loan.montoCondonado && loan.montoCondonado > 0" class="flex justify-between items-center text-xs">
+                  <span class="text-amber-400 font-bold flex items-center gap-1">
+                    🎁 Mora Condonada:
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-amber-400 font-bold">
+                      -{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.montoCondonado | number:'1.0-0' }}
+                    </span>
+                    <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR"
+                            (click)="confirmReversarCondonacion(loan)"
+                            title="Reversar condonación"
+                            class="text-[9px] bg-amber-950/60 border border-amber-500/40 text-amber-400 hover:bg-amber-500 hover:text-industrial-black px-1.5 py-0.5 rounded transition font-bold">
+                      Reversar
+                    </button>
+                  </div>
+                </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-industrial-muted">Total Abonado:</span>
                   <span class="text-semantic-emerald font-bold">
@@ -519,30 +549,35 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
 
               <!-- Receipt Lists -->
               <div>
-                <span class="text-xs text-industrial-muted uppercase font-mono block mb-2">Historial de Abonos</span>
+                <span class="text-xs text-industrial-muted uppercase font-mono block mb-2">Historial de Movimientos y Abonos</span>
                 <div class="max-h-36 overflow-y-auto space-y-2 pr-1 border border-industrial-border/40 p-2 rounded-lg bg-industrial-surface/50">
                   <div *ngIf="loan.payments.length === 0" class="text-[10px] text-industrial-muted text-center py-4">
                     No se han registrado abonos aún
                   </div>
-                  <div *ngFor="let pay of loan.payments" class="text-xs flex justify-between bg-industrial-dark p-2 border border-industrial-border rounded-lg">
+                  <div *ngFor="let pay of loan.payments" 
+                       [class]="'text-xs flex justify-between p-2 border rounded-lg ' + (pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'bg-amber-950/30 border-amber-500/30' : 'bg-industrial-dark border-industrial-border')">
                     <div>
                       <span class="text-[9px] text-industrial-muted font-mono block">{{ pay.numeroRecibo }}</span>
                       <span class="text-[9px] text-white block">{{ pay.fechaPago | date:'dd/MM HH:mm' }}</span>
-                      <span *ngIf="pay.metodoPago" 
+                      <span *ngIf="pay.tipoPago === PaymentTipo.CONDONACION_MORA" 
+                            class="text-[8px] font-bold uppercase rounded px-1 mt-0.5 inline-block bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        🎁 Condonación de Mora
+                      </span>
+                      <span *ngIf="pay.metodoPago && pay.tipoPago !== PaymentTipo.CONDONACION_MORA" 
                             [class]="'text-[8px] font-bold uppercase rounded px-1 mt-0.5 inline-block ' + (pay.metodoPago === 'EFECTIVO' ? 'bg-amber-900/50 text-amber-400' : pay.metodoPago === 'SINPE' ? 'bg-blue-900/50 text-blue-400' : 'bg-purple-900/50 text-purple-400')">
                         {{ pay.metodoPago }}
                       </span>
                     </div>
                     <div class="flex flex-col items-end justify-between">
                       <div class="flex items-center gap-1.5">
-                        <span class="text-white font-black">
-                          {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
+                        <span [class]="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'text-amber-400 font-black' : 'text-white font-black'">
+                          {{ pay.tipoPago === PaymentTipo.CONDONACION_MORA ? '-' : '' }}{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
                         </span>
-                        <!-- Trash Icon for Deletion (Visible only if current user is not COBRADOR) -->
+                        <!-- Trash / Revert Icon (Visible only if current user is not COBRADOR) -->
                         <button *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR" 
-                                (click)="onDeletePayment(pay.id)"
+                                (click)="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? confirmReversarCondonacion(loan, pay.id) : onDeletePayment(pay.id)"
                                 class="text-semantic-red hover:text-red-400 p-0.5"
-                                title="Anular Abono">
+                                [title]="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'Reversar Condonación' : 'Anular Abono'">
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
@@ -703,8 +738,8 @@ import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepp
           </p>
           
           <div class="flex gap-3">
-            <button (click)="closeConfirmModal()" class="flex-1 bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-white text-xs font-bold py-3 rounded-lg transition duration-150">
-              Cancelar
+            <button (click)="closeConfirmModal()" class="flex-1 bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar text-xs font-bold py-3 rounded-lg transition duration-150 uppercase tracking-wider">
+              Cerrar y volver
             </button>
             <button (click)="executeConfirmAction()" [ngClass]="confirmModalConfig()?.danger ? 'bg-semantic-red hover:bg-red-600 text-white' : 'bg-caterpillar hover:bg-caterpillar-dark text-industrial-black'" class="flex-1 font-black uppercase text-xs tracking-wider py-3 rounded-lg transition duration-150">
               Confirmar
@@ -738,6 +773,7 @@ export class DashboardComponent implements OnInit {
   @Output() openCreateLoan = new EventEmitter<void>();
   @Output() openEditLoan = new EventEmitter<Loan>();
   @Output() openTeamManagement = new EventEmitter<void>();
+  @Output() openStatementEvent = new EventEmitter<Loan>();
 
 
   // States
@@ -757,7 +793,7 @@ export class DashboardComponent implements OnInit {
   openCondonarModal(loan: Loan) {
     this.selectedLoanForCondonar = loan;
     this.condonarMonto = loan.multasAcumuladas || 0;
-    this.condonarMotivo = '';
+    this.condonarMotivo = 'Exoneración de mora otorgada por el prestamista';
     this.showCondonarModal.set(true);
   }
 
@@ -783,6 +819,27 @@ export class DashboardComponent implements OnInit {
     } catch (err: any) {
       this.toastService.show(err.error?.error || 'Error al condonar la mora', 'error');
     }
+  }
+
+  confirmReversarCondonacion(loan: Loan, paymentId?: string) {
+    this.confirmModalConfig.set({
+      title: 'Reversar Condonación',
+      message: `¿Está seguro de que desea anular/reversar la condonación otorgada a ${loan.clienteNombre}? La mora acumulada se recalculará automáticamente.`,
+      danger: true,
+      action: async () => {
+        try {
+          const res = await this.loanService.reversarCondonacion(loan.id, paymentId);
+          this.toastService.success(res.message || 'Condonación reversada correctamente');
+          const updated = this.loans().find(l => l.id === loan.id);
+          if (updated && this.selectedStatementLoan?.id === loan.id) {
+            this.selectedStatementLoan = updated;
+          }
+          this.recalculateCounts();
+        } catch (err: any) {
+          this.toastService.error(err.error?.error || 'Error al reversar la condonación');
+        }
+      }
+    });
   }
 
 
@@ -825,15 +882,7 @@ export class DashboardComponent implements OnInit {
   // Get current weekday mapped to 1-7 based on tenant's timezone
   get currentWeekday(): number {
     const tz = this.loanService.settings()?.timezone || 'America/Costa_Rica';
-    try {
-      const formatter = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' });
-      const dayName = formatter.format(new Date());
-      const mapping: Record<string, number> = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
-      return mapping[dayName] || 1;
-    } catch {
-      const day = new Date().getDay();
-      return day === 0 ? 7 : day;
-    }
+    return getWeekdayInTimezone(new Date(), tz);
   }
 
   // Count helper functions
@@ -877,7 +926,7 @@ export class DashboardComponent implements OnInit {
         const rentPaymentsTotal = l.payments.filter(p => p.tipoPago === PaymentTipo.CUOTA_RENTA).reduce((sum, p) => sum + Number(p.montoAbonado), 0);
         isAtrasado = hasMulta || (rentPaymentsTotal < (Number(l.cuotaSemanal) * periodsActive));
       } else {
-        const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        const paymentsTotal = l.payments.filter(p => p.tipoPago !== PaymentTipo.CONDONACION_MORA).reduce((sum, p) => sum + Number(p.montoAbonado), 0);
         isAtrasado = hasMulta || (paymentsTotal < (Number(l.cuotaSemanal) * periodsActive));
       }
 
@@ -904,73 +953,9 @@ export class DashboardComponent implements OnInit {
   }
 
   getNextPaymentDate(loan: any): string {
-    const startDate = new Date(loan.fechaInicio);
-    startDate.setHours(0, 0, 0, 0);
-
-    const isAlquiler = loan.modalidad === LoanModalidad.ALQUILER;
-    const freq = loan.frecuenciaPago || LoanFrecuencia.SEMANAL;
-    const daysPerPeriod = freq === LoanFrecuencia.SEMANAL ? 7 : freq === LoanFrecuencia.QUINCENAL ? 15 : 30;
-
-    let dayOffset = 0;
-    if (freq === LoanFrecuencia.SEMANAL) {
-      const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
-      dayOffset = jsDayCobro - startDate.getDay();
-      if (dayOffset < 0) {
-        dayOffset += 7;
-      }
-
-      const diasMinimos = this.loanService.settings()?.diasMinimosPrimerCobro ?? 3;
-      if (dayOffset < diasMinimos) {
-        dayOffset += 7;
-      }
-    } else {
-      dayOffset = daysPerPeriod;
-    }
-
-    const current = new Date(startDate);
-    current.setDate(current.getDate() + dayOffset);
-
-    let numCuotasAbonadas = 0;
-    let totalCuotasEstimadas = 999999;
-
-    if (isAlquiler) {
-      const totalAbonadoRenta = (loan.payments || []).filter((p: any) => p.tipoPago === PaymentTipo.CUOTA_RENTA).reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
-      numCuotasAbonadas = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
-    } else {
-      const totalAbonado = (loan.payments || []).reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
-      numCuotasAbonadas = Math.floor(totalAbonado / Number(loan.cuotaSemanal));
-      totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
-    }
-
-    const targetIdx = Math.max(0, Math.min(numCuotasAbonadas, totalCuotasEstimadas - 1));
-    const targetDate = new Date(current);
-    if (freq === LoanFrecuencia.MENSUAL) {
-      targetDate.setMonth(current.getMonth() + targetIdx);
-    } else {
-      targetDate.setDate(current.getDate() + targetIdx * daysPerPeriod);
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const diffTime = targetDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    const options: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' };
-    let result = targetDate.toLocaleDateString('es-ES', options);
-    result = result.replace(/\./g, '');
-    result = result.charAt(0).toUpperCase() + result.slice(1);
-
-    if (diffDays === 0) {
-      return `Hoy (${result})`;
-    }
-    if (diffDays === 1) {
-      return `Mañana (${result})`;
-    }
-    if (diffDays < 0) {
-      return `Vencido (${result})`;
-    }
-    return result;
+    const tz = this.loanService.settings()?.timezone || 'America/Costa_Rica';
+    const diasMinimos = this.loanService.settings()?.diasMinimosPrimerCobro ?? 3;
+    return formatNextPaymentDate(loan, tz, diasMinimos);
   }
 
   filteredLoans(): Loan[] {
@@ -998,7 +983,7 @@ export class DashboardComponent implements OnInit {
         const rentPaymentsTotal = l.payments.filter(p => p.tipoPago === PaymentTipo.CUOTA_RENTA).reduce((sum, p) => sum + Number(p.montoAbonado), 0);
         isAtrasado = hasMulta || (rentPaymentsTotal < (Number(l.cuotaSemanal) * periodsActive));
       } else {
-        const paymentsTotal = l.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        const paymentsTotal = l.payments.filter(p => p.tipoPago !== PaymentTipo.CONDONACION_MORA).reduce((sum, p) => sum + Number(p.montoAbonado), 0);
         isAtrasado = hasMulta || (paymentsTotal < (Number(l.cuotaSemanal) * periodsActive));
       }
 
@@ -1210,10 +1195,7 @@ export class DashboardComponent implements OnInit {
   }
 
   openStatement(loan: Loan) {
-    this.selectedStatementLoan = loan;
-    this.lastPayment.set(null); // No payment context, so we don't show the Receipt toggle option
-    this.showAsReceipt.set(false);
-    this.showStatementModal.set(true);
+    this.openStatementEvent.emit(loan);
   }
 
   async onDeletePayment(paymentId: string) {

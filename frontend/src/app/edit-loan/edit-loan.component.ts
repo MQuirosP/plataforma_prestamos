@@ -1,7 +1,7 @@
 import { Component, OnInit, Input, Output, EventEmitter, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LoanService, Loan, FineFrequency, Role, TipoIdentificacion } from '../services/loan.service';
+import { LoanService, Loan, FineFrequency, Role, TipoIdentificacion, LoanFrecuencia } from '../services/loan.service';
 import { ToastService } from '../services/toast.service';
 import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepper.component';
 import { trigger, state, style, animate, transition } from '@angular/animations';
@@ -19,30 +19,20 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
     ])
   ],
   template: `
-    <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
-      
-      <!-- Top Caterpillar Branded Bar -->
-      <header class="border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95" style="background-color: #111111;">
-        <div class="flex items-center gap-2">
-          <button (click)="goBack.emit()" class="text-caterpillar hover:text-caterpillar mr-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 class="text-lg font-bold text-white leading-tight tracking-tight">EDITAR PRÉSTAMO</h1>
-            <p class="text-[10px] text-caterpillar uppercase tracking-wider font-mono">PANEL DE ADMINISTRACIÓN</p>
-          </div>
-        </div>
-      </header>
-
+    <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none pt-6">
       <!-- Content Column -->
-      <main class="max-w-md mx-auto px-4 mt-6">
+      <main class="max-w-md mx-auto px-4">
         
         <div class="bg-industrial-dark border border-industrial-border rounded-xl p-5 space-y-5 shadow-2xl relative overflow-hidden">
           
           <!-- Industrial stripe -->
           <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
+
+          <!-- Form Title Inside Card (No back button) -->
+          <div class="pt-2 pb-3 border-b border-industrial-border/60">
+            <h1 class="text-lg font-bold text-white leading-tight tracking-tight uppercase">EDITAR PRÉSTAMO</h1>
+            <p class="text-[10px] text-caterpillar uppercase tracking-wider font-mono">PANEL DE ADMINISTRACIÓN</p>
+          </div>
 
           <!-- Warning banner if loan has payments -->
           <div *ngIf="hasPayments" class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-400 font-mono">
@@ -93,6 +83,33 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
               </div>
             </div>
 
+            <!-- Frecuencia & Día de Cobro Pactado -->
+            <div class="space-y-3 bg-industrial-dark/40 border border-industrial-border/60 rounded-xl p-3.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-industrial-muted font-mono uppercase">Frecuencia de Cobro</span>
+                <span class="px-2 py-0.5 rounded bg-caterpillar/10 text-caterpillar text-xs font-bold uppercase border border-caterpillar/30">
+                  {{ loan.frecuenciaPago || 'SEMANAL' }}
+                </span>
+              </div>
+              <div>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">{{ getDiaCobroLabel(loan.frecuenciaPago) }}</label>
+                <div [class.opacity-50]="loan.frecuenciaPago === LoanFrecuencia.DIARIO"
+                     class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                  <select [(ngModel)]="editData.diaCobro" name="diaCobro" required [disabled]="loan.frecuenciaPago === LoanFrecuencia.DIARIO"
+                          class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                    <option *ngFor="let opt of getDiaCobroOptions(loan.frecuenciaPago)" [value]="opt.value">
+                      {{ opt.label }}
+                    </option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Monto Original & Cuota -->
             <div class="space-y-4">
               <div>
@@ -102,28 +119,6 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Cuota Pactada</label>
                 <app-numeric-stepper [(ngModel)]="editData.cuotaSemanal" name="cuotaSemanal" [required]="true" [min]="0" [step]="500"></app-numeric-stepper>
-              </div>
-            </div>
-
-            <!-- Día de Cobro Pactado -->
-            <div>
-              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Día de Cobro Pactado</label>
-              <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
-                <select [(ngModel)]="editData.diaCobro" name="diaCobro" required 
-                        class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
-                  <option [value]="1">Lunes</option>
-                  <option [value]="2">Martes</option>
-                  <option [value]="3">Miércoles</option>
-                  <option [value]="4">Jueves</option>
-                  <option [value]="5">Viernes</option>
-                  <option [value]="6">Sábado</option>
-                  <option [value]="7">Domingo</option>
-                </select>
-                <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                  </svg>
-                </div>
               </div>
             </div>
 
@@ -174,8 +169,8 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
             <!-- Buttons -->
             <div class="flex gap-3 pt-4">
               <button type="button" (click)="goBack.emit()"
-                      class="flex-1 bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-white text-xs font-bold py-3.5 rounded-lg transition duration-150">
-                Cancelar
+                      class="flex-1 bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar text-xs font-bold py-3.5 rounded-lg transition duration-150 uppercase tracking-wider">
+                Cerrar y volver
               </button>
               <button type="submit" [disabled]="saving()"
                       class="flex-1 bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3.5 rounded-lg font-black uppercase tracking-wider text-xs transition duration-150 shadow-lg disabled:opacity-50">
@@ -192,6 +187,7 @@ export class EditLoanComponent implements OnInit {
   @Input({ required: true }) loan!: Loan;
   @Output() goBack = new EventEmitter<void>();
 
+  LoanFrecuencia = LoanFrecuencia;
   FineFrequency = FineFrequency;
   loanService = inject(LoanService);
   toastService = inject(ToastService);
@@ -266,6 +262,45 @@ export class EditLoanComponent implements OnInit {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  getDiaCobroLabel(frecuencia: string | undefined): string {
+    const freq = frecuencia || this.loan?.frecuenciaPago || 'SEMANAL';
+    if (freq === 'QUINCENAL') return 'Esquema / Día de Cobro Quincenal';
+    if (freq === 'MENSUAL') return 'Día del Mes de Cobro (1 al 31)';
+    if (freq === 'DIARIO') return 'Día de Cobro (Cobro Diario)';
+    return 'Día de Cobro Pactado (Semanal)';
+  }
+
+  getDiaCobroOptions(frecuencia: string | undefined): { value: number; label: string }[] {
+    const freq = frecuencia || this.loan?.frecuenciaPago || 'SEMANAL';
+    if (freq === 'DIARIO') {
+      return [{ value: 1, label: 'Todos los días (Lunes a Domingo)' }];
+    }
+    if (freq === 'QUINCENAL') {
+      return [
+        { value: 15, label: 'Días 15 y 30 de cada mes (Planilla Quincenal)' },
+        { value: 1, label: 'Días 1 y 16 de cada mes (Inicio/Mitad de Mes)' },
+        { value: 5, label: 'Cada 2 semanas los Viernes' },
+        { value: 2, label: 'Cada 2 semanas los Lunes' }
+      ];
+    }
+    if (freq === 'MENSUAL') {
+      const days = [];
+      for (let i = 1; i <= 31; i++) {
+        days.push({ value: i, label: `Día ${i} de cada mes` });
+      }
+      return days;
+    }
+    return [
+      { value: 1, label: 'Lunes' },
+      { value: 2, label: 'Martes' },
+      { value: 3, label: 'Miércoles' },
+      { value: 4, label: 'Jueves' },
+      { value: 5, label: 'Viernes' },
+      { value: 6, label: 'Sábado' },
+      { value: 7, label: 'Domingo' }
+    ];
   }
 
   getIdPlaceholder(tipo: string): string {

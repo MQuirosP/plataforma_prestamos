@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LoanService, Role } from '../services/loan.service';
 import { AdminService } from '../services/admin.service';
 import { ToastService } from '../services/toast.service';
+import { formatEventType } from '../shared/audit-log-list/audit-log-list.component';
 
 @Component({
   selector: 'app-team-management',
@@ -169,7 +170,7 @@ import { ToastService } from '../services/toast.service';
               <div *ngIf="!loadingLogs()">
                 <div *ngFor="let log of filteredLogs()" class="bg-industrial-surface border border-industrial-border p-3 rounded-lg text-xs space-y-1 mb-2">
                   <div class="flex items-center justify-between text-[10px] text-industrial-muted font-mono">
-                    <span class="px-1.5 py-0.5 rounded bg-caterpillar/10 text-caterpillar font-bold border border-caterpillar/20">{{ log.tipoEvento }}</span>
+                    <span class="px-1.5 py-0.5 rounded bg-caterpillar/10 text-caterpillar font-bold border border-caterpillar/20">{{ formatEventType(log.tipoEvento) }}</span>
                     <span>{{ log.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
                   </div>
                   <p class="text-white font-medium text-xs leading-relaxed pt-0.5">{{ log.descripcion }}</p>
@@ -233,12 +234,12 @@ import { ToastService } from '../services/toast.service';
 
               <div class="flex gap-3 pt-2">
                 <button type="button" (click)="showAddModal.set(false)" 
-                        class="w-1/3 bg-industrial-surface border border-industrial-border hover:bg-industrial-dark text-white font-bold py-3 px-4 rounded-lg text-xs uppercase tracking-tight transition">
-                  Cancelar
+                        class="flex-1 bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar font-bold py-3 px-4 rounded-lg text-xs uppercase tracking-tight transition">
+                  Cerrar y volver
                 </button>
                 <button type="submit" [disabled]="loadingCobrador()" 
-                        class="w-2/3 bg-caterpillar hover:bg-caterpillar-dark text-industrial-black font-black py-3 px-4 rounded-lg text-xs uppercase tracking-tight transition shadow-lg disabled:opacity-50">
-                  {{ loadingCobrador() ? 'Guardando...' : '+ Agregar Cobrador' }}
+                        class="flex-1 bg-caterpillar hover:bg-caterpillar-dark text-industrial-black font-black py-3 px-4 rounded-lg text-xs uppercase tracking-tight transition shadow-lg disabled:opacity-50">
+                  {{ loadingCobrador() ? 'Guardando...' : 'Crear Cobrador' }}
                 </button>
               </div>
             </form>
@@ -253,6 +254,7 @@ import { ToastService } from '../services/toast.service';
 export class TeamManagementComponent implements OnInit {
   @Output() goBack = new EventEmitter<void>();
 
+  formatEventType = formatEventType;
   loanService = inject(LoanService);
   adminService = inject(AdminService);
   toastService = inject(ToastService);

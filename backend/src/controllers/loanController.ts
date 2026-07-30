@@ -9,46 +9,22 @@ import { sanitizeString, sanitizePhone, validatePositiveNumber, validateIntegerR
 import { logActivity } from '../services/auditLogger';
 
 
-function getDuePeriodsCount(loan: any, today: Date = new Date(), diasMinimos: number = 3): number {
-  const startDate = new Date(loan.fechaInicio);
-  const freq = loan.frecuenciaPago || 'SEMANAL';
-  
-  if (freq === 'SEMANAL') {
-    let current = new Date(startDate);
-    const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
-    let dayOffset = jsDayCobro - current.getDay();
-    if (dayOffset < 0) dayOffset += 7;
-    if (dayOffset < diasMinimos) dayOffset += 7;
-    current.setDate(current.getDate() + dayOffset);
-    
-    let count = 0;
-    while (current <= today) {
-      count++;
-      current.setDate(current.getDate() + 7);
-      if (count > 5000) break;
-    }
-    return count;
-  } else if (freq === 'QUINCENAL') {
-    let current = new Date(startDate);
-    current.setDate(current.getDate() + 15);
-    let count = 0;
-    while (current <= today) {
-      count++;
-      current.setDate(current.getDate() + 15);
-      if (count > 2500) break;
-    }
-    return count;
-  } else {
-    let current = new Date(startDate);
-    current.setMonth(current.getMonth() + 1);
-    let count = 0;
-    while (current <= today) {
-      count++;
-      current.setMonth(current.getMonth() + 1);
-      if (count > 1200) break;
-    }
-    return count;
-  }
+import { getDueDateList } from '../services/dateUtils';
+
+
+function getDuePeriodsCount(loan: any, today: Date = new Date(), diasMinimos: number = 3, timezone: string = 'America/Costa_Rica'): number {
+  const list = getDueDateList(
+    loan.fechaInicio,
+    loan.diaCobro,
+    loan.frecuenciaPago,
+    Number(loan.totalAPagar || 0),
+    Number(loan.cuotaSemanal || 0),
+    diasMinimos,
+    timezone,
+    loan.modalidad,
+    today
+  );
+  return list.length;
 }
 
 // List all loans for the logged-in lender (or cobrador's prestamista)
@@ -123,7 +99,7 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         cuotaActual = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
         cuotasTotales = getDuePeriodsCount(loan, new Date(), diasMinimos);
       } else {
-        const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0);
+        const totalAbonado = payments.filter(p => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
         balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
         const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
         cuotaActual = Math.min(Math.floor(totalAbonado / Number(loan.cuotaSemanal)), totalCuotasEstimadas);
@@ -168,7 +144,7 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         cuotaActual = Math.floor(totalAbonadoRenta / Number(loan.cuotaSemanal));
         cuotasTotales = getDuePeriodsCount(loan, new Date(), diasMinimos);
       } else {
-        const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
         balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
         const totalCuotasEstimadas = Math.ceil(Number(loan.totalAPagar) / Number(loan.cuotaSemanal));
         cuotaActual = Math.min(Math.floor(totalAbonado / Number(loan.cuotaSemanal)), totalCuotasEstimadas);
@@ -229,7 +205,7 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
 
   const parsedMonto = validatePositiveNumber(montoOriginal);
   const parsedCuota = validatePositiveNumber(cuotaSemanal);
-  const parsedDia = validateIntegerRange(diaCobro, 1, 7);
+  const parsedDia = validateIntegerRange(diaCobro, 1, 31);
 
   if (parsedMonto === null) {
     return res.status(400).json({ error: 'El monto original debe ser un número mayor a 0.' });
@@ -238,7 +214,7 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
     return res.status(400).json({ error: 'La cuota semanal debe ser un número mayor a 0.' });
   }
   if (parsedDia === null) {
-    return res.status(400).json({ error: 'El día de cobro debe ser un número entre 1 y 7.' });
+    return res.status(400).json({ error: 'El día de cobro debe ser un número válido entre 1 y 31.' });
   }
 
   const parsedPorcentaje = porcentaje !== undefined && porcentaje !== null ? validatePositiveNumber(porcentaje, true) : null;
@@ -472,7 +448,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
         return res.status(400).json({ error: `El abono a capital supera el balance de capital pendiente de ${balanceCapital}` });
       }
     } else if (!isAlquiler) {
-      const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0);
+      const totalAbonado = payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p: any) => sum + Number(p.montoAbonado), 0);
       const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
       if (parsedMonto > balancePendiente) {
         return res.status(400).json({ error: `El abono supera el balance pendiente de ${balancePendiente}` });
@@ -510,7 +486,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
         loan.estado = LoanStatus.PAID;
       }
     } else if (!isAlquiler) {
-      const totalAbonado = payments.reduce((sum, p) => sum + p.montoAbonado, 0) + parsedMonto;
+      const totalAbonado = payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p: any) => sum + Number(p.montoAbonado), 0) + parsedMonto;
       if (totalAbonado >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
         loan.estado = LoanStatus.PAID;
       }
@@ -543,7 +519,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
           throw new Error(`El abono a capital supera el balance de capital pendiente de ${balanceCapital}`);
         }
       } else if (!isAlquiler) {
-        const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+        const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
         const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
         if (parsedMonto > balancePendiente) {
           throw new Error(`El abono supera el balance pendiente de ${balancePendiente}`);
@@ -571,7 +547,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
           });
         }
       } else if (!isAlquiler) {
-        const totalAbonado = loan.payments.reduce((sum, p) => sum + Number(p.montoAbonado), 0) + parsedMonto;
+        const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0) + parsedMonto;
         if (totalAbonado >= Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0)) {
           await tx.loan.update({
             where: { id: loanId },
@@ -746,7 +722,7 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
 
   const parsedMonto = montoOriginal !== undefined ? validatePositiveNumber(montoOriginal) : undefined;
   const parsedCuota = cuotaSemanal !== undefined ? validatePositiveNumber(cuotaSemanal) : undefined;
-  const parsedDia = diaCobro !== undefined ? validateIntegerRange(diaCobro, 1, 7) : undefined;
+  const parsedDia = diaCobro !== undefined ? validateIntegerRange(diaCobro, 1, 31) : undefined;
 
   if (montoOriginal !== undefined && parsedMonto === null) {
     return res.status(400).json({ error: 'El monto original debe ser un número mayor a 0.' });
@@ -755,7 +731,7 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
     return res.status(400).json({ error: 'La cuota pactada debe ser un número mayor a 0.' });
   }
   if (diaCobro !== undefined && parsedDia === null) {
-    return res.status(400).json({ error: 'El día de cobro debe ser un número entre 1 y 7.' });
+    return res.status(400).json({ error: 'El día de cobro debe ser un número válido entre 1 y 31.' });
   }
 
   const parsedFineAmount = fineAmount !== undefined && fineAmount !== null ? validatePositiveNumber(fineAmount, true) : undefined;
@@ -995,7 +971,8 @@ export async function condonarMora(req: AuthenticatedRequest, res: Response, nex
     return res.status(400).json({ error: 'El monto a condonar debe ser un número válido mayor a 0.' });
   }
 
-  const cleanMotivo = motivo ? sanitizeString(motivo, 250) : 'Sin motivo especificado';
+  const cleanMotivo = motivo && motivo.trim() ? sanitizeString(motivo, 250) : 'Exoneración de mora otorgada por el prestamista';
+  const condRecibo = 'COND-' + Math.floor(100000 + Math.random() * 900000);
 
   if (isUsingMemoryStore()) {
     const loan = inMemoryStore.loans.find(l => l.id === id && l.prestamistaId === prestamistaId);
@@ -1008,6 +985,18 @@ export async function condonarMora(req: AuthenticatedRequest, res: Response, nex
     const newMultas = Math.max(0, currentMultas - parsedMonto);
     loan.montoCondonado = newCondonado;
     loan.multasAcumuladas = newMultas;
+
+    inMemoryStore.payments.push({
+      id: Math.random().toString(),
+      loanId: id,
+      montoAbonado: parsedMonto,
+      numeroRecibo: condRecibo,
+      notas: cleanMotivo,
+      metodoPago: 'EFECTIVO',
+      creadoPorId: req.user?.id,
+      tipoPago: 'CONDONACION_MORA',
+      fechaPago: new Date()
+    });
 
     await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${loan.clienteNombre}. Motivo: ${cleanMotivo}`);
     return res.json({ success: true, message: `Se condonaron ₡${parsedMonto} de mora correctamente`, loan });
@@ -1027,16 +1016,107 @@ export async function condonarMora(req: AuthenticatedRequest, res: Response, nex
     const currentMultas = Number(loan.multasAcumuladas || 0);
     const newMultas = Math.max(0, currentMultas - parsedMonto);
 
+    await prisma.payment.create({
+      data: {
+        loanId: id,
+        montoAbonado: parsedMonto,
+        numeroRecibo: condRecibo,
+        notas: cleanMotivo,
+        tipoPago: 'CONDONACION_MORA' as any,
+        creadoPorId: req.user?.id
+      }
+    });
+
     const updatedLoan = await prisma.loan.update({
       where: { id },
       data: {
         montoCondonado: newCondonado,
         multasAcumuladas: newMultas
+      },
+      include: {
+        payments: true
       }
     });
 
     await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${loan.clienteNombre}. Motivo: ${cleanMotivo}`);
     return res.json({ success: true, message: `Se condonaron ₡${parsedMonto} de mora correctamente`, loan: updatedLoan });
+
+  } catch (err: any) { next(err); }
+}
+
+// Reversar / Anular Condonación de Mora
+export async function reversarCondonacion(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const prestamistaId = req.user?.id || 'mock-lender-id-123';
+  const userRole = req.user?.rol;
+  const { id } = req.params;
+  const { paymentId } = req.body;
+
+  if (userRole === Role.COBRADOR) {
+    return res.status(403).json({ error: 'Los cobradores no pueden reversar condonaciones de mora.' });
+  }
+
+  if (isUsingMemoryStore()) {
+    const loan = inMemoryStore.loans.find(l => l.id === id && l.prestamistaId === prestamistaId);
+    if (!loan) return res.status(404).json({ error: 'Préstamo no encontrado' });
+
+    let condPayments = inMemoryStore.payments.filter(p => p.loanId === id && p.tipoPago === 'CONDONACION_MORA');
+    if (paymentId) {
+      condPayments = condPayments.filter(p => p.id === paymentId);
+    }
+    const totalReversado = condPayments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+
+    inMemoryStore.payments = inMemoryStore.payments.filter(p => !(p.loanId === id && p.tipoPago === 'CONDONACION_MORA' && (!paymentId || p.id === paymentId)));
+
+    const currentCondonado = Number(loan.montoCondonado || 0);
+    loan.montoCondonado = paymentId && totalReversado > 0 ? Math.max(0, currentCondonado - totalReversado) : 0;
+
+    await updatePenaltiesForTenant(prestamistaId);
+    await logActivity(req, 'REVERSAR_CONDONACION', `Reversó condonación de mora al cliente ${loan.clienteNombre}`);
+    return res.json({ success: true, message: 'Condonación de mora reversada correctamente', loan });
+  }
+
+  try {
+    const loan = await prisma.loan.findFirst({
+      where: { id, prestamistaId }
+    });
+
+    if (!loan) return res.status(404).json({ error: 'Préstamo no encontrado' });
+
+    let condPayments = await prisma.payment.findMany({
+      where: {
+        loanId: id,
+        tipoPago: 'CONDONACION_MORA' as any,
+        ...(paymentId ? { id: paymentId } : {})
+      }
+    });
+
+    const totalReversado = condPayments.reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+
+    if (condPayments.length > 0) {
+      await prisma.payment.deleteMany({
+        where: {
+          id: { in: condPayments.map(p => p.id) }
+        }
+      });
+    }
+
+    const currentCondonado = Number(loan.montoCondonado || 0);
+    const newCondonado = paymentId && totalReversado > 0 ? Math.max(0, currentCondonado - totalReversado) : 0;
+
+    await prisma.loan.update({
+      where: { id },
+      data: { montoCondonado: newCondonado }
+    });
+
+    await updatePenaltiesForTenant(prestamistaId);
+
+    const updatedLoan = await prisma.loan.findUnique({
+      where: { id },
+      include: { payments: true }
+    });
+
+    await logActivity(req, 'REVERSAR_CONDONACION', `Reversó condonación de mora al cliente ${loan.clienteNombre}`);
+    return res.json({ success: true, message: 'Condonación de mora reversada correctamente', loan: updatedLoan });
 
   } catch (err: any) { next(err); }
 }

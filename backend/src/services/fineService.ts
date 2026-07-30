@@ -1,6 +1,6 @@
 import { prisma, isUsingMemoryStore, inMemoryStore } from './db';
 import { Loan, LoanStatus, FineFrequency } from '@prisma/client';
-import { getDaysDiffInTimezone } from './dateUtils';
+import { getDaysDiffInTimezone, getDateStringInTimezone, getWeekdayInTimezone, getDueDateList } from './dateUtils';
 
 
 export async function updatePenaltiesForTenant(prestamistaId: string) {
@@ -73,8 +73,8 @@ function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro
     return { multasAcumuladas: Number(loan.multasAcumuladas || 0) };
   }
 
-
-  const startDate = new Date(loan.fechaInicio);
+  const todayStr = getDateStringInTimezone(today, timezone);
+  const startStr = getDateStringInTimezone(loan.fechaInicio, timezone);
   const cuotaAmount = Number(loan.cuotaSemanal);
   
   // Calculate total payments received
@@ -87,55 +87,30 @@ function calculateAndSetPenalties(loan: any, today: Date, diasMinimosPrimerCobro
     const totalAbonadoRenta = payments.filter((p: any) => p.tipoPago === 'CUOTA_RENTA').reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
     numCuotasAbonadas = Math.floor(totalAbonadoRenta / cuotaAmount);
   } else {
-    const totalAbonado = payments.reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+    const totalAbonado = payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA').reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
     numCuotasAbonadas = Math.floor(totalAbonado / cuotaAmount);
   }
 
-  // Generate due dates since startDate up to today
-  const dueDates: Date[] = [];
-  let current = new Date(startDate);
-  
-  if (freq === 'SEMANAL') {
-    const jsDayCobro = loan.diaCobro === 7 ? 0 : loan.diaCobro;
-    let dayOffset = jsDayCobro - current.getDay();
-    if (dayOffset < 0) dayOffset += 7;
-    if (dayOffset < diasMinimosPrimerCobro) dayOffset += 7;
-    current.setDate(current.getDate() + dayOffset);
-    
-    const totalCuotasEstimadas = isAlquiler ? 999999 : Math.ceil(Number(loan.totalAPagar) / cuotaAmount);
-
-    while (current <= today && dueDates.length < totalCuotasEstimadas) {
-      dueDates.push(new Date(current));
-      current.setDate(current.getDate() + 7);
-    }
-  } else if (freq === 'QUINCENAL') {
-    current.setDate(current.getDate() + 15);
-    const totalCuotasEstimadas = isAlquiler ? 999999 : Math.ceil(Number(loan.totalAPagar) / cuotaAmount);
-    
-    while (current <= today && dueDates.length < totalCuotasEstimadas) {
-      dueDates.push(new Date(current));
-      current.setDate(current.getDate() + 15);
-    }
-  } else {
-    current.setMonth(current.getMonth() + 1);
-    const totalCuotasEstimadas = isAlquiler ? 999999 : Math.ceil(Number(loan.totalAPagar) / cuotaAmount);
-    
-    while (current <= today && dueDates.length < totalCuotasEstimadas) {
-      dueDates.push(new Date(current));
-      current.setMonth(current.getMonth() + 1);
-    }
-  }
+  // Generate due dates since startStr up to todayStr
+  const dueDates = getDueDateList(
+    loan.fechaInicio,
+    loan.diaCobro,
+    loan.frecuenciaPago,
+    Number(loan.totalAPagar),
+    cuotaAmount,
+    diasMinimosPrimerCobro,
+    timezone,
+    loan.modalidad,
+    today
+  );
 
   const N = dueDates.length; // number of installments that have fallen due
   const P = numCuotasAbonadas; // number of installments fully covered by payments
 
   let penalties = 0;
   if (P < N) {
-
-    const oldestDueDate = dueDates[P];
-    const daysLate = getDaysDiffInTimezone(oldestDueDate, today, timezone);
-
-
+    const oldestDueDateStr = dueDates[P];
+    const daysLate = getDaysDiffInTimezone(oldestDueDateStr, todayStr, timezone);
 
     if (daysLate > loan.graceDays) {
       const fine = Number(loan.fineAmount);

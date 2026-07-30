@@ -45,11 +45,16 @@
                          [loan]="selectedLoanForEdit()!" 
                          (goBack)="currentScreen.set('dashboard')">
           </app-edit-loan>
+          <app-loan-statement *ngIf="currentScreen() === 'loan-statement' && selectedLoanForStatement()"
+                               [loan]="selectedLoanForStatement()!"
+                               (goBack)="currentScreen.set('dashboard')">
+          </app-loan-statement>
           <app-dashboard *ngIf="currentScreen() === 'dashboard'" 
                          (openSettings)="currentScreen.set('settings')" 
                          (openCreateLoan)="currentScreen.set('create-loan')"
                          (openTeamManagement)="currentScreen.set('team-management')"
-                         (openEditLoan)="openEditLoanScreen($event)"></app-dashboard>
+                         (openEditLoan)="openEditLoanScreen($event)"
+                         (openStatementEvent)="openStatementScreen($event)"></app-dashboard>
 
         </ng-container>
       </ng-container>

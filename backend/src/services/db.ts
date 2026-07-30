@@ -79,7 +79,7 @@ export interface MemoryPayment {
   notas?: string;
   metodoPago: 'EFECTIVO' | 'SINPE' | 'TRANSFERENCIA';
   creadoPorId?: string;
-  tipoPago?: 'CUOTA_RENTA' | 'ABONO_CAPITAL';
+  tipoPago?: 'CUOTA_RENTA' | 'ABONO_CAPITAL' | 'CONDONACION_MORA';
   fechaPago: Date;
 }
 
@@ -173,7 +173,7 @@ class InMemoryStore {
       cuotaSemanal: 10000,
       diaCobro: 6,
       estado: 'ACTIVE',
-      fechaInicio: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+      fechaInicio: new Date('2026-07-01T00:00:00.000Z'),
       fineAmount: 1000,
       fineFrequency: 'DAILY',
       graceDays: 0,

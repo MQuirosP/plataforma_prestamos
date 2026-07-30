@@ -176,13 +176,13 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
 
             <!-- Actions -->
             <div class="pt-4 flex gap-3">
+              <button type="button" (click)="goBack.emit()" 
+                      class="flex-1 bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar text-xs font-bold py-3.5 rounded-lg transition duration-150 uppercase tracking-wider">
+                Cerrar y volver
+              </button>
               <button type="submit" 
                       class="flex-1 bg-caterpillar hover:bg-caterpillar-dark text-industrial-black py-3.5 rounded-lg font-black uppercase text-xs tracking-wider transition duration-150 shadow-lg">
                 Guardar Configuración
-              </button>
-              <button type="button" (click)="goBack.emit()" 
-                      class="bg-industrial-surface border border-industrial-border hover:bg-industrial-border text-white text-xs font-bold px-4 py-3.5 rounded-lg transition duration-150">
-                Cancelar
               </button>
             </div>
 
@@ -275,8 +275,9 @@ import { DateFieldComponent } from '../shared/date-field/date-field.component';
                     <option value="EDITAR_LOAN">Editar Préstamo</option>
                     <option value="ELIMINAR_LOAN">Eliminar Préstamo</option>
                     <option value="CONDONAR_MORA">Condonación de Mora</option>
-                    <option value="AGREGAR_PAGO">Agregar Pago</option>
-                    <option value="ELIMINAR_PAGO">Eliminar Pago</option>
+                    <option value="CREAR_PAGO">Registro de Pago</option>
+                    <option value="AGREGAR_PAGO">Registro de Pago</option>
+                    <option value="ELIMINAR_PAGO">Eliminación de Pago</option>
                     <option value="CREAR_COBRADOR">Crear Cobrador</option>
                     <option value="ACTUALIZAR_SETTINGS">Actualizar Configuración</option>
                   </select>
