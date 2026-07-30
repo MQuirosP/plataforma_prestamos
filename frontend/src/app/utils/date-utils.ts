@@ -35,6 +35,59 @@ export function getWeekdayInTimezone(date: Date | string = new Date(), timezone:
 }
 
 /**
+ * Generates an array of due date strings (YYYY-MM-DD) between startDate and cutoffDate.
+ */
+export function getDueDateListFrontend(
+  startDateStr: string,
+  cutoffDateStr: string,
+  frecuenciaPago: string = 'SEMANAL',
+  diaCobro: number = 1,
+  diasMinimos: number = 3
+): string[] {
+  const dueDates: string[] = [];
+  const startStr = getDateStringInTimezone(startDateStr);
+  const cutoffStr = getDateStringInTimezone(cutoffDateStr);
+  let current = new Date(`${startStr}T12:00:00.000Z`);
+
+  if (frecuenciaPago === 'SEMANAL') {
+    const targetWeekday = diaCobro && diaCobro >= 1 && diaCobro <= 7 ? diaCobro : 1;
+    const startWeekday = current.getUTCDay() === 0 ? 7 : current.getUTCDay();
+    let dayOffset = targetWeekday - startWeekday;
+    if (dayOffset < 0) dayOffset += 7;
+    if (dayOffset < diasMinimos) dayOffset += 7;
+    current.setUTCDate(current.getUTCDate() + dayOffset);
+
+    const limit = new Date(`${cutoffStr}T12:00:00.000Z`);
+    while (current.getTime() <= limit.getTime()) {
+      dueDates.push(current.toISOString().split('T')[0]);
+      current.setUTCDate(current.getUTCDate() + 7);
+    }
+  } else if (frecuenciaPago === 'QUINCENAL') {
+    current.setUTCDate(current.getUTCDate() + 15);
+    const limit = new Date(`${cutoffStr}T12:00:00.000Z`);
+    while (current.getTime() <= limit.getTime()) {
+      dueDates.push(current.toISOString().split('T')[0]);
+      current.setUTCDate(current.getUTCDate() + 15);
+    }
+  } else {
+    const targetDay = diaCobro && diaCobro >= 1 && diaCobro <= 31 ? diaCobro : current.getUTCDate();
+    current.setUTCMonth(current.getUTCMonth() + 1);
+    const daysInM = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)).getUTCDate();
+    current.setUTCDate(Math.min(targetDay, daysInM));
+
+    const limit = new Date(`${cutoffStr}T12:00:00.000Z`);
+    while (current.getTime() <= limit.getTime()) {
+      dueDates.push(current.toISOString().split('T')[0]);
+      current.setUTCMonth(current.getUTCMonth() + 1);
+      const mDays = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 0)).getUTCDate();
+      current.setUTCDate(Math.min(targetDay, mDays));
+    }
+  }
+
+  return dueDates;
+}
+
+/**
  * Formats next payment date string in Spanish (e.g. "Hoy (Sáb, 18 jul)", "Mañana (Dom, 19 jul)", "Vencido (Sáb, 18 jul)", or "Sáb, 15 ago")
  */
 export function formatNextPaymentDate(

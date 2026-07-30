@@ -7,7 +7,7 @@ import { ToastService } from '../services/toast.service';
 
 import { AdminService } from '../services/admin.service';
 import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepper.component';
-import { formatNextPaymentDate, getWeekdayInTimezone } from '../utils/date-utils';
+import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, getDueDateListFrontend } from '../utils/date-utils';
 
 @Component({
   selector: 'app-dashboard',
@@ -346,6 +346,27 @@ import { formatNextPaymentDate, getWeekdayInTimezone } from '../utils/date-utils
               <div>
                 <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Monto a Abonar</label>
                 <app-numeric-stepper [(ngModel)]="abonoMonto" name="abonoMonto" [required]="true" [min]="0" [step]="1000"></app-numeric-stepper>
+                
+                <!-- Smart Quick-Select Presets -->
+                <div *ngIf="selectedLoanForAbono" class="space-y-1.5 mt-2.5">
+                  <span class="text-[10px] text-industrial-muted uppercase font-mono block">Atajos de Cobro Rápido</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button *ngFor="let preset of getAbonoPresets(selectedLoanForAbono)"
+                            type="button"
+                            (click)="abonoMonto = preset.amount"
+                            [class]="'text-[11px] px-2.5 py-1.5 rounded-lg font-mono font-bold border transition-all duration-150 flex items-center gap-1.5 ' + 
+                                     (abonoMonto === preset.amount 
+                                        ? 'bg-caterpillar text-industrial-black border-caterpillar shadow-md font-black' 
+                                        : (preset.highlight 
+                                            ? 'bg-amber-950/50 border-amber-500/60 text-amber-400 hover:border-caterpillar hover:text-white' 
+                                            : 'bg-industrial-surface border-industrial-border text-industrial-muted hover:border-caterpillar/50 hover:text-white'))">
+                      <span>{{ preset.label }}</span>
+                      <span [class]="abonoMonto === preset.amount ? 'text-industrial-black font-black' : 'text-semantic-emerald font-black'">
+                        ({{ loanService.settings()?.monedaSimbolo || '₡' }}{{ preset.amount | number:'1.0-0' }})
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <!-- Tipo de Abono (Solo para ALQUILER) -->
@@ -1152,6 +1173,77 @@ export class DashboardComponent implements OnInit {
         }
       }
     });
+  }
+
+  getAbonoPresets(loan: Loan): { label: string; amount: number; badge?: string; highlight?: boolean }[] {
+    if (!loan) return [];
+
+    const presets: { label: string; amount: number; badge?: string; highlight?: boolean }[] = [];
+    const cuota = Number(loan.cuotaSemanal || 0);
+    const multas = Number(loan.multasAcumuladas || 0);
+    const balance = Number(loan.balancePendiente || 0);
+
+    // 1. Single Cuota
+    if (cuota > 0) {
+      presets.push({
+        label: '1 Cuota',
+        amount: Math.min(cuota, balance)
+      });
+    }
+
+    // Compute overdue count from fechaInicio & payments
+    let cuotasAtrasadas = 0;
+    if (loan.fechaInicio) {
+      const tz = this.loanService.settings()?.timezone || 'America/Costa_Rica';
+      const todayStr = getDateStringInTimezone(new Date(), tz);
+      const startStr = getDateStringInTimezone(loan.fechaInicio, tz);
+      const isAlquiler = loan.modalidad === 'ALQUILER';
+      const payments = loan.payments || [];
+      const totalPaid = isAlquiler
+        ? payments.filter((p: any) => p.tipoPago === 'CUOTA_RENTA').reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0)
+        : payments.filter((p: any) => p.tipoPago !== 'CONDONACION_MORA').reduce((sum: number, p: any) => sum + Number(p.montoAbonado), 0);
+      
+      const numAbonadas = cuota > 0 ? Math.floor(totalPaid / cuota) : 0;
+      const dueDates = getDueDateListFrontend(startStr, todayStr, loan.frecuenciaPago || 'SEMANAL', Number(loan.diaCobro || 1));
+      const expected = dueDates.length;
+      if (expected > numAbonadas) {
+        cuotasAtrasadas = expected - numAbonadas;
+      }
+    }
+
+    // 2. Overdue payments (Poner al Día)
+    if (cuotasAtrasadas > 1) {
+      const amountCuotas = Math.min(cuotasAtrasadas * cuota, balance);
+      presets.push({
+        label: `${cuotasAtrasadas} Cuotas (Poner al día)`,
+        amount: amountCuotas,
+        highlight: multas === 0
+      });
+    }
+
+    // 3. Mora + Cuotas Atrasadas
+    if (multas > 0) {
+      const cuotasMonto = cuotasAtrasadas > 0 ? cuotasAtrasadas * cuota : cuota;
+      const totalMoraYCuotas = multas + Math.min(cuotasMonto, balance);
+      const cuotasLabel = cuotasAtrasadas > 1 ? `${cuotasAtrasadas} Cuotas` : '1 Cuota';
+      presets.push({
+        label: `Mora + ${cuotasLabel}`,
+        amount: totalMoraYCuotas,
+        badge: 'INCLUYE MORA',
+        highlight: true
+      });
+    }
+
+    // 4. Liquidación Total
+    const totalLiquidacion = balance + multas;
+    if (totalLiquidacion > cuota) {
+      presets.push({
+        label: 'Liquidación Total',
+        amount: totalLiquidacion
+      });
+    }
+
+    return presets;
   }
 
   openAbonoModal(loan: Loan) {
