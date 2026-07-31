@@ -5,6 +5,7 @@ import { PlanManager } from '../services/planManager.js';
 import { Role, SubscriptionType, MetodoPago, LoanStatus, FineFrequency, TipoIdentificacion, LoanModalidad, LoanFrecuencia, PaymentTipo } from '@prisma/client';
 import { updatePenaltiesForTenant } from '../services/fineService';
 import { logger } from '../services/logger';
+import { AppError } from '../utils/AppError';
 import { sanitizeString, sanitizePhone, validatePositiveNumber, validateIntegerRange } from '../services/validation';
 import { logActivity } from '../services/auditLogger';
 
@@ -515,7 +516,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
         include: { payments: true }
       });
 
-      if (!loan) throw new Error('Préstamo no encontrado');
+      if (!loan) throw new AppError(404, 'Préstamo no encontrado');
       clienteNombre = loan.clienteNombre;
 
       const isAlquiler = loan.modalidad === 'ALQUILER';
@@ -527,7 +528,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       if (cleanTipoPago === PaymentTipo.PAGO_MORA) {
         const balanceMora = Number(loan.multasAcumuladas || 0);
         if (parsedMonto > balanceMora) {
-          throw new Error(`El abono de mora supera el balance pendiente de ${balanceMora}`);
+          throw new AppError(400, `El abono de mora supera el balance pendiente de ${balanceMora}`);
         }
         await tx.loan.update({
           where: { id: loanId },
@@ -543,13 +544,13 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
           const totalAbonadoCapital = loan.payments.filter(p => p.tipoPago === 'ABONO_CAPITAL').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
           const balanceCapital = Number(loan.montoOriginal) - totalAbonadoCapital;
           if (parsedMonto > balanceCapital) {
-            throw new Error(`El abono a capital supera el balance de capital pendiente de ${balanceCapital}`);
+            throw new AppError(400, `El abono a capital supera el balance de capital pendiente de ${balanceCapital}`);
           }
         } else if (!isAlquiler) {
           const totalAbonado = loan.payments.filter(p => p.tipoPago !== 'CONDONACION_MORA' && p.tipoPago !== 'PAGO_MORA').reduce((sum, p) => sum + Number(p.montoAbonado), 0);
           const balancePendiente = Number(loan.totalAPagar) + Number(loan.multasAcumuladas || 0) - totalAbonado;
           if (parsedMonto > balancePendiente) {
-            throw new Error(`El abono supera el balance pendiente de ${balancePendiente}`);
+            throw new AppError(400, `El abono supera el balance pendiente de ${balancePendiente}`);
           }
         }
       }
@@ -677,7 +678,7 @@ export async function deletePayment(req: AuthenticatedRequest, res: Response, ne
       });
 
       if (!payment || payment.loanId !== loanId) {
-        throw new Error('Pago no encontrado');
+        throw new AppError(404, 'Pago no encontrado');
       }
 
       await tx.payment.delete({
@@ -947,7 +948,7 @@ export async function deleteLoan(req: AuthenticatedRequest, res: Response, next:
       });
 
       if (!loan) {
-        throw new Error('Préstamo no encontrado');
+        throw new AppError(404, 'Préstamo no encontrado');
       }
 
       // Restar los abonos de este préstamo de la caja de sus respectivos cobradores

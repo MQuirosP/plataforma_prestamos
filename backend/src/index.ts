@@ -7,6 +7,7 @@ import pinoHttp from 'pino-http';
 import apiRouter from './routes/api';
 import { checkDatabaseConnection } from './services/db';
 import { logger } from './services/logger';
+import { AppError } from './utils/AppError';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -107,6 +108,32 @@ app.use('/api', apiRouter);
 // All controllers call next(err) in catch blocks — this catches them all,
 // logs the error with full context, and returns a consistent 500 response.
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof AppError) {
+    logger.warn({ err: err.message, userId: (req as any).user?.id ?? null }, 'AppError');
+    return res.status(err.statusCode).json({ error: err.message });
+  }
+
+  // Handle common Prisma Errors proactively
+  if (err.code === 'P2025') {
+    logger.warn({ err: err.message, userId: (req as any).user?.id ?? null }, 'Prisma Record not found (P2025)');
+    return res.status(404).json({ error: 'Recurso no encontrado' });
+  }
+
+  if (err.code === 'P2002') {
+    logger.warn({ err: err.message, userId: (req as any).user?.id ?? null }, 'Prisma Unique constraint failed (P2002)');
+    return res.status(409).json({ error: 'El registro ya existe o hay un conflicto de duplicado.' });
+  }
+
+  if (err.code === 'P2003') {
+    logger.warn({ err: err.message, userId: (req as any).user?.id ?? null }, 'Prisma Foreign key constraint failed (P2003)');
+    return res.status(409).json({ error: 'La operación no se puede completar porque afectaría registros relacionados.' });
+  }
+
+  if (err.code === 'P2000') {
+    logger.warn({ err: err.message, userId: (req as any).user?.id ?? null }, 'Prisma Value too long (P2000)');
+    return res.status(400).json({ error: 'Uno de los valores proporcionados es demasiado largo.' });
+  }
+
   logger.error(
     {
       err: { message: err.message, stack: err.stack, code: err.code },
