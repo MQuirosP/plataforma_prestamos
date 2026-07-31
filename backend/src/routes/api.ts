@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { getLoans, createLoan, addPayment, deletePayment, updateLoan, deleteLoan, condonarMora, reversarCondonacion } from '../controllers/loanController';
-
+import { getClients, createClient, updateClient, deleteClient, addClientDocument, deleteClientDocument } from '../controllers/clientController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
 import { getTenants, createTenant, toggleSuspendTenant, changeTenantPlan, updateTenantPaymentDate, extendTenantTrial, updateTenantPhone, impersonateTenant, impersonateCobrador, getLogs, getStats, getPlanConfigs, updatePlanConfig, getSaasGlobalConfig, updateSaasGlobalConfig } from '../controllers/adminController';
 import { login, changePassword, refresh, logout } from '../controllers/authController';
@@ -22,6 +22,14 @@ router.use(authMiddleware as any);
 
 // @ts-ignore
 router.post('/auth/change-password', changePassword as any);
+
+// Client management
+router.get('/clients', getClients as any);
+router.post('/clients', createClient as any);
+router.put('/clients/:id', updateClient as any);
+router.delete('/clients/:id', deleteClient as any);
+router.post('/clients/:id/documents', addClientDocument as any);
+router.delete('/clients/:id/documents/:docId', deleteClientDocument as any);
 
 // Loan management
 router.get('/loans', getLoans as any);

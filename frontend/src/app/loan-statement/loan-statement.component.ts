@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, inject, signal } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoanService, Loan, Payment, Role, PaymentMethod, PaymentTipo } from '../services/loan.service';
+import { ClientService } from '../services/client.service';
 import { ToastService } from '../services/toast.service';
 import html2canvas from 'html2canvas';
 
@@ -47,7 +48,7 @@ import html2canvas from 'html2canvas';
             <div>
               <span class="text-industrial-muted block font-mono text-[10px]">CLIENTE</span>
               <span class="text-white font-extrabold text-sm block">{{ loan.clienteNombre }}</span>
-              <a [href]="'https://wa.me/' + getCleanPhone(loan.clienteTelefono)" target="_blank" class="text-industrial-muted hover:text-emerald-400 font-mono text-xs transition duration-150 inline-block mt-0.5">
+              <a [href]="'https://wa.me/' + getCleanPhone(loan.clienteTelefono || '')" target="_blank" class="text-industrial-muted hover:text-emerald-400 font-mono text-xs transition duration-150 inline-block mt-0.5">
                 {{ loan.clienteTelefono }}
               </a>
             </div>
@@ -105,20 +106,49 @@ import html2canvas from 'html2canvas';
           </div>
 
           <!-- CLIENT INFORMATION GRID (2 cols on mobile, 3 on desktop) -->
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 bg-industrial-surface/40 p-3.5 md:p-4 rounded-xl border border-industrial-border text-xs">
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 bg-industrial-surface/40 p-3.5 md:p-4 rounded-xl border border-industrial-border text-xs relative">
             <div class="col-span-2 md:col-span-1">
               <span class="text-industrial-muted font-mono text-[9px] md:text-[10px] block uppercase">Cliente</span>
               <span class="text-white font-extrabold text-sm md:text-base leading-tight block">{{ loan.clienteNombre }}</span>
+              <span class="text-industrial-muted font-mono text-[10px] block mt-1" *ngIf="loan.client && loan.client.numeroIdentificacion">ID: {{ loan.client.numeroIdentificacion }}</span>
             </div>
             <div>
               <span class="text-industrial-muted font-mono text-[9px] md:text-[10px] block uppercase">Teléfono</span>
-              <a [href]="'https://wa.me/' + getCleanPhone(loan.clienteTelefono)" target="_blank" class="text-industrial-muted hover:text-emerald-400 font-mono text-xs md:text-sm transition duration-150 inline-block">
+              <a [href]="'https://wa.me/' + getCleanPhone(loan.clienteTelefono || '')" target="_blank" class="text-industrial-muted hover:text-emerald-400 font-mono text-xs md:text-sm transition duration-150 inline-block">
                 {{ loan.clienteTelefono }}
               </a>
             </div>
             <div>
               <span class="text-industrial-muted font-mono text-[9px] md:text-[10px] block uppercase">Fecha de Inicio</span>
               <span class="text-white font-mono text-xs md:text-sm block">{{ loan.fechaInicio | date:'dd/MM/yyyy' }}</span>
+            </div>
+
+            <!-- Client Documents Section -->
+            <div class="col-span-2 md:col-span-3 mt-2 pt-3 border-t border-industrial-border/60">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-industrial-muted font-mono text-[10px] uppercase">Documentos (DNI)</span>
+                <label class="bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-caterpillar cursor-pointer px-2 py-1 rounded text-[10px] font-bold uppercase transition">
+                  Subir Foto
+                  <input type="file" (change)="onUploadDocument($event)" accept="image/*" class="hidden">
+                </label>
+              </div>
+              <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-none" *ngIf="loan.client && loan.client.documents && loan.client.documents.length > 0">
+                <div *ngFor="let doc of loan.client.documents" class="relative group shrink-0">
+                  <a [href]="doc.url" target="_blank">
+                    <img [src]="doc.url" class="w-16 h-16 object-cover rounded-lg border border-industrial-border group-hover:border-caterpillar transition">
+                  </a>
+                  <button (click)="onDeleteDocument(doc.id)" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition shadow">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+              </div>
+              <div *ngIf="!loan.client || !loan.client.documents || loan.client.documents.length === 0" class="text-[10px] text-industrial-muted italic">
+                No hay documentos registrados para este cliente.
+              </div>
+              
+              <div *ngIf="isUploadingDoc" class="text-[10px] text-caterpillar mt-1 font-mono animate-pulse">
+                Subiendo foto a Cloudinary...
+              </div>
             </div>
           </div>
 
@@ -393,28 +423,73 @@ export class LoanStatementComponent {
     }
   }
 
+  Role = Role;
+  PaymentMethod = PaymentMethod;
+  PaymentTipo = PaymentTipo;
+  loanService = inject(LoanService);
+  clientService = inject(ClientService);
+  toastService = inject(ToastService);
 
   @Input({ required: true }) loan!: Loan;
   @Input() lastPayment: Payment | null = null;
   @Output() goBack = new EventEmitter<void>();
+  @Output() close = new EventEmitter<void>();
 
-  loanService = inject(LoanService);
-  toastService = inject(ToastService);
-  Role = Role;
-  PaymentMethod = PaymentMethod;
-  PaymentTipo = PaymentTipo;
-
-  showAsReceipt = signal<boolean>(false);
+  showAsReceipt = signal(false);
+  isUploadingDoc = false;
   confirmModalConfig = signal<{ title: string; message: string; action: () => void; danger?: boolean } | null>(null);
 
   Number = Number;
 
-  getCleanPhone(phone: string): string {
+  getCleanPhone(phone: string | undefined | null): string {
     let clean = (phone || '').replace(/\D/g, '');
     if (clean.length === 8) {
       clean = '506' + clean;
     }
     return clean;
+  }
+
+  async onUploadDocument(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    
+    if (!this.loan.client || !this.loan.client.id) {
+      this.toastService.error('El préstamo no tiene un cliente válido asociado. Contacte a soporte.');
+      return;
+    }
+
+    const file = input.files[0];
+    this.isUploadingDoc = true;
+
+    try {
+      const url = await this.clientService.uploadDniPhoto(file);
+      const doc = await this.clientService.addClientDocument(this.loan.client.id, url, 'DNI');
+      
+      // Update local loan object to show it immediately
+      if (!this.loan.client.documents) {
+        this.loan.client.documents = [];
+      }
+      this.loan.client.documents.push(doc);
+      this.toastService.success('Foto subida exitosamente');
+    } catch (err: any) {
+      this.toastService.error(err.message || 'Error al subir la foto');
+    } finally {
+      this.isUploadingDoc = false;
+      input.value = ''; // clear input
+    }
+  }
+
+  async onDeleteDocument(docId: string) {
+    if (!confirm('¿Está seguro de eliminar esta foto?')) return;
+    
+    try {
+      await this.clientService.deleteClientDocument(this.loan.client!.id, docId);
+      // Remove from local array
+      this.loan.client!.documents = this.loan.client!.documents!.filter(d => d.id !== docId);
+      this.toastService.success('Foto eliminada exitosamente');
+    } catch (err) {
+      this.toastService.error('Error al eliminar la foto');
+    }
   }
 
   getTotalAbonado(): number {

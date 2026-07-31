@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, Output, EventEmitter } from '@angula
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoanService, Role, FineFrequency, TipoIdentificacion } from '../services/loan.service';
+import { ClientService } from '../services/client.service';
 import { ToastService } from '../services/toast.service';
 import { NumericStepperComponent } from '../shared/numeric-stepper/numeric-stepper.component';
 import { trigger, state, style, animate, transition } from '@angular/animations';
@@ -36,45 +37,76 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
 
           <form (submit)="onCreateLoan($event)" class="space-y-4">
             
-            <!-- Nombre Completo del Cliente -->
-            <div>
-              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nombre Completo del Cliente</label>
-              <input type="text" [(ngModel)]="newLoanData.clienteNombre" name="clienteNombre" required 
-                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-            </div>
+            <!-- Selección de Cliente -->
+            <div class="space-y-4 border border-industrial-border rounded-xl p-4 bg-industrial-dark/40">
+              <div class="flex gap-4 mb-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="clientMode" [(ngModel)]="clientMode" value="existing" class="text-caterpillar focus:ring-caterpillar bg-industrial-surface border-industrial-border">
+                  <span class="text-sm text-white">Cliente Existente</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="clientMode" [(ngModel)]="clientMode" value="new" class="text-caterpillar focus:ring-caterpillar bg-industrial-surface border-industrial-border">
+                  <span class="text-sm text-white">Nuevo Cliente</span>
+                </label>
+              </div>
 
-            <!-- Teléfono (WhatsApp) -->
-            <div>
-              <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Teléfono (WhatsApp)</label>
-              <input type="text" [(ngModel)]="newLoanData.clienteTelefono" name="clienteTelefono" required 
-                     class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
-            </div>
-
-            <!-- Tipo de Identificación & Número -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Tipo de Documento</label>
+              <!-- Selector de Cliente Existente -->
+              <div *ngIf="clientMode === 'existing'" @expandCollapse>
+                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Seleccionar Cliente</label>
                 <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
-                  <select [(ngModel)]="newLoanData.tipoIdentificacion" name="tipoIdentificacion"
+                  <select [(ngModel)]="newLoanData.clientId" name="clientId"
                           class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
-                    <option value="CEDULA_NACIONAL">Cédula Nacional</option>
-                    <option value="PASAPORTE">Pasaporte</option>
-                    <option value="RESIDENCIA_DIMEX">DIMEX</option>
-                    <option value="OTRO">Otro</option>
+                    <option value="" disabled>Seleccione un cliente...</option>
+                    <option *ngFor="let client of clientService.clients()" [value]="client.id">
+                      {{ client.nombre }} - {{ client.telefono }}
+                    </option>
                   </select>
                   <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
               </div>
-              <div>
-                <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nº Identificación</label>
-                <input type="text" [(ngModel)]="newLoanData.numeroIdentificacion" name="numeroIdentificacion"
-                       [placeholder]="getIdPlaceholder(newLoanData.tipoIdentificacion)"
-                       [maxlength]="getIdMaxLength(newLoanData.tipoIdentificacion)"
-                       (input)="onIdInput($event, newLoanData, 'numeroIdentificacion')"
-                       [attr.inputmode]="newLoanData.tipoIdentificacion === 'PASAPORTE' || newLoanData.tipoIdentificacion === 'OTRO' ? 'text' : 'numeric'"
-                       class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar font-mono tracking-wide">
+
+              <!-- Formulario de Nuevo Cliente -->
+              <div *ngIf="clientMode === 'new'" @expandCollapse class="space-y-4 pt-2 border-t border-industrial-border/30">
+                <div>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nombre Completo del Cliente</label>
+                  <input type="text" [(ngModel)]="newLoanData.clienteNombre" name="clienteNombre"
+                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                </div>
+
+                <div>
+                  <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Teléfono (WhatsApp)</label>
+                  <input type="text" [(ngModel)]="newLoanData.clienteTelefono" name="clienteTelefono"
+                         class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Tipo de Documento</label>
+                    <div class="group relative flex items-stretch rounded-lg overflow-hidden border border-industrial-border focus-within:border-caterpillar transition-colors duration-150 bg-industrial-surface">
+                      <select [(ngModel)]="newLoanData.tipoIdentificacion" name="tipoIdentificacion"
+                              class="w-full bg-transparent text-white text-sm px-3 py-3 pr-12 focus:outline-none appearance-none cursor-pointer">
+                        <option value="CEDULA_NACIONAL">Cédula Nacional</option>
+                        <option value="PASAPORTE">Pasaporte</option>
+                        <option value="RESIDENCIA_DIMEX">DIMEX</option>
+                        <option value="OTRO">Otro</option>
+                      </select>
+                      <div class="absolute inset-y-0 right-0 flex items-center justify-center w-9 bg-industrial-dark text-caterpillar border-l border-industrial-border pointer-events-none select-none group-hover:bg-caterpillar group-hover:text-industrial-black transition-colors duration-150">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-industrial-muted uppercase font-mono mb-1">Nº Identificación</label>
+                    <input type="text" [(ngModel)]="newLoanData.numeroIdentificacion" name="numeroIdentificacion"
+                           [placeholder]="getIdPlaceholder(newLoanData.tipoIdentificacion)"
+                           [maxlength]="getIdMaxLength(newLoanData.tipoIdentificacion)"
+                           (input)="onIdInput($event, newLoanData, 'numeroIdentificacion')"
+                           [attr.inputmode]="newLoanData.tipoIdentificacion === 'PASAPORTE' || newLoanData.tipoIdentificacion === 'OTRO' ? 'text' : 'numeric'"
+                           class="w-full bg-industrial-surface border border-industrial-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-caterpillar font-mono tracking-wide">
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -255,11 +287,15 @@ export class CreateLoanComponent implements OnInit {
   Role = Role;
   FineFrequency = FineFrequency;
   loanService = inject(LoanService);
+  clientService = inject(ClientService);
   toastService = inject(ToastService);
 
   @Output() goBack = new EventEmitter<void>();
 
+  clientMode: 'existing' | 'new' = 'existing';
+
   newLoanData = {
+    clientId: '',
     clienteNombre: '',
     clienteTelefono: '',
     tipoIdentificacion: TipoIdentificacion.CEDULA_NACIONAL as TipoIdentificacion,
@@ -286,6 +322,7 @@ export class CreateLoanComponent implements OnInit {
     const prefix = this.getPrefixByCurrency(currency);
 
     this.newLoanData = {
+      clientId: '',
       clienteNombre: '',
       clienteTelefono: prefix,
       tipoIdentificacion: TipoIdentificacion.CEDULA_NACIONAL,
@@ -303,6 +340,14 @@ export class CreateLoanComponent implements OnInit {
       modalidad: settings?.modalidadPredeterminada || 'TRADICIONAL',
       frecuenciaPago: 'SEMANAL'
     };
+
+    if (this.clientService.clients().length === 0) {
+      this.clientService.loadClients().then(() => {
+        if (this.clientService.clients().length === 0) {
+          this.clientMode = 'new';
+        }
+      });
+    }
   }
 
   getPrefixByCurrency(monedaCodigo: string | undefined): string {
@@ -381,17 +426,29 @@ export class CreateLoanComponent implements OnInit {
 
   async onCreateLoan(event: Event) {
     event.preventDefault();
-    if (!this.newLoanData.clienteNombre || !this.newLoanData.clienteTelefono || !this.newLoanData.montoOriginal || !this.newLoanData.cuotaSemanal) {
-      this.toastService.error('Por favor llene todos los campos');
+    
+    if (this.clientMode === 'existing' && !this.newLoanData.clientId) {
+      this.toastService.error('Debe seleccionar un cliente.');
+      return;
+    }
+    
+    if (this.clientMode === 'new' && (!this.newLoanData.clienteNombre || !this.newLoanData.clienteTelefono)) {
+      this.toastService.error('Por favor indique el nombre y teléfono del nuevo cliente.');
+      return;
+    }
+
+    if (!this.newLoanData.montoOriginal || !this.newLoanData.cuotaSemanal) {
+      this.toastService.error('Los montos son requeridos.');
       return;
     }
 
     try {
       await this.loanService.createLoan({
-        clienteNombre: this.newLoanData.clienteNombre,
-        clienteTelefono: this.newLoanData.clienteTelefono,
-        tipoIdentificacion: this.newLoanData.tipoIdentificacion || null,
-        numeroIdentificacion: this.newLoanData.numeroIdentificacion || null,
+        clientId: this.clientMode === 'existing' ? this.newLoanData.clientId : undefined,
+        clienteNombre: this.clientMode === 'new' ? this.newLoanData.clienteNombre : undefined,
+        clienteTelefono: this.clientMode === 'new' ? this.newLoanData.clienteTelefono : undefined,
+        tipoIdentificacion: this.clientMode === 'new' ? this.newLoanData.tipoIdentificacion || null : undefined,
+        numeroIdentificacion: this.clientMode === 'new' ? this.newLoanData.numeroIdentificacion || null : undefined,
         montoOriginal: Number(this.newLoanData.montoOriginal),
         cuotaSemanal: Number(this.newLoanData.cuotaSemanal),
         diaCobro: Number(this.newLoanData.diaCobro),

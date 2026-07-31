@@ -100,6 +100,7 @@ model User {
   liquidaciones   Liquidacion[]     @relation("LiquidacionesCobrador")
   invites         Invite[]
   refreshTokens   RefreshToken[]
+  clients         Client[]
 
   @@index([prestamistaId])
 }
@@ -152,12 +153,10 @@ model Loan {
   id                  String     @id @default(uuid())
   prestamistaId       String
   prestamista         User       @relation(fields: [prestamistaId], references: [id], onDelete: Cascade)
-  clienteNombre       String
-  clienteTelefono     String
-  /// Tipo de identificación del cliente
-  tipoIdentificacion  TipoIdentificacion? @default(CEDULA_NACIONAL)
-  /// Número de identificación para búsqueda rápida
-  numeroIdentificacion String?
+  
+  clientId            String
+  client              Client     @relation(fields: [clientId], references: [id])
+  
   montoOriginal       Decimal
   totalAPagar         Decimal
   cuotaSemanal        Decimal
@@ -175,6 +174,7 @@ model Loan {
   payments            Payment[]
 
   @@index([prestamistaId])
+  @@index([clientId])
 }
 
 model Payment {
@@ -256,4 +256,34 @@ model SaaSPlanConfig {
   maxCobradores Int
   precioMensual Decimal
   updatedAt     DateTime @updatedAt
+}
+
+/// Representa a un cliente prestatario de un prestamista
+model Client {
+  id                   String     @id @default(uuid())
+  prestamistaId        String
+  prestamista          User       @relation(fields: [prestamistaId], references: [id], onDelete: Cascade)
+  nombre               String
+  telefono             String
+  tipoIdentificacion   TipoIdentificacion? @default(CEDULA_NACIONAL)
+  numeroIdentificacion String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  
+  loans                Loan[]
+  documents            ClientDocument[]
+
+  @@unique([prestamistaId, numeroIdentificacion])
+  @@index([prestamistaId])
+  @@index([prestamistaId, nombre])
+}
+
+/// Documentos o fotos adjuntos a un cliente (ej. Foto de DNI)
+model ClientDocument {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  url       String
+  tipo      String   // ej. 'DNI_FRENTE', 'DNI_DORSO', 'OTRO'
+  createdAt DateTime @default(now())
 }

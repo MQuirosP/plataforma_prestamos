@@ -107,8 +107,11 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         cuotasTotales = totalCuotasEstimadas;
       }
 
+      const client = inMemoryStore.clients.find(c => c.id === loan.clientId) || null;
+
       return {
         ...loan,
+        client,
         montoOriginal: Number(loan.montoOriginal),
         totalAPagar: Number(loan.totalAPagar),
         cuotaSemanal: Number(loan.cuotaSemanal),
@@ -119,6 +122,8 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         balancePendiente,
         cuotaActual,
         cuotasTotales,
+        clienteNombre: client?.nombre || 'Desconocido',
+        clienteTelefono: client?.telefono || '',
         payments
       };
     });
@@ -128,7 +133,7 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
   try {
     const loans = await prisma.loan.findMany({
       where: { prestamistaId },
-      include: { payments: true }
+      include: { payments: true, client: { include: { documents: true } } }
     });
 
     const loansWithBalance = loans.map(loan => {
@@ -164,6 +169,8 @@ export async function getLoans(req: AuthenticatedRequest, res: Response, next: N
         balancePendiente,
         cuotaActual,
         cuotasTotales,
+        clienteNombre: (loan as any).client?.nombre || 'Desconocido', // Backward compatibility for UI
+        clienteTelefono: (loan as any).client?.telefono || '',
         payments: loan.payments.map(p => ({
           ...p,
           montoAbonado: Number(p.montoAbonado)
@@ -186,22 +193,24 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
   }
 
   const {
-    clienteNombre, clienteTelefono, montoOriginal, cuotaSemanal, diaCobro,
+    clientId, clienteNombre, clienteTelefono, montoOriginal, cuotaSemanal, diaCobro,
     tipoIdentificacion, numeroIdentificacion, porcentaje,
     fineAmount, fineFrequency, graceDays, totalAPagarDirect,
     modalidad, frecuenciaPago
   } = req.body;
 
-  const cleanNombre = sanitizeString(clienteNombre, 100);
-  const cleanTelefono = sanitizePhone(clienteTelefono);
+  const cleanNombre = clienteNombre ? sanitizeString(clienteNombre, 100) : null;
+  const cleanTelefono = clienteTelefono ? sanitizePhone(clienteTelefono) : null;
   const cleanTipoId = (tipoIdentificacion ? sanitizeString(tipoIdentificacion, 50) : 'CEDULA_NACIONAL') as TipoIdentificacion;
   const cleanNumeroId = numeroIdentificacion ? sanitizeString(numeroIdentificacion, 50) : null;
 
-  if (!cleanNombre) {
-    return res.status(400).json({ error: 'El nombre del cliente es obligatorio y no puede estar vacío.' });
-  }
-  if (!cleanTelefono) {
-    return res.status(400).json({ error: 'El teléfono del cliente es requerido y debe tener un formato válido.' });
+  if (!clientId) {
+    if (!cleanNombre) {
+      return res.status(400).json({ error: 'Si no selecciona un cliente existente, el nombre del nuevo cliente es obligatorio.' });
+    }
+    if (!cleanTelefono) {
+      return res.status(400).json({ error: 'Si no selecciona un cliente existente, el teléfono es requerido.' });
+    }
   }
 
   const parsedMonto = validatePositiveNumber(montoOriginal);
@@ -340,10 +349,7 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
     const newLoan: any = {
       id: `loan-${Date.now()}`,
       prestamistaId,
-      clienteNombre: cleanNombre,
-      clienteTelefono: cleanTelefono,
-      tipoIdentificacion: cleanTipoId,
-      numeroIdentificacion: cleanNumeroId,
+      clientId: clientId || `client-mock-${Date.now()}`,
       montoOriginal: parsedMonto,
       totalAPagar,
       cuotaSemanal: parsedCuota,
@@ -370,13 +376,25 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      let finalClientId = clientId;
+
+      if (!finalClientId) {
+        const client = await tx.client.create({
+          data: {
+            prestamistaId,
+            nombre: cleanNombre!,
+            telefono: cleanTelefono!,
+            tipoIdentificacion: cleanTipoId,
+            numeroIdentificacion: cleanNumeroId,
+          }
+        });
+        finalClientId = client.id;
+      }
+
       const loan = await tx.loan.create({
         data: {
           prestamistaId,
-          clienteNombre: cleanNombre,
-          clienteTelefono: cleanTelefono,
-          tipoIdentificacion: cleanTipoId,
-          numeroIdentificacion: cleanNumeroId,
+          clientId: finalClientId,
           montoOriginal: parsedMonto,
           totalAPagar,
           cuotaSemanal: parsedCuota,
@@ -388,7 +406,8 @@ export async function createLoan(req: AuthenticatedRequest, res: Response, next:
           multasAcumuladas: 0,
           modalidad: cleanModalidad,
           frecuenciaPago: cleanFrecuencia
-        }
+        },
+        include: { client: true }
       });
       return loan;
     });
@@ -504,20 +523,20 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       }
     }
 
-    await logActivity(req, 'CREAR_PAGO', `Registró abono de ${parsedMonto} (${cleanTipoPago}) en préstamo del cliente ${loan.clienteNombre}`);
+    await logActivity(req, 'CREAR_PAGO', `Registró abono de ${parsedMonto} (${cleanTipoPago}) en préstamo del cliente ${(loan as any).client?.nombre || 'Desconocido'}`);
     return res.status(201).json(newPayment);
   }
 
   try {
-    let clienteNombre = '';
+    let clientName = '';
     const result = await prisma.$transaction(async (tx) => {
       const loan = await tx.loan.findUnique({
         where: { id: loanId },
-        include: { payments: true }
+        include: { payments: true, client: true }
       });
 
       if (!loan) throw new AppError(404, 'Préstamo no encontrado');
-      clienteNombre = loan.clienteNombre;
+      clientName = loan.client?.nombre || 'Desconocido';
 
       const isAlquiler = loan.modalidad === 'ALQUILER';
       let cleanTipoPago = tipoPago as any;
@@ -617,7 +636,7 @@ export async function addPayment(req: AuthenticatedRequest, res: Response, next:
       return payment;
     });
 
-    await logActivity(req, 'CREAR_PAGO', `Registró abono de ${parsedMonto} (${result.tipoPago}) en préstamo del cliente ${clienteNombre}`);
+    await logActivity(req, 'CREAR_PAGO', `Registró abono de ${parsedMonto} (${result.tipoPago}) en préstamo del cliente ${clientName}`);
     return res.status(201).json({
       ...result,
       montoAbonado: Number(result.montoAbonado)
@@ -750,15 +769,10 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
 
 
   const {
-    clienteNombre, clienteTelefono, tipoIdentificacion, numeroIdentificacion,
+    clientId,
     montoOriginal, cuotaSemanal, diaCobro, fineAmount, fineFrequency, graceDays,
     totalAPagarDirect, porcentaje, hasFine
   } = req.body;
-
-  const cleanNombre = clienteNombre !== undefined ? sanitizeString(clienteNombre, 100) : undefined;
-  const cleanTelefono = clienteTelefono !== undefined ? sanitizePhone(clienteTelefono) : undefined;
-  const cleanTipoId = tipoIdentificacion !== undefined ? sanitizeString(tipoIdentificacion, 50) : undefined;
-  const cleanNumeroId = numeroIdentificacion !== undefined ? sanitizeString(numeroIdentificacion, 50) : undefined;
 
   const parsedMonto = montoOriginal !== undefined ? validatePositiveNumber(montoOriginal) : undefined;
   const parsedCuota = cuotaSemanal !== undefined ? validatePositiveNumber(cuotaSemanal) : undefined;
@@ -802,10 +816,7 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
     const hasPayments = payments.length > 0;
 
     // Actualizar datos del cliente
-    loan.clienteNombre = cleanNombre !== undefined && cleanNombre !== '' ? cleanNombre : loan.clienteNombre;
-    loan.clienteTelefono = cleanTelefono !== undefined && cleanTelefono !== '' ? cleanTelefono : loan.clienteTelefono;
-    loan.tipoIdentificacion = cleanTipoId !== undefined ? cleanTipoId : loan.tipoIdentificacion;
-    loan.numeroIdentificacion = cleanNumeroId !== undefined ? cleanNumeroId : loan.numeroIdentificacion;
+    loan.clientId = clientId !== undefined ? clientId : loan.clientId;
     loan.diaCobro = parsedDia !== undefined ? parsedDia! : loan.diaCobro;
 
     // Actualizar multas
@@ -846,14 +857,14 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
       }
     }
 
-    await logActivity(req, 'EDITAR_LOAN', `Actualizó préstamo del cliente ${loan.clienteNombre} (ID: ${loan.id})`);
+    await logActivity(req, 'EDITAR_LOAN', `Actualizó préstamo del cliente ${(loan as any).client?.nombre || 'Desconocido'} (ID: ${loan.id})`);
     return res.json({ success: true, loan });
   }
 
   try {
     const loan = await prisma.loan.findFirst({
       where: { id, prestamistaId },
-      include: { payments: true }
+      include: { payments: true, client: true }
     });
 
     if (!loan) {
@@ -863,10 +874,7 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
     const hasPayments = loan.payments.length > 0;
 
     const dataToUpdate: any = {
-      clienteNombre: cleanNombre !== undefined && cleanNombre !== '' ? cleanNombre : loan.clienteNombre,
-      clienteTelefono: cleanTelefono !== undefined && cleanTelefono !== '' ? cleanTelefono : loan.clienteTelefono,
-      tipoIdentificacion: cleanTipoId !== undefined ? cleanTipoId : loan.tipoIdentificacion,
-      numeroIdentificacion: cleanNumeroId !== undefined ? cleanNumeroId : loan.numeroIdentificacion,
+      clientId: clientId !== undefined && clientId !== '' ? clientId : loan.clientId,
       diaCobro: parsedDia !== undefined ? parsedDia! : loan.diaCobro,
     };
 
@@ -908,10 +916,11 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
 
     const updatedLoan = await prisma.loan.update({
       where: { id },
-      data: dataToUpdate
+      data: dataToUpdate,
+      include: { client: true }
     });
 
-    await logActivity(req, 'EDITAR_LOAN', `Actualizó préstamo del cliente ${updatedLoan.clienteNombre} (ID: ${updatedLoan.id})`);
+    await logActivity(req, 'EDITAR_LOAN', `Actualizó préstamo del cliente ${updatedLoan.client?.nombre || 'Desconocido'} (ID: ${updatedLoan.id})`);
     return res.json({ success: true, loan: updatedLoan });
   } catch (err: any) { next(err); }
 }
@@ -936,7 +945,7 @@ export async function deleteLoan(req: AuthenticatedRequest, res: Response, next:
     inMemoryStore.payments = inMemoryStore.payments.filter(p => p.loanId !== id);
     // Delete loan
     inMemoryStore.loans.splice(loanIdx, 1);
-    await logActivity(req, 'ELIMINAR_LOAN', `Eliminó préstamo del cliente ${deletedLoan.clienteNombre} (ID: ${deletedLoan.id})`);
+    await logActivity(req, 'ELIMINAR_LOAN', `Eliminó préstamo del cliente ${(deletedLoan as any).client?.nombre || 'Desconocido'} (ID: ${deletedLoan.id})`);
     return res.json({ success: true, message: 'Préstamo eliminado correctamente en memoria' });
   }
 
@@ -944,7 +953,7 @@ export async function deleteLoan(req: AuthenticatedRequest, res: Response, next:
     const result = await prisma.$transaction(async (tx) => {
       const loan = await tx.loan.findFirst({
         where: { id, prestamistaId },
-        include: { payments: true }
+        include: { payments: true, client: true }
       });
 
       if (!loan) {
@@ -989,7 +998,7 @@ export async function deleteLoan(req: AuthenticatedRequest, res: Response, next:
       return loan;
     });
 
-    await logActivity(req, 'ELIMINAR_LOAN', `Eliminó préstamo del cliente ${result.clienteNombre} (ID: ${result.id})`);
+    await logActivity(req, 'ELIMINAR_LOAN', `Eliminó préstamo del cliente ${result.client?.nombre || 'Desconocido'} (ID: ${result.id})`);
     return res.json({ success: true, message: 'Préstamo y abonos eliminados correctamente', loan: result });
   } catch (err: any) { next(err); }
 }
@@ -1038,7 +1047,7 @@ export async function condonarMora(req: AuthenticatedRequest, res: Response, nex
       fechaPago: new Date()
     });
 
-    await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${loan.clienteNombre}. Motivo: ${cleanMotivo}`);
+    await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${(loan as any).client?.nombre || 'Desconocido'}. Motivo: ${cleanMotivo}`);
     return res.json({ success: true, message: `Se condonaron ₡${parsedMonto} de mora correctamente`, loan });
   }
 
@@ -1078,7 +1087,7 @@ export async function condonarMora(req: AuthenticatedRequest, res: Response, nex
       }
     });
 
-    await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${loan.clienteNombre}. Motivo: ${cleanMotivo}`);
+    await logActivity(req, 'CONDONAR_MORA', `Condonó ₡${parsedMonto} de mora al cliente ${(loan as any).client?.nombre || 'Desconocido'}. Motivo: ${cleanMotivo}`);
     return res.json({ success: true, message: `Se condonaron ₡${parsedMonto} de mora correctamente`, loan: updatedLoan });
 
   } catch (err: any) { next(err); }
@@ -1111,7 +1120,7 @@ export async function reversarCondonacion(req: AuthenticatedRequest, res: Respon
     loan.montoCondonado = paymentId && totalReversado > 0 ? Math.max(0, currentCondonado - totalReversado) : 0;
 
     await updatePenaltiesForTenant(prestamistaId);
-    await logActivity(req, 'REVERSAR_CONDONACION', `Reversó condonación de mora al cliente ${loan.clienteNombre}`);
+    await logActivity(req, 'REVERSAR_CONDONACION', `Reversó condonación de mora al cliente ${(loan as any).client?.nombre || 'Desconocido'}`);
     return res.json({ success: true, message: 'Condonación de mora reversada correctamente', loan });
   }
 
@@ -1155,7 +1164,7 @@ export async function reversarCondonacion(req: AuthenticatedRequest, res: Respon
       include: { payments: true }
     });
 
-    await logActivity(req, 'REVERSAR_CONDONACION', `Reversó condonación de mora al cliente ${loan.clienteNombre}`);
+    await logActivity(req, 'REVERSAR_CONDONACION', `Reversó condonación de mora al cliente ${(loan as any).client?.nombre || 'Desconocido'}`);
     return res.json({ success: true, message: 'Condonación de mora reversada correctamente', loan: updatedLoan });
 
   } catch (err: any) { next(err); }

@@ -69,11 +69,33 @@ export enum SubscriptionType {
   EXPIRED = 'EXPIRED'
 }
 
+export interface ClientDocument {
+  id: string;
+  clientId: string;
+  url: string;
+  tipo: string;
+  createdAt: string;
+}
+
+export interface Client {
+  id: string;
+  prestamistaId: string;
+  nombre: string;
+  telefono: string;
+  tipoIdentificacion?: TipoIdentificacion | null;
+  numeroIdentificacion?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  documents?: ClientDocument[];
+}
+
 export interface Loan {
   id: string;
   prestamistaId: string;
-  clienteNombre: string;
-  clienteTelefono: string;
+  clientId: string;
+  client?: Client;
+  clienteNombre: string; // Fallback para compatibilidad
+  clienteTelefono: string; // Fallback para compatibilidad
   montoOriginal: number;
   totalAPagar: number;
   cuotaSemanal: number;
@@ -354,8 +376,9 @@ export class LoanService {
   }
 
   async createLoan(loanData: {
-    clienteNombre: string;
-    clienteTelefono: string;
+    clientId?: string;
+    clienteNombre?: string;
+    clienteTelefono?: string;
     tipoIdentificacion?: TipoIdentificacion | null;
     numeroIdentificacion?: string | null;
     montoOriginal: number;

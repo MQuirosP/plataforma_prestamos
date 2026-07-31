@@ -48,11 +48,29 @@ export interface MemorySaasGlobalConfig {
   graceDays: number;
 }
 
+export interface MemoryClient {
+  id: string;
+  prestamistaId: string;
+  nombre: string;
+  telefono: string;
+  tipoIdentificacion?: string | null;
+  numeroIdentificacion?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MemoryClientDocument {
+  id: string;
+  clientId: string;
+  url: string;
+  tipo: string;
+  createdAt: Date;
+}
+
 export interface MemoryLoan {
   id: string;
   prestamistaId: string;
-  clienteNombre: string;
-  clienteTelefono: string;
+  clientId: string;
   montoOriginal: number;
   totalAPagar: number;
   cuotaSemanal: number;
@@ -64,9 +82,7 @@ export interface MemoryLoan {
   graceDays?: number;
   multasAcumuladas?: number;
   montoCondonado?: number;
-  tipoIdentificacion?: string | null;
 
-  numeroIdentificacion?: string | null;
   modalidad?: 'TRADICIONAL' | 'ALQUILER';
   frecuenciaPago?: 'SEMANAL' | 'QUINCENAL' | 'MENSUAL';
 }
@@ -160,14 +176,26 @@ class InMemoryStore {
     }
   ];
 
+  clients: MemoryClient[] = [
+    {
+      id: 'client-mora-demo-1',
+      prestamistaId: 'mock-admin-id-999',
+      nombre: 'Patito Cagón',
+      telefono: '+50672666369',
+      tipoIdentificacion: 'CEDULA_NACIONAL',
+      numeroIdentificacion: '1-1234-0567',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ];
+
+  clientDocuments: MemoryClientDocument[] = [];
+
   loans: MemoryLoan[] = [
     {
       id: 'loan-mora-demo-1',
       prestamistaId: 'mock-admin-id-999',
-      clienteNombre: 'Patito Cagón',
-      clienteTelefono: '+50672666369',
-      tipoIdentificacion: 'CEDULA_NACIONAL',
-      numeroIdentificacion: '1-1234-0567',
+      clientId: 'client-mora-demo-1',
       montoOriginal: 160000,
       totalAPagar: 200000,
       cuotaSemanal: 10000,
@@ -181,7 +209,6 @@ class InMemoryStore {
       modalidad: 'TRADICIONAL',
       frecuenciaPago: 'SEMANAL'
     }
-
   ];
 
   payments: MemoryPayment[] = [];
