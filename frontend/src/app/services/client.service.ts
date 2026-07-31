@@ -99,6 +99,10 @@ export class ClientService {
         method: 'POST',
         body: formData
       });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error?.message || 'Error al subir imagen a Cloudinary');
+      }
       const data = await response.json();
       return data.secure_url;
     } catch (err) {
