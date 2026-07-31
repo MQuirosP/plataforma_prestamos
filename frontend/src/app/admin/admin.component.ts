@@ -257,10 +257,10 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-caterpillar shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     Enviar Recordatorio 
                   </button>
-                  <a [href]="getWhatsappLink(tenant)" target="_blank" (click)="activePhoneDropdown.set(null)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
+                  <button (click)="shareCustomMessage(tenant, $event)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-industrial-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                     Mensaje Personalizado
-                  </a>
+                  </button>
                   <button (click)="openEditPhoneModal(tenant, $event)" class="text-left px-3 py-2 text-[10px] text-white hover:bg-industrial-dark transition flex items-center gap-2 border-t border-industrial-border/60">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-semantic-emerald shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -1266,8 +1266,22 @@ export class AdminComponent implements OnInit {
             }
 
             const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
-            window.open(whatsappUrl, '_blank');
-            this.toastService.success('Recordatorio enviado a WhatsApp');
+            if (navigator.share && navigator.canShare && navigator.canShare({ url: whatsappUrl })) {
+              try {
+                await navigator.share({
+                  title: `Recordatorio a ${tenant.nombre}`,
+                  text: text,
+                  url: whatsappUrl
+                });
+                this.toastService.success('Recordatorio compartido');
+              } catch (err) {
+                window.open(whatsappUrl, '_blank');
+                this.toastService.success('Recordatorio enviado a WhatsApp');
+              }
+            } else {
+              window.open(whatsappUrl, '_blank');
+              this.toastService.success('Recordatorio enviado a WhatsApp');
+            }
           } catch (uploadErr) {
             this.fallbackClipboard(blob, tenant);
           }
@@ -1288,6 +1302,26 @@ export class AdminComponent implements OnInit {
       window.open(this.getWhatsappLink(tenant, true), '_blank');
     } catch (e) {
       this.toastService.error('No se pudo copiar la imagen al portapapeles');
+    }
+  }
+
+async shareCustomMessage(tenant: Tenant, event: Event) {
+    event.stopPropagation();
+    this.activePhoneDropdown.set(null);
+    const cleanPhone = this.formatWhatsappNumber(tenant.telefono);
+    const whatsappUrl = `https://wa.me/${cleanPhone}`;
+    
+    if (navigator.share && navigator.canShare && navigator.canShare({ url: whatsappUrl })) {
+      try {
+        await navigator.share({
+          title: `Mensaje a ${tenant.nombre}`,
+          url: whatsappUrl
+        });
+      } catch (err) {
+        window.open(whatsappUrl, '_blank');
+      }
+    } else {
+      window.open(whatsappUrl, '_blank');
     }
   }
 
