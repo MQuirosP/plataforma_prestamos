@@ -96,9 +96,9 @@ import { ToastService } from '../services/toast.service';
                Documentos Adjuntos
              </h2>
              <button (click)="fileInput.click()" [disabled]="uploading()" class="bg-industrial-surface text-caterpillar border border-industrial-border px-3 py-1.5 rounded-lg font-bold uppercase text-[10px] hover:bg-caterpillar hover:text-industrial-black transition-colors disabled:opacity-50">
-                + Subir Foto
+                + Subir Foto(s)
              </button>
-             <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" capture="environment" class="hidden">
+             <input type="file" #fileInput multiple (change)="onFileSelected($event)" accept="image/*" capture="environment" class="hidden">
           </div>
           
           <div *ngIf="uploading()" class="mb-4 bg-industrial-surface rounded-xl p-4 border border-industrial-border text-center">
@@ -246,22 +246,28 @@ export class ClientProfileComponent implements OnInit {
   }
 
   async onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
     this.uploading.set(true);
     try {
-      const url = await this.clientService.uploadDniPhoto(file);
-      const doc = await this.clientService.addClientDocument(this.client.id, url, 'DNI');
-      this.client.documents = [...(this.client.documents || []), doc];
+      const newDocs = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const url = await this.clientService.uploadDniPhoto(file);
+        const doc = await this.clientService.addClientDocument(this.client.id, url, 'DOCUMENTO');
+        newDocs.push(doc);
+      }
+      
+      this.client.documents = [...(this.client.documents || []), ...newDocs];
       
       // Update in loan service as well so it reflects globally
       this.loanService.loans.update(current => 
         current.map(l => l.clientId === this.client.id ? { ...l, client: { ...l.client!, documents: this.client.documents } } : l)
       );
-      this.toastService.success('Foto subida exitosamente');
+      this.toastService.success(`${newDocs.length} foto(s) subida(s) exitosamente`);
     } catch (err: any) {
-      this.toastService.error(err.error?.error || err.message || 'Error al subir la foto');
+      this.toastService.error(err.error?.error || err.message || 'Error al subir foto(s)');
     } finally {
       this.uploading.set(false);
       event.target.value = null;
