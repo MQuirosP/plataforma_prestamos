@@ -312,6 +312,30 @@ import html2canvas from 'html2canvas';
               </span>
             </div>
             
+            <!-- MOVEMENTS LEDGER (CARDEX) FOR EXPORT -->
+            <div *ngIf="loan.payments && loan.payments.length > 0" class="pt-4 border-t border-industrial-border/60 border-dashed mt-2">
+              <span class="text-industrial-muted font-mono text-[9px] uppercase font-bold tracking-widest block mb-3 text-center">Últimos Movimientos</span>
+              
+              <div class="space-y-2">
+                <div *ngFor="let pay of loan.payments.slice(0, 5)" class="flex justify-between items-center text-[10px] font-mono border-b border-industrial-surface pb-2">
+                  <div class="flex flex-col">
+                    <span class="text-white">{{ pay.fechaPago | date:'dd/MM/yyyy' }}</span>
+                    <span class="text-industrial-muted text-[8px] uppercase">
+                      {{ pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'Condonación' : pay.tipoPago === PaymentTipo.PAGO_MORA ? 'Pago Mora' : 'Abono Cuota' }}
+                      <span *ngIf="pay.metodoPago && pay.tipoPago !== PaymentTipo.CONDONACION_MORA">({{ pay.metodoPago }})</span>
+                    </span>
+                  </div>
+                  <div [class]="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'text-amber-400 font-bold' : pay.tipoPago === PaymentTipo.PAGO_MORA ? 'text-rose-400 font-bold' : 'text-semantic-emerald font-bold'">
+                    {{ pay.tipoPago === PaymentTipo.CONDONACION_MORA ? '-' : pay.tipoPago === PaymentTipo.PAGO_MORA ? '' : '+' }}{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
+                  </div>
+                </div>
+              </div>
+              
+              <div *ngIf="loan.payments.length > 5" class="text-center mt-2 text-[9px] text-industrial-muted italic">
+                ... y {{ loan.payments.length - 5 }} movimientos anteriores
+              </div>
+            </div>
+            
             <div class="text-center pt-2">
               <span class="text-[9px] text-industrial-muted font-mono uppercase">Emitido: {{ currentDate | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
