@@ -89,7 +89,11 @@ npx prisma db seed
    - Fichas interactivas divididas en tres pestañas reactivas: **Atrasados**, **Vencen Hoy** y **Al Día**.
    - Indicadores clave (KPIs) en tiempo real: Capital en la Calle, Por Cobrar esta Semana y Rendimiento Estimado.
 
-2. **Panel de Administración SaaS**:
+2. **Interfaz Consistente y Premium (Móvil-First)**:
+   - Cabecera global unificada con acceso inteligente al panel de control y preferencias.
+   - Envolturas estandarizadas estilo "Premium Card" con distintivos colores industriales (amarillo/negro Caterpillar) que aseguran una experiencia inmersiva y cohesiva a lo largo de todos los flujos de trabajo.
+
+3. **Panel de Administración SaaS**:
    - Visualización y búsqueda de todos los cobradores registrados.
    - Activación, suspensión y extensión de suscripciones (+30 días) en un solo clic.
 

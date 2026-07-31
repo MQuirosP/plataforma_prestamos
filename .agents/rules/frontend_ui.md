@@ -39,7 +39,20 @@
   - **No Misplaced Creation Buttons**: Official document inspection views MUST NOT contain primary record creation buttons (such as "+ Registrar Abono" or "+ Crear Préstamo"). Record creation belongs strictly in the main Dashboard or dedicated workflow screens.
   - **Single Clear Exit Control**: Avoid duplicating top and bottom exit buttons. Render a single, prominent exit control ("Cerrar y Volver") in the action footer.
   - **Compact Mobile Client Metadata Card**: On mobile viewports (`< 768px`), client information boxes MUST NOT stack 3 vertical full-width rows. Use a 2-column grid where the client name (`clienteNombre`) spans full width at the top, followed by 2 parallel columns for Teléfono and Fecha de Inicio below it.
+  <!-- Single Primary Share Button ... (existing rule preserved by doing it here) -->
   - **Inline Modalidad Badge**: In document cards, place the modalidad badge (`TRADICIONAL` / `ALQUILER`) inline within the top header bar next to the logo/business title, keeping the card compact and avoiding vertical gap wasted space.
+
+- **Standard View Layout (Page Containers)**:
+  - **Global Header**: The application features a persistent global `<app-header>` at the root `AppComponent` level. **NEVER** hardcode a custom `<header>` bar inside a routed page component.
+  - **Main Container**: All routed page components (e.g., Settings, Create Loan, Edit Loan, Clients Directory) MUST use a clean `<main class="max-w-md md:max-w-xl mx-auto px-4 pb-24 pt-6">` tag as their top-level viewport container. **NEVER** wrap the view in `min-h-screen bg-industrial-black` (as this is handled by `app.component.html`).
+  - **Premium Card Style**: The primary content of any view MUST be wrapped inside the standardized "Premium Card":
+    ```html
+    <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-5 shadow-2xl relative overflow-hidden mb-6">
+      <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
+      <!-- Content goes here -->
+    </div>
+    ```
+
 - **Form Page Header Layout (`CreateLoanComponent`, `EditLoanComponent`)**:
   - Creation and edition form pages MUST NOT render an external top floating header bar with a back chevron (`<`).
   - Form titles (e.g., `NUEVO PRÉSTAMO` or `EDITAR PRÉSTAMO`) MUST be placed **INSIDE the main form card container** (`bg-industrial-dark`) at the top, with a subtle bottom divider line (`border-b border-industrial-border/60`).

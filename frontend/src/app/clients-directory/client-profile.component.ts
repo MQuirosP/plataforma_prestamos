@@ -10,12 +10,10 @@ import { ToastService } from '../services/toast.service';
   standalone: true,
   imports: [CommonModule, FormsModule, DecimalPipe, DatePipe],
   template: `
-    <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none pt-6">
+    <!-- Content Column -->
+    <main class="max-w-md md:max-w-xl mx-auto px-4 pb-24 pt-6">
       
-      <!-- Content Column -->
-      <main class="max-w-md mx-auto px-4">
-        
-        <div class="bg-industrial-dark border border-industrial-border rounded-xl p-5 shadow-2xl relative overflow-hidden">
+      <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-5 shadow-2xl relative overflow-hidden mb-6">
           
           <!-- Industrial stripe -->
           <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
@@ -192,9 +190,8 @@ import { ToastService } from '../services/toast.service';
             </div>
           </div>
 
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
 
     <!-- Image Preview Modal -->
     <div *ngIf="previewUrl" class="fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm">

@@ -11,8 +11,8 @@ import html2canvas from 'html2canvas';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="min-h-screen bg-industrial-black text-white pb-24 font-sans select-none pt-6">
-      <main class="max-w-md mx-auto px-4 space-y-6">
+    <!-- Content Column -->
+    <main class="max-w-md md:max-w-xl mx-auto px-4 pb-24 pt-6 space-y-6">
       
       <!-- View Mode Toggle (Shown if lastPayment exists) -->
       <div *ngIf="lastPayment" class="flex justify-end mb-2">
@@ -246,20 +246,27 @@ import html2canvas from 'html2canvas';
         </div>
       </div>
 
-      <!-- BOTTOM ACTIONS BAR -->
-      <div class="flex items-center justify-between gap-4 pt-2">
+      <!-- FINAL ACTION BUTTONS -->
+      <div class="flex flex-col md:flex-row gap-3 pt-2 w-full max-w-sm mx-auto">
         <button (click)="goBack.emit()" 
-                class="bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar text-[10px] font-bold px-6 py-3.5 rounded-xl transition duration-150 uppercase tracking-wider text-center">
+                [disabled]="isExporting"
+                class="flex-1 bg-industrial-surface border border-industrial-border text-white text-xs font-bold py-3.5 rounded-xl uppercase tracking-wider hover:border-caterpillar/40 hover:text-caterpillar transition-colors disabled:opacity-50">
           Cerrar y Volver
         </button>
-
         <button (click)="openExportModal()" 
-                class="flex-1 md:flex-initial bg-caterpillar hover:bg-caterpillar-dark text-industrial-black font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider transition shadow-xl flex items-center justify-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.63-2.315a1.5 1.5 0 11.536.536l-4.63 2.315a1.5 1.5 0 11-.536-.536zm0 2.516l4.63 2.315a1.5 1.5 0 11-.536.536l-4.63-2.315a1.5 1.5 0 11.536-.536z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.63-2.315a1.5 1.5 0 11.536.536l-4.63 2.315a1.5 1.5 0 11-.536-.536zm0 2.516l4.63 2.315a1.5 1.5 0 11.536.536l-4.63-2.315a1.5 1.5 0 11.536-.536z" />
-          </svg>
-          Compartir
+                [disabled]="isExporting"
+                class="flex-1 bg-caterpillar text-industrial-black text-xs font-black py-3.5 rounded-xl uppercase tracking-wider hover:bg-caterpillar-dark transition-colors flex items-center justify-center gap-2 shadow-lg shadow-caterpillar/20 disabled:opacity-50 disabled:cursor-not-allowed">
+          <ng-container *ngIf="!isExporting">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.63-2.315a1.5 1.5 0 11.536.536l-4.63 2.315a1.5 1.5 0 11-.536-.536zm0 2.516l4.63 2.315a1.5 1.5 0 11-.536.536l-4.63-2.315a1.5 1.5 0 11.536-.536z" /></svg>
+            Compartir
+          </ng-container>
+          <ng-container *ngIf="isExporting">
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-industrial-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Procesando...
+          </ng-container>
         </button>
       </div>
 
@@ -439,9 +446,7 @@ import html2canvas from 'html2canvas';
           </div>
         </div>
       </div>
-      </div>
-      </main>
-    </div>
+
   `
 })
 export class LoanStatementComponent {

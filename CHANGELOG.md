@@ -4,6 +4,16 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 
 ---
 
+## [1.4.0] - 2026-07-31
+### Añadido
+- **Cabecera Global (HeaderComponent)**: El logo y el menú principal (Settings/Cerrar sesión) han sido extraídos del Dashboard hacia el componente raíz (`AppComponent`), lo que garantiza que la navegación y accesibilidad al perfil se mantengan constantes en cualquier pantalla de la aplicación.
+- **Acceso Directo Inteligente**: El botón flotante de "+ Nuevo Préstamo" (en web) vive en el header pero se oculta dinámicamente cuando el usuario navega fuera del dashboard para evitar cruces de flujos (ej. crear préstamos desde la vista de configuraciones).
+
+### Modificado
+- **Estandarización Premium UI (Standard View Layout)**: Reescritura arquitectónica del layout en `SettingsComponent`, `TeamManagementComponent`, `ClientProfileComponent`, `CreateLoanComponent` y `EditLoanComponent`. Ahora todas las pantallas secundarias abandonan los envoltorios `min-h-screen` obsoletos en favor de un contenedor limpio `<main>` y centralizan su contenido en el diseño estándar de **Premium Card** (borde oscuro, redondeado 2xl, sombra pesada y franja degradada superior de marca Caterpillar).
+
+---
+
 ## [1.3.0] - 2026-07-28
 ### Añadido
 - **Condonación de Mora (Fine Waiver)**: Implementada la funcionalidad de condonación de mora parcial o total exclusiva para el rol `PRESTAMISTA` y `ADMIN` (`POST /api/loans/:id/condonar-mora`), con persisencia acumulada en la columna `montoCondonado` (`waivedAmount`).

@@ -17,11 +17,12 @@ import { LoanStatementComponent } from './loan-statement/loan-statement.componen
 import { ClientsDirectoryComponent } from './clients-directory/clients-directory.component';
 import { ClientProfileComponent } from './clients-directory/client-profile.component';
 import { Loan, Client } from './services/loan.service';
+import { HeaderComponent } from './shared/header/header.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent, ToastComponent, CreateLoanComponent, EditLoanComponent, TeamManagementComponent, TrialBannerComponent, LoanStatementComponent, ClientsDirectoryComponent, ClientProfileComponent],
+  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent, ToastComponent, CreateLoanComponent, EditLoanComponent, TeamManagementComponent, TrialBannerComponent, LoanStatementComponent, ClientsDirectoryComponent, ClientProfileComponent, HeaderComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })

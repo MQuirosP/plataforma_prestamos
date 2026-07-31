@@ -20,14 +20,13 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
     ])
   ],
   template: `
-    <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none pt-6">
-      <!-- Content Column -->
-      <main class="max-w-md mx-auto px-4">
+    <!-- Content Column -->
+    <main class="max-w-md md:max-w-xl mx-auto px-4 pb-24 pt-6">
+      
+      <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-5 space-y-5 shadow-2xl relative overflow-hidden mb-6">
         
-        <div class="bg-industrial-dark border border-industrial-border rounded-xl p-5 space-y-5 shadow-2xl relative overflow-hidden">
-          
-          <!-- Industrial stripe -->
-          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
+        <!-- Industrial stripe -->
+        <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
 
           <!-- Form Title Inside Card (No back button) -->
           <div class="pt-2 pb-3 border-b border-industrial-border/60">
@@ -278,9 +277,8 @@ import { trigger, state, style, animate, transition } from '@angular/animations'
               </button>
             </div>
           </form>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   `
 })
 export class CreateLoanComponent implements OnInit {

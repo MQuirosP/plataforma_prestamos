@@ -11,36 +11,35 @@ import { formatEventType } from '../shared/audit-log-list/audit-log-list.compone
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none">
+    <!-- Main Content Column -->
+    <main class="max-w-md md:max-w-xl mx-auto px-4 pb-24 pt-6">
       
-      <!-- Top Caterpillar Branded Bar -->
-      <header class="border-b border-industrial-border px-5 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95" style="background-color: #111111;">
-        <div class="flex items-center gap-2">
-          <button (click)="goBack.emit()" class="text-caterpillar hover:text-caterpillar mr-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 class="text-lg font-bold text-white leading-tight tracking-tight uppercase">GESTIÓN DE EQUIPO</h1>
-            <p class="text-[10px] text-caterpillar uppercase tracking-wider font-mono">COBRADORES Y ASIGNACIONES</p>
-          </div>
+      <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-5 space-y-4 shadow-2xl relative overflow-hidden mb-6">
+        <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
+        
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2 pb-3 border-b border-industrial-border/60">
+            <div>
+              <h1 class="text-lg font-bold text-white leading-tight tracking-tight uppercase">GESTIÓN DE EQUIPO</h1>
+              <p class="text-[10px] text-caterpillar uppercase tracking-wider font-mono">COBRADORES Y ASIGNACIONES</p>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <button (click)="openAddModal()" 
+                      class="hidden md:flex bg-caterpillar hover:bg-caterpillar-dark text-industrial-black px-3.5 py-2 rounded-lg font-bold transition duration-150 shadow-md items-center gap-1.5 text-xs whitespace-nowrap">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                </svg>
+                <span class="font-black uppercase tracking-tight">Agregar</span>
+              </button>
+              <button type="button" (click)="goBack.emit()"
+                      class="bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar text-[10px] font-bold py-2 px-4 rounded-lg transition duration-150 uppercase tracking-wider whitespace-nowrap">
+                Cerrar y volver
+              </button>
+            </div>
         </div>
 
-        <button (click)="openAddModal()" 
-                class="hidden md:flex bg-caterpillar hover:bg-caterpillar-dark text-industrial-black px-3.5 py-2 rounded-lg font-bold transition duration-150 shadow-md items-center gap-1.5 text-xs">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-          </svg>
-          <span class="font-black uppercase tracking-tight">Agregar Cobrador</span>
-        </button>
-      </header>
-
-      <!-- Main Content Column -->
-      <main class="max-w-md mx-auto px-4 mt-6 space-y-4">
-        
         <!-- Header status card -->
-        <div class="bg-industrial-dark border border-industrial-border rounded-xl p-4 flex items-center justify-between">
+        <div class="bg-industrial-surface border border-industrial-border rounded-xl p-4 flex items-center justify-between">
           <div>
             <span class="text-[10px] text-industrial-muted uppercase font-mono block">Miembros en Equipo</span>
             <span *ngIf="!loadingTeam()" class="text-xl font-black text-white mt-0.5 block">{{ cobradores().length }} Cobrador(es)</span>
@@ -118,7 +117,7 @@ import { formatEventType } from '../shared/audit-log-list/audit-log-list.compone
           </div>
         </div>
 
-      </main>
+      </div>
 
       <!-- FAB Mobile Add Button (Circular Floating Action Button) -->
       <button (click)="openAddModal()" 
@@ -246,8 +245,7 @@ import { formatEventType } from '../shared/audit-log-list/audit-log-list.compone
           </div>
         </div>
       </div>
-
-    </div>
+    </main>
   `,
   styles: []
 })

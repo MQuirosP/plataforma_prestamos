@@ -23,6 +23,14 @@
 <div *ngIf="loanService.isLoggedIn()" 
      class="min-h-screen bg-industrial-black flex flex-col transition-all duration-150">
   <app-trial-banner></app-trial-banner>
+  
+  <app-header *ngIf="loanService.currentUser()?.rol !== Role.ADMIN"
+              [currentScreen]="currentScreen()"
+              (goHome)="currentScreen.set('dashboard')"
+              (openCreateModal)="currentScreen.set('create-loan')"
+              (openSettings)="currentScreen.set('settings')">
+  </app-header>
+
   <!-- Main Viewport Flow (Scrollable Content Area) -->
   <div class="flex-grow flex flex-col"
        [class.pb-[115px]]="loanService.currentUser()?.isImpersonating"

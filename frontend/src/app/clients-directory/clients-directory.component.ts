@@ -9,12 +9,11 @@ import { LoanService, Client } from '../services/loan.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none pt-6">
+    <!-- Content Column -->
+    <main class="max-w-6xl mx-auto px-4 pb-24 pt-6">
       
-      <main class="max-w-6xl mx-auto px-4">
-        
-        <div class="bg-industrial-dark border border-industrial-border rounded-xl p-5 shadow-2xl relative overflow-hidden mb-8">
-          <!-- Industrial stripe -->
+      <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-5 shadow-2xl relative overflow-hidden mb-8">
+        <!-- Industrial stripe -->
           <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
 
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2 pb-3 border-b border-industrial-border/60">
@@ -102,8 +101,7 @@ import { LoanService, Client } from '../services/loan.service';
           </button>
         </div>
       </div>
-      </main>
-    </div>
+    </main>
   `
 })
 export class ClientsDirectoryComponent implements OnInit {
