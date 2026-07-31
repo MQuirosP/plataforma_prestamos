@@ -770,6 +770,7 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
 
   const {
     clientId,
+    clienteNombre, clienteTelefono, tipoIdentificacion, numeroIdentificacion,
     montoOriginal, cuotaSemanal, diaCobro, fineAmount, fineFrequency, graceDays,
     totalAPagarDirect, porcentaje, hasFine
   } = req.body;
@@ -815,8 +816,17 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
     const payments = inMemoryStore.payments.filter(p => p.loanId === id);
     const hasPayments = payments.length > 0;
 
-    // Actualizar datos del cliente
+    // Actualizar datos del cliente en memoria (globalmente)
     loan.clientId = clientId !== undefined ? clientId : loan.clientId;
+    if (loan.clientId) {
+      const client = inMemoryStore.clients?.find(c => c.id === loan.clientId);
+      if (client) {
+        if (clienteNombre !== undefined) client.nombre = clienteNombre;
+        if (clienteTelefono !== undefined) client.telefono = clienteTelefono;
+        if (tipoIdentificacion !== undefined) client.tipoIdentificacion = tipoIdentificacion;
+        if (numeroIdentificacion !== undefined) client.numeroIdentificacion = numeroIdentificacion;
+      }
+    }
     loan.diaCobro = parsedDia !== undefined ? parsedDia! : loan.diaCobro;
 
     // Actualizar multas
@@ -914,10 +924,24 @@ export async function updateLoan(req: AuthenticatedRequest, res: Response, next:
       }
     }
 
-    const updatedLoan = await prisma.loan.update({
-      where: { id },
-      data: dataToUpdate,
-      include: { client: true }
+    const updatedLoan = await prisma.$transaction(async (tx) => {
+      if (loan.clientId && (clienteNombre !== undefined || clienteTelefono !== undefined || tipoIdentificacion !== undefined || numeroIdentificacion !== undefined)) {
+        await tx.client.update({
+          where: { id: loan.clientId },
+          data: {
+            nombre: clienteNombre !== undefined ? clienteNombre : undefined,
+            telefono: clienteTelefono !== undefined ? clienteTelefono : undefined,
+            tipoIdentificacion: tipoIdentificacion !== undefined ? tipoIdentificacion : undefined,
+            numeroIdentificacion: numeroIdentificacion !== undefined ? numeroIdentificacion : undefined
+          }
+        });
+      }
+
+      return tx.loan.update({
+        where: { id },
+        data: dataToUpdate,
+        include: { client: true }
+      });
     });
 
     await logActivity(req, 'EDITAR_LOAN', `Actualizó préstamo del cliente ${updatedLoan.client?.nombre || 'Desconocido'} (ID: ${updatedLoan.id})`);

@@ -216,8 +216,8 @@ export class EditLoanComponent implements OnInit {
     this.editData = {
       clienteNombre: this.loan.clienteNombre,
       clienteTelefono: this.loan.clienteTelefono,
-      tipoIdentificacion: this.loan.tipoIdentificacion || '',
-      numeroIdentificacion: this.loan.numeroIdentificacion || '',
+      tipoIdentificacion: this.loan.client?.tipoIdentificacion || this.loan.tipoIdentificacion || '',
+      numeroIdentificacion: this.loan.client?.numeroIdentificacion || this.loan.numeroIdentificacion || '',
       montoOriginal: Number(this.loan.montoOriginal),
       cuotaSemanal: Number(this.loan.cuotaSemanal),
       diaCobro: Number(this.loan.diaCobro || 1),
