@@ -396,7 +396,7 @@ import html2canvas from 'html2canvas';
 
           <div class="flex gap-2">
             <button (click)="closeReceipt()" class="flex-1 bg-industrial-surface border border-industrial-border text-white text-xs font-bold py-2.5 rounded-lg uppercase">Cerrar</button>
-            <button (click)="shareReceipt()" [disabled]="isExporting" class="flex-1 bg-caterpillar text-industrial-black text-xs font-black py-2.5 rounded-lg uppercase">
+            <button (click)="exportAndShare('receipt-card', true)" [disabled]="isExporting" class="flex-1 bg-caterpillar text-industrial-black text-xs font-black py-2.5 rounded-lg uppercase">
               {{ isExporting ? 'Generando...' : 'Compartir' }}
             </button>
           </div>
@@ -449,7 +449,10 @@ export class LoanStatementComponent {
 
   async exportAndShare(elementId: string, isIndividualReceipt: boolean) {
     const element = document.getElementById(elementId);
-      if (!element) return;
+    if (!element) return;
+    
+    try {
+      this.isExporting = true;
       
       const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(element, { 
