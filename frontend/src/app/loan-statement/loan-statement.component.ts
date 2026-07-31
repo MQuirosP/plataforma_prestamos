@@ -11,7 +11,8 @@ import html2canvas from 'html2canvas';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="min-h-screen bg-industrial-black text-white p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+    <div class="min-h-screen bg-industrial-black text-white pb-24 font-sans select-none pt-6">
+      <main class="max-w-md mx-auto px-4 space-y-6">
       
       <!-- View Mode Toggle (Shown if lastPayment exists) -->
       <div *ngIf="lastPayment" class="flex justify-end mb-2">
@@ -175,7 +176,7 @@ import html2canvas from 'html2canvas';
           </div>
 
           <!-- PAYMENT PROGRESS BAR -->
-          <div data-html2canvas-ignore="true" class="bg-industrial-surface border border-industrial-border p-4 rounded-xl space-y-2">
+          <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl space-y-2">
             <div class="flex justify-between text-xs font-mono">
               <span class="text-industrial-muted uppercase">Progreso de Cuotas</span>
               <span class="text-white font-bold">Cuota {{ loan.cuotaActual }} de {{ loan.cuotasTotales }}</span>
@@ -187,7 +188,7 @@ import html2canvas from 'html2canvas';
           </div>
 
           <!-- MOVEMENTS TABLE -->
-          <div data-html2canvas-ignore="true" class="space-y-3">
+          <div class="space-y-3">
             <h3 class="text-xs text-caterpillar uppercase font-mono font-bold tracking-wider">Historial de Movimientos y Abonos</h3>
             
             <div class="border border-industrial-border rounded-xl overflow-hidden bg-industrial-surface/30">
@@ -255,7 +256,7 @@ import html2canvas from 'html2canvas';
           Cerrar y Volver
         </button>
 
-        <button (click)="exportAndShare()" 
+        <button (click)="openExportModal()" 
                 class="flex-1 md:flex-initial bg-caterpillar hover:bg-caterpillar-dark text-industrial-black font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider transition shadow-xl flex items-center justify-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.63-2.315a1.5 1.5 0 11.536.536l-4.63 2.315a1.5 1.5 0 11-.536-.536zm0 2.516l4.63 2.315a1.5 1.5 0 11-.536.536l-4.63-2.315a1.5 1.5 0 11.536-.536z" />
@@ -265,7 +266,77 @@ import html2canvas from 'html2canvas';
         </button>
       </div>
 
-      <!-- RECEIPT OVERLAY MODAL -->
+      <!-- EXPORT PREVIEW MODAL -->
+      <div *ngIf="showExportModal()" class="fixed inset-0 z-[200] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        
+        <h3 class="text-white font-black text-sm uppercase tracking-widest mb-4">Vista Previa de Exportación</h3>
+
+        <!-- This is the exact ticket that will be screenshotted -->
+        <div id="exportable-statement" class="bg-industrial-dark border border-industrial-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden mb-6">
+          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
+          
+          <div class="text-center mb-6">
+            <img src="/assets/images/logo-header.webp" class="h-8 mx-auto mb-2" alt="Logo">
+            <h3 class="text-caterpillar font-black uppercase tracking-tight text-sm">Estado de Cuenta</h3>
+            <p class="text-industrial-muted text-[9px] uppercase font-mono tracking-widest mt-0.5">
+              {{ loanService.settings()?.nombreNegocio || 'CAT-LOAN' }}
+            </p>
+          </div>
+
+          <div class="space-y-4">
+            <div class="bg-industrial-surface/50 border border-industrial-border/60 p-3 rounded-xl flex flex-col">
+              <span class="text-industrial-muted text-[9px] uppercase font-mono">Cliente</span>
+              <span class="text-white font-black text-base">{{ loan.clienteNombre }}</span>
+              <span class="text-industrial-muted text-[10px] font-mono">{{ loan.clienteTelefono }}</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-industrial-surface border border-industrial-border p-3 rounded-xl">
+                <span class="text-industrial-muted font-mono text-[9px] uppercase block">Préstamo</span>
+                <span class="text-white font-black text-sm block">
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.totalAPagar | number:'1.0-0' }}
+                </span>
+              </div>
+              <div class="bg-industrial-surface border border-industrial-border p-3 rounded-xl">
+                <span class="text-industrial-muted font-mono text-[9px] uppercase block">Abonado</span>
+                <span class="text-semantic-emerald font-black text-sm block">
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ getTotalAbonado() | number:'1.0-0' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="bg-caterpillar/10 border border-caterpillar/40 p-4 rounded-xl text-center">
+              <span class="text-caterpillar font-mono text-[10px] uppercase font-bold block mb-1">Balance Restante</span>
+              <span class="text-caterpillar font-black text-2xl tracking-tight block">
+                {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.balancePendiente | number:'1.0-0' }}
+              </span>
+            </div>
+            
+            <div class="text-center pt-2">
+              <span class="text-[9px] text-industrial-muted font-mono uppercase">Emitido: {{ currentDate | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 w-full max-w-sm">
+          <button (click)="showExportModal.set(false)" [disabled]="isExporting"
+                  class="flex-1 bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar text-xs font-bold py-3.5 rounded-xl transition duration-150 uppercase tracking-wider">
+            Cancelar
+          </button>
+          <button (click)="exportAndShare('exportable-statement', false)" [disabled]="isExporting"
+                  class="flex-[2] bg-caterpillar hover:bg-caterpillar-dark text-industrial-black font-black uppercase text-xs tracking-wider py-3.5 rounded-xl transition shadow-xl flex items-center justify-center gap-2">
+            <span *ngIf="isExporting" class="animate-pulse">Generando...</span>
+            <ng-container *ngIf="!isExporting">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.63-2.315a1.5 1.5 0 11.536.536l-4.63 2.315a1.5 1.5 0 11-.536-.536zm0 2.516l4.63 2.315a1.5 1.5 0 11-.536.536l-4.63-2.315a1.5 1.5 0 11.536-.536z" />
+              </svg>
+              Enviar WhatsApp
+            </ng-container>
+          </button>
+        </div>
+      </div>
+
+      <!-- RECEIPT OVERLAY MODAL (Individual Payment) -->
       <div *ngIf="viewingReceipt" class="fixed inset-0 z-[150] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
         <div id="receipt-card" class="bg-industrial-dark border border-industrial-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden">
           <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
@@ -330,7 +401,8 @@ import html2canvas from 'html2canvas';
           </div>
         </div>
       </div>
-
+      </div>
+      </main>
     </div>
   `
 })
@@ -346,11 +418,13 @@ export class LoanStatementComponent {
     this.viewingReceipt = null;
   }
 
-  async shareReceipt() {
-    if (!this.viewingReceipt) return;
-    try {
-      this.isExporting = true;
-      const element = document.getElementById('receipt-card');
+  openExportModal() {
+    this.currentDate = new Date();
+    this.showExportModal.set(true);
+  }
+
+  async exportAndShare(elementId: string, isIndividualReceipt: boolean) {
+    const element = document.getElementById(elementId);
       if (!element) return;
       
       const html2canvas = (await import('html2canvas')).default;
@@ -376,16 +450,16 @@ export class LoanStatementComponent {
       const data = await uploadRes.json();
       const imageUrl = data.secure_url;
       
-      let message = `*RECIBO DE ABONO OFICIAL*\n`;
-      message += `Cliente: ${this.loan?.clienteNombre}\n`;
-      message += `Monto: ${this.loanService.settings()?.monedaSimbolo || '₡'}${this.viewingReceipt.montoAbonado}\n`;
-      message += `Ver recibo aquí: ${imageUrl}`;
-      
-      const whatsappUrl = `https://wa.me/${this.loan?.clienteTelefono}?text=${encodeURIComponent(message)}`;
+      const isReceipt = isIndividualReceipt;
+      const msg = isReceipt
+        ? `*RECIBO DE ABONO OFICIAL*\nCliente: ${this.loan?.clienteNombre}\nMonto: ${this.loanService.settings()?.monedaSimbolo || '₡'} ${this.viewingReceipt.montoAbonado}\nVer recibo aquí: ${imageUrl}`
+        : `Hola ${this.loan.clienteNombre}, adjunto envío tu estado de cuenta actualizado: ${imageUrl}`;
+
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
       window.open(whatsappUrl, '_blank');
-      
+      this.toastService.success(isReceipt ? 'Recibo enviado a WhatsApp.' : 'Estado de cuenta enviado.');
     } catch (error) {
-      console.error('Error sharing receipt:', error);
+      console.error('Error sharing:', error);
       this.toastService.error('Error al generar la imagen para compartir');
     } finally {
       this.isExporting = false;
@@ -404,7 +478,8 @@ export class LoanStatementComponent {
   @Output() goBack = new EventEmitter<void>();
   @Output() close = new EventEmitter<void>();
 
-  showAsReceipt = signal(false);
+  showExportModal = signal(false);
+  currentDate = new Date();
   isUploadingDoc = false;
   confirmModalConfig = signal<{ title: string; message: string; action: () => void; danger?: boolean } | null>(null);
 
@@ -480,64 +555,5 @@ export class LoanStatementComponent {
     }
   }
 
-  async exportAndShare() {
-    const element = document.getElementById('statement-card');
-    if (!element) return;
 
-    try {
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#121212',
-        scale: 2
-      });
-
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-
-        const formData = new FormData();
-        formData.append('file', blob);
-        formData.append('upload_preset', 'loans_cat');
-
-        try {
-          const uploadRes = await fetch('https://api.cloudinary.com/v1_1/dv74qevjc/image/upload', {
-            method: 'POST',
-            body: formData
-          });
-
-          if (!uploadRes.ok) {
-            throw new Error('Cloudinary upload failed');
-          }
-
-          const uploadData = await uploadRes.json();
-          const imageUrl = uploadData.secure_url;
-
-          const cleanPhone = this.getCleanPhone(this.loan.clienteTelefono);
-
-          const isReceipt = this.showAsReceipt() && this.lastPayment;
-          const msg = isReceipt
-            ? `Hola ${this.loan.clienteNombre}, adjunto envío tu comprobante de abono: ${imageUrl}`
-            : `Hola ${this.loan.clienteNombre}, adjunto envío tu estado de cuenta digital: ${imageUrl}`;
-
-          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
-
-          window.open(whatsappUrl, '_blank');
-          this.toastService.success(isReceipt ? 'Recibo enviado a WhatsApp.' : 'Estado de cuenta enviado.');
-        } catch {
-          this.downloadFallback(canvas);
-        }
-      }, 'image/png');
-
-    } catch {
-      this.toastService.error('Error al exportar el estado de cuenta');
-    }
-  }
-
-  downloadFallback(canvas: HTMLCanvasElement) {
-    const isReceipt = this.showAsReceipt() && this.lastPayment;
-    const namePrefix = isReceipt ? 'Recibo' : 'EstadoCuenta';
-    const link = document.createElement('a');
-    link.download = `${namePrefix}_${this.loan.clienteNombre}.png`;
-    link.href = canvas.toDataURL();
-    link.click();
-    this.toastService.success(isReceipt ? 'Recibo exportado como imagen.' : 'Estado de cuenta exportado.');
-  }
 }
