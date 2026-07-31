@@ -14,12 +14,14 @@ import { EditLoanComponent } from './edit-loan/edit-loan.component';
 import { TeamManagementComponent } from './team-management/team-management.component';
 import { TrialBannerComponent } from './shared/trial-banner/trial-banner.component';
 import { LoanStatementComponent } from './loan-statement/loan-statement.component';
-import { Loan } from './services/loan.service';
+import { ClientsDirectoryComponent } from './clients-directory/clients-directory.component';
+import { ClientProfileComponent } from './clients-directory/client-profile.component';
+import { Loan, Client } from './services/loan.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent, ToastComponent, CreateLoanComponent, EditLoanComponent, TeamManagementComponent, TrialBannerComponent, LoanStatementComponent],
+  imports: [CommonModule, DashboardComponent, ExpiredComponent, SettingsComponent, LoginComponent, OnboardingComponent, AdminComponent, ToastComponent, CreateLoanComponent, EditLoanComponent, TeamManagementComponent, TrialBannerComponent, LoanStatementComponent, ClientsDirectoryComponent, ClientProfileComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -27,9 +29,10 @@ export class AppComponent {
   Role = Role;
   loanService = inject(LoanService);
   adminService = inject(AdminService);
-  currentScreen = signal<'dashboard' | 'settings' | 'create-loan' | 'edit-loan' | 'team-management' | 'loan-statement'>('dashboard');
+  currentScreen = signal<'dashboard' | 'settings' | 'create-loan' | 'edit-loan' | 'team-management' | 'loan-statement' | 'clients-directory' | 'client-profile'>('dashboard');
   selectedLoanForEdit = signal<Loan | null>(null);
   selectedLoanForStatement = signal<Loan | null>(null);
+  selectedClientForProfile = signal<Client | null>(null);
 
   openEditLoanScreen(loan: Loan) {
     this.selectedLoanForEdit.set(loan);
@@ -39,6 +42,11 @@ export class AppComponent {
   openStatementScreen(loan: Loan) {
     this.selectedLoanForStatement.set(loan);
     this.currentScreen.set('loan-statement');
+  }
+
+  openClientProfile(client: Client) {
+    this.selectedClientForProfile.set(client);
+    this.currentScreen.set('client-profile');
   }
 
   onOnboardingFinished() {

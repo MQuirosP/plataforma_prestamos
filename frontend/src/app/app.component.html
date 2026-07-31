@@ -49,10 +49,20 @@
                                [loan]="selectedLoanForStatement()!"
                                (goBack)="currentScreen.set('dashboard')">
           </app-loan-statement>
+          <app-clients-directory *ngIf="currentScreen() === 'clients-directory'"
+                                 (goBack)="currentScreen.set('dashboard')"
+                                 (openClientEvent)="openClientProfile($event)">
+          </app-clients-directory>
+          <app-client-profile *ngIf="currentScreen() === 'client-profile' && selectedClientForProfile()"
+                              [client]="selectedClientForProfile()!"
+                              (goBack)="currentScreen.set('clients-directory')"
+                              (openStatementEvent)="openStatementScreen($event)">
+          </app-client-profile>
           <app-dashboard *ngIf="currentScreen() === 'dashboard'" 
                          (openSettings)="currentScreen.set('settings')" 
                          (openCreateLoan)="currentScreen.set('create-loan')"
                          (openTeamManagement)="currentScreen.set('team-management')"
+                         (openClientsDirectory)="currentScreen.set('clients-directory')"
                          (openEditLoan)="openEditLoanScreen($event)"
                          (openStatementEvent)="openStatementScreen($event)"></app-dashboard>
 
