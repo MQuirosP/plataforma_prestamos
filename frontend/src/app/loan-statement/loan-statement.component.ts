@@ -450,6 +450,7 @@ export class LoanStatementComponent {
       const data = await uploadRes.json();
       const imageUrl = data.secure_url;
       
+      const cleanPhone = this.getCleanPhone(this.loan.clienteTelefono);
       const isReceipt = isIndividualReceipt;
       const msg = isReceipt
         ? `*RECIBO DE ABONO OFICIAL*\nCliente: ${this.loan?.clienteNombre}\nMonto: ${this.loanService.settings()?.monedaSimbolo || '₡'} ${this.viewingReceipt.montoAbonado}\nVer recibo aquí: ${imageUrl}`
@@ -479,6 +480,7 @@ export class LoanStatementComponent {
   @Output() close = new EventEmitter<void>();
 
   showExportModal = signal(false);
+  showAsReceipt = signal(false);
   currentDate = new Date();
   isUploadingDoc = false;
   confirmModalConfig = signal<{ title: string; message: string; action: () => void; danger?: boolean } | null>(null);
