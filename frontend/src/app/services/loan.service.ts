@@ -632,6 +632,10 @@ export class LoanService {
       this.http.get<ActivityLog[]>(`${this.apiUrl}/tenant/logs${query}`, this.getHeaders())
     );
   }
+
+  getPlanConfigs(): Promise<any[]> {
+    return firstValueFrom(this.http.get<any[]>(`${this.apiUrl}/plans`, this.getHeaders()));
+  }
 }
 
 export interface ActivityLog {

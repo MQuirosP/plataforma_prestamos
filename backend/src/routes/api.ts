@@ -7,6 +7,7 @@ import { login, changePassword, refresh, logout } from '../controllers/authContr
 import { getCajaCobrador, procesarLiquidacion } from '../controllers/cobradorController';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { isUsingMemoryStore, inMemoryStore, prisma } from '../services/db';
+import { PlanManager } from '../services/planManager';
 import { SubscriptionType } from '@prisma/client';
 
 const router = Router();
@@ -106,6 +107,15 @@ router.post('/dev/toggle-subscription', async (req: AuthenticatedRequest, res: R
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to toggle status', details: err.message });
   }
+});
+
+
+// Rutas publicas de configuracion SaaS (requiere estar autenticado)
+router.get('/plans', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const configs = await PlanManager.getAllPlanConfigs();
+    return res.json(configs);
+  } catch (err: any) { next(err); }
 });
 
 export default router;
