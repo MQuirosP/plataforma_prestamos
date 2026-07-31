@@ -74,7 +74,12 @@ export async function createCobrador(req: AuthenticatedRequest, res: Response, n
     await logActivity(req, 'CREAR_COBRADOR', `Creó el cobrador ${cleanNombre} (usuario: ${cleanUsername})`);
 
     return res.json({ success: true, cobrador: { id: newCobrador.id, nombre: newCobrador.nombre, username: newCobrador.username } });
-  } catch (err: any) { next(err); }
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      return res.status(400).json({ error: 'El nombre de usuario ya está en uso.' });
+    }
+    next(err);
+  }
 }
 
 export async function getCobradores(req: AuthenticatedRequest, res: Response, next: NextFunction) {

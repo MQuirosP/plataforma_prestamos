@@ -126,7 +126,12 @@ export async function createTenant(req: AuthenticatedRequest, res: Response, nex
 
     await logAudit('CREAR_TENANT', `Se creó el prestamista ${cleanUsername} (Trial de ${trialDays} días)`, req, newTenant.id);
     return res.json({ success: true, tenant: newTenant });
-  } catch (err: any) { next(err); }
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      return res.status(400).json({ error: 'El nombre de usuario o correo ya está en uso.' });
+    }
+    next(err);
+  }
 }
 
 // 2b. Obtener Configuración Global de SaaS
