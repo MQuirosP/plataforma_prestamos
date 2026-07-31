@@ -9,25 +9,26 @@ import { LoanService, Client } from '../services/loan.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="p-6 bg-industrial-black min-h-screen text-white font-sans max-w-7xl mx-auto pb-32">
+    <div class="min-h-screen bg-industrial-black text-industrial-light pb-24 font-sans select-none pt-6">
       
-      <!-- Header -->
-      <div class="flex items-center gap-4 mb-8">
-        <button (click)="goBack.emit()" class="text-industrial-muted hover:text-white transition-colors bg-industrial-surface p-2 rounded-xl border border-industrial-border">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </button>
-        <div>
-          <h1 class="text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-caterpillar" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            Directorio de Clientes
-          </h1>
-          <p class="text-sm text-industrial-muted font-mono uppercase mt-1">Gestión integral de expedientes</p>
+      <main class="max-w-6xl mx-auto px-4">
+        
+        <div class="bg-industrial-dark border border-industrial-border rounded-xl p-5 shadow-2xl relative overflow-hidden mb-8">
+          <!-- Industrial stripe -->
+          <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_6px]"></div>
+
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2 pb-3 border-b border-industrial-border/60">
+            <div>
+              <h1 class="text-lg font-bold text-white leading-tight tracking-tight uppercase">DIRECTORIO DE CLIENTES</h1>
+              <p class="text-[10px] text-caterpillar uppercase tracking-wider font-mono">GESTIÓN INTEGRAL DE EXPEDIENTES</p>
+            </div>
+            
+            <button type="button" (click)="goBack.emit()"
+                    class="bg-industrial-surface border border-industrial-border hover:border-caterpillar/40 text-white hover:text-caterpillar text-[10px] font-bold py-2 px-4 rounded-lg transition duration-150 uppercase tracking-wider whitespace-nowrap">
+              Cerrar y volver
+            </button>
+          </div>
         </div>
-      </div>
 
       <!-- Search Bar -->
       <div class="bg-industrial-dark border border-industrial-border rounded-2xl p-4 mb-8 shadow-2xl relative overflow-hidden">
@@ -100,7 +101,7 @@ import { LoanService, Client } from '../services/loan.service';
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
           </button>
         </div>
-      </div>
+      </main>
     </div>
   `
 })
