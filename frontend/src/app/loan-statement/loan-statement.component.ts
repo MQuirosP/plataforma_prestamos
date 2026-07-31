@@ -123,7 +123,7 @@ import html2canvas from 'html2canvas';
           </div>
 
           <!-- FINANCIAL SUMMARY CARDS -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="grid grid-cols-2 gap-4">
             <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl">
               <span class="text-industrial-muted font-mono text-[10px] uppercase block mb-1">Monto Préstamo</span>
               <span class="text-white font-black text-xl block">
@@ -264,12 +264,12 @@ import html2canvas from 'html2canvas';
       </div>
 
       <!-- EXPORT PREVIEW MODAL -->
-      <div *ngIf="showExportModal()" class="fixed inset-0 z-[200] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+      <div *ngIf="showExportModal()" class="fixed inset-0 z-[200] bg-black/90 flex flex-col items-center p-4 py-8 md:py-12 backdrop-blur-sm overflow-y-auto">
         
         <h3 class="text-white font-black text-sm uppercase tracking-widest mb-4">Vista Previa de Exportación</h3>
 
         <!-- This is the exact ticket that will be screenshotted -->
-        <div id="exportable-statement" class="bg-industrial-dark border border-industrial-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden mb-6">
+        <div id="exportable-statement" class="bg-industrial-dark border border-industrial-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden mb-6 flex-shrink-0 my-auto">
           <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-caterpillar via-industrial-black to-caterpillar bg-[length:30px_8px]"></div>
           
           <div class="text-center mb-6">
@@ -308,7 +308,18 @@ import html2canvas from 'html2canvas';
               </div>
             </div>
 
-            <div class="bg-caterpillar/10 border border-caterpillar/40 p-4 rounded-xl text-center">
+            <!-- PAYMENT PROGRESS BAR FOR EXPORT -->
+            <div class="bg-industrial-surface border border-industrial-border p-3 rounded-xl mt-3">
+              <div class="flex justify-between text-[8px] font-mono mb-1.5">
+                <span class="text-industrial-muted uppercase">Progreso de Cuotas</span>
+                <span class="text-white font-bold">Cuota {{ loan.cuotaActual }} de {{ loan.cuotasTotales }}</span>
+              </div>
+              <div class="w-full bg-industrial-dark h-2 rounded-full overflow-hidden border border-industrial-border">
+                <div class="bg-caterpillar h-full rounded-full" [style.width.%]="getProgressPercentage()"></div>
+              </div>
+            </div>
+
+            <div class="bg-caterpillar/10 border border-caterpillar/40 p-4 rounded-xl text-center mt-3">
               <span class="text-caterpillar font-mono text-[10px] uppercase font-bold block mb-1">Balance Restante</span>
               <span class="text-caterpillar font-black text-2xl tracking-tight block">
                 {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.balancePendiente | number:'1.0-0' }}
