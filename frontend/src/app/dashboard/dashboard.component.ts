@@ -43,24 +43,6 @@ import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, g
               </svg>
               <span class="font-black uppercase tracking-tight">Nuevo</span>
             </button>
-
-            <!-- Directorio de Clientes button -->
-            <button (click)="openClientsDirectory.emit()" 
-                    class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-caterpillar transition duration-150"
-                    title="Directorio de Clientes">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </button>
-
-            <!-- Manage Cobradores button -->
-            <button (click)="openCobradoresModal()" 
-                    class="bg-industrial-surface border border-industrial-border p-2 rounded-lg text-industrial-muted hover:text-emerald-500 transition duration-150"
-                    title="Gestionar Equipo">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </button>
           </ng-container>
 
           <!-- Settings button -->
@@ -114,6 +96,18 @@ import { formatNextPaymentDate, getWeekdayInTimezone, getDateStringInTimezone, g
               {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ rendimientoEstimado() | number:'1.0-0' }}
             </span>
           </div>
+        </section>
+
+        <!-- Acciones Rápidas (Directorio / Equipo) -->
+        <section *ngIf="loanService.currentUser()?.rol !== Role.COBRADOR" class="grid grid-cols-2 gap-3 mb-6">
+          <button (click)="openClientsDirectory.emit()" class="bg-industrial-dark border border-industrial-border hover:border-caterpillar/40 rounded-xl p-3 flex items-center justify-center gap-2.5 group transition-all duration-300 shadow-md">
+             <svg class="w-5 h-5 text-industrial-muted group-hover:text-caterpillar transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+             <span class="text-xs font-bold text-white group-hover:text-caterpillar transition-colors uppercase tracking-wider">Directorio</span>
+          </button>
+          <button (click)="openCobradoresModal()" class="bg-industrial-dark border border-industrial-border hover:border-emerald-500/40 rounded-xl p-3 flex items-center justify-center gap-2.5 group transition-all duration-300 shadow-md">
+             <svg class="w-5 h-5 text-industrial-muted group-hover:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+             <span class="text-xs font-bold text-white group-hover:text-emerald-500 transition-colors uppercase tracking-wider">Equipo</span>
+          </button>
         </section>
 
         <!-- Dynamic Cobranza Wall Selector Tabs (Sleek horizontal chips) -->
