@@ -10,11 +10,16 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 - **Motor Centralizado de Zonas Horarias (`dateUtils.ts`)**: Creado motor multi-tenant para el cómputo de días transcurridos y medianoche (`getDaysDiffInTimezone`, `getMidnightInTimezone`) evaluado estrictamente en la zona horaria IANA del tenant (`BusinessSettings.timezone`), previniendo desfasajes UTC del servidor Render/Neon.
 - **Formateo de Eventos de Auditoría en Español**: Estandarizados todos los eventos de auditoría (ej: `Condonación de Mora`, `Crear Préstamo`, `Registro de Pago`) con etiquetas amigables en español en la Consola Administrador y vista impersonada.
 - **Seguridad y Cabeceras HTTP**: Integrado `helmet` middleware para inyectar cabeceras de protección contra XSS, Clickjacking, MIME-sniffing y eliminación de cabecera `X-Powered-By`.
+- **`AppError`**: Implementación de una clase de error estandarizada (`AppError`) para todo el backend. Garantiza que los mensajes de validación (400, 404, etc.) lleguen correctamente al frontend.
+- **Manejador Global de Errores Prisma**: El middleware global ahora intercepta automáticamente errores conocidos de base de datos (`P2025`, `P2002`, `P2003`, `P2000`) convirtiéndolos en respuestas HTTP semánticas (`404`, `409`, `400`).
 
 ### Modificado
 - **Reglas de Clasificación de Atrasados**: Préstamos con `multasAcumuladas > 0` se clasifican incondicionalmente bajo la pestaña "ATRASADOS" del Dashboard.
 - **Feedback Táctil Micro-Animado**: Añadido efecto global `:active` (`scale(0.96)`) en todos los botones y elementos interactivos para respuesta al toque.
 - **Seguridad en Cookies JWT**: Configurado `sameSite: 'none'` con `secure: true` en producción para cookies de `refresh_token` cross-domain entre Cloudflare Pages y Render.
+
+### Corregido
+- **Validaciones Ocultas de Préstamos**: Los rechazos por "abono supera el saldo" ya no se ocultan bajo un 500 interno, ahora muestran un toast exacto en el frontend.
 
 ---
 

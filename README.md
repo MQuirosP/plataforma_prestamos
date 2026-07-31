@@ -19,6 +19,19 @@ El proyecto está estructurado como un monorepo administrado con npm workspaces:
 
 ---
 
+## 🚦 Manejo de Errores y Validaciones
+
+CAT-LOAN implementa un modelo de manejo de errores robusto e integrado:
+- **`AppError`**: Clase centralizada en el backend (`backend/src/utils/AppError.ts`) para lanzar excepciones con un código HTTP específico (ej. `throw new AppError(400, 'Saldo insuficiente')`). Todos los controladores deben utilizar esta clase para que el frontend reciba mensajes claros.
+- **Interceptación Global de Prisma**: El middleware global de Express (`backend/src/index.ts`) captura automáticamente errores críticos de base de datos y los traduce a respuestas amigables:
+  - `P2025` (Registro no encontrado) -> `404 Not Found`
+  - `P2002` (Violación de restricción única) -> `409 Conflict`
+  - `P2003` (Violación de llave foránea) -> `409 Conflict`
+  - `P2000` (Valor muy largo) -> `400 Bad Request`
+- **Toasts Automáticos en Frontend**: El frontend (Angular) extrae automáticamente `err.error.error` y despliega notificaciones Toast para mantener al usuario informado sobre rechazos de validación.
+
+---
+
 ## 💻 Configuración Local y Desarrollo
 
 ### Requisitos Previos
