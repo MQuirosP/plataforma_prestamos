@@ -86,7 +86,7 @@ export class ClientService {
 
   async uploadDniPhoto(file: File): Promise<string> {
     const cloudName = 'dv74qevjc'; // Hardcoded per user knowledge
-    const preset = 'ml_default';
+    const preset = 'loans_cat';
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', preset);
