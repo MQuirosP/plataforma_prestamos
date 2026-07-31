@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { getLoans, createLoan, addPayment, deletePayment, updateLoan, deleteLoan, condonarMora, reversarCondonacion } from '../controllers/loanController';
 
 import { getSettings, updateSettings } from '../controllers/settingsController';
