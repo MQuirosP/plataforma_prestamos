@@ -195,7 +195,7 @@ import html2canvas from 'html2canvas';
 
               <div *ngIf="loan.payments && loan.payments.length > 0" class="divide-y divide-industrial-border/60">
                 <div *ngFor="let pay of loan.payments" 
-                     [class]="'p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs transition ' + (pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'bg-amber-950/30' : pay.tipoPago === PaymentTipo.PAGO_MORA ? 'bg-rose-950/30' : 'hover:bg-industrial-surface/80')">
+                     [class]="'p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs transition ' + (pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'bg-amber-950/30' : pay.tipoPago === PaymentTipo.PAGO_MORA ? 'bg-rose-950/30' : 'hover:bg-industrial-surface/80')">
                   
                   <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -213,7 +213,7 @@ import html2canvas from 'html2canvas';
                     <span *ngIf="pay.notas" class="text-[10px] text-industrial-muted block italic">{{ pay.notas }}</span>
                   </div>
 
-                  <div class="flex items-center gap-4">
+                  <div class="flex items-center justify-between w-full md:w-auto gap-4 mt-1 md:mt-0">
                     <span [class]="pay.tipoPago === PaymentTipo.CONDONACION_MORA ? 'text-amber-400 font-black text-sm font-mono' : pay.tipoPago === PaymentTipo.PAGO_MORA ? 'text-rose-400 font-black text-sm font-mono' : 'text-semantic-emerald font-black text-sm font-mono'">
                       {{ pay.tipoPago === PaymentTipo.CONDONACION_MORA ? '-' : pay.tipoPago === PaymentTipo.PAGO_MORA ? '' : '+' }}{{ loanService.settings()?.monedaSimbolo || '₡' }} {{ pay.montoAbonado | number:'1.0-0' }}
                     </span>
