@@ -123,31 +123,28 @@ import html2canvas from 'html2canvas';
           </div>
 
           <!-- FINANCIAL SUMMARY CARDS -->
-          <div class="grid grid-cols-2 gap-3 text-xs">
-            <div class="bg-industrial-surface border border-industrial-border p-3.5 rounded-xl">
-              <span class="text-industrial-muted font-mono text-[9px] uppercase block">Monto Préstamo</span>
-              <span class="text-white font-black text-sm">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl">
+              <span class="text-industrial-muted font-mono text-[10px] uppercase block mb-1">Monto Préstamo</span>
+              <span class="text-white font-black text-xl block">
                 {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.totalAPagar | number:'1.0-0' }}
               </span>
             </div>
-
-            <div class="bg-industrial-surface border border-industrial-border p-3.5 rounded-xl">
-              <span class="text-industrial-muted font-mono text-[9px] uppercase block">Total Abonado</span>
-              <span class="text-semantic-emerald font-black text-sm">
+            <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl">
+              <span class="text-industrial-muted font-mono text-[10px] uppercase block mb-1">Total Abonado</span>
+              <span class="text-semantic-emerald font-black text-xl block">
                 {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ getTotalAbonado() | number:'1.0-0' }}
               </span>
             </div>
-
-            <div class="bg-industrial-surface border border-industrial-border p-3.5 rounded-xl">
-              <span class="text-industrial-muted font-mono text-[9px] uppercase block">Multas</span>
-              <span [class]="Number(loan.multasAcumuladas || 0) > 0 ? 'text-semantic-red font-black text-sm' : 'text-industrial-muted font-mono text-sm'">
-                {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ (loan.multasAcumuladas || 0) | number:'1.0-0' }}
+            <div class="bg-industrial-surface border border-industrial-border p-4 rounded-xl">
+              <span class="text-industrial-muted font-mono text-[10px] uppercase block mb-1">Moras Pagadas</span>
+              <span class="text-rose-400 font-black text-xl block">
+                {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ getMorasPagadas() | number:'1.0-0' }}
               </span>
             </div>
-
-            <div class="bg-industrial-surface border border-caterpillar/40 p-3.5 rounded-xl bg-gradient-to-br from-industrial-surface to-industrial-dark flex flex-col justify-center">
-              <span class="text-caterpillar font-mono text-[9px] uppercase font-bold block">Restante</span>
-              <span class="text-caterpillar font-black text-sm">
+            <div class="bg-industrial-surface border-2 border-caterpillar/20 p-4 rounded-xl">
+              <span class="text-caterpillar font-mono text-[10px] uppercase font-bold block mb-1">Restante</span>
+              <span class="text-caterpillar font-black text-xl block">
                 {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.balancePendiente | number:'1.0-0' }}
               </span>
             </div>
@@ -290,17 +287,23 @@ import html2canvas from 'html2canvas';
               <span class="text-industrial-muted text-[10px] font-mono">{{ loan.clienteTelefono }}</span>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="bg-industrial-surface border border-industrial-border p-3 rounded-xl">
-                <span class="text-industrial-muted font-mono text-[9px] uppercase block">Préstamo</span>
-                <span class="text-white font-black text-sm block">
+            <div class="grid grid-cols-3 gap-2">
+              <div class="bg-industrial-surface border border-industrial-border p-2 rounded-xl text-center">
+                <span class="text-industrial-muted font-mono text-[8px] uppercase block">Préstamo</span>
+                <span class="text-white font-black text-xs block mt-1">
                   {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ loan.totalAPagar | number:'1.0-0' }}
                 </span>
               </div>
-              <div class="bg-industrial-surface border border-industrial-border p-3 rounded-xl">
-                <span class="text-industrial-muted font-mono text-[9px] uppercase block">Abonado</span>
-                <span class="text-semantic-emerald font-black text-sm block">
+              <div class="bg-industrial-surface border border-industrial-border p-2 rounded-xl text-center">
+                <span class="text-industrial-muted font-mono text-[8px] uppercase block">Abonado</span>
+                <span class="text-semantic-emerald font-black text-xs block mt-1">
                   {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ getTotalAbonado() | number:'1.0-0' }}
+                </span>
+              </div>
+              <div class="bg-industrial-surface border border-industrial-border p-2 rounded-xl text-center">
+                <span class="text-industrial-muted font-mono text-[8px] uppercase block">Moras</span>
+                <span class="text-rose-400 font-black text-xs block mt-1">
+                  {{ loanService.settings()?.monedaSimbolo || '₡' }} {{ getMorasPagadas() | number:'1.0-0' }}
                 </span>
               </div>
             </div>
@@ -317,7 +320,7 @@ import html2canvas from 'html2canvas';
               <span class="text-industrial-muted font-mono text-[9px] uppercase font-bold tracking-widest block mb-3 text-center">Últimos Movimientos</span>
               
               <div class="space-y-2">
-                <div *ngFor="let pay of loan.payments.slice(0, 5)" class="flex justify-between items-center text-[10px] font-mono border-b border-industrial-surface pb-2">
+                <div *ngFor="let pay of loan.payments | slice:0:5" class="flex justify-between items-center text-[10px] font-mono border-b border-industrial-surface pb-2">
                   <div class="flex flex-col">
                     <span class="text-white">{{ pay.fechaPago | date:'dd/MM/yyyy' }}</span>
                     <span class="text-industrial-muted text-[8px] uppercase">
@@ -523,10 +526,17 @@ export class LoanStatementComponent {
   }
 
   getTotalAbonado(): number {
-    const totalAPagar = Number(this.loan.totalAPagar || 0);
-    const multas = Number(this.loan.multasAcumuladas || 0);
-    const balance = Number(this.loan.balancePendiente || 0);
-    return Math.max(0, totalAPagar + multas - balance);
+    if (!this.loan.payments) return 0;
+    return this.loan.payments
+      .filter(p => p.tipoPago !== PaymentTipo.CONDONACION_MORA && p.tipoPago !== PaymentTipo.PAGO_MORA)
+      .reduce((sum, p) => sum + Number(p.montoAbonado), 0);
+  }
+
+  getMorasPagadas(): number {
+    if (!this.loan.payments) return 0;
+    return this.loan.payments
+      .filter(p => p.tipoPago === PaymentTipo.PAGO_MORA)
+      .reduce((sum, p) => sum + Number(p.montoAbonado), 0);
   }
 
   getProgressPercentage(): number {
